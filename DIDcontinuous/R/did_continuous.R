@@ -40,6 +40,13 @@ did_continuous <- function(
     }
   }
 
+  # General Syntax Check
+  if (!is.null(switchers)) {
+      if (switchers %in% c("up", "down")) {
+        stop("Switchers could be either NULL, up or down")          
+      }
+  }
+
   results <- did_continuous_main(df, Y, G, T, D, Z, estimator, estimation_method, order,
   noestrapolation, placebo, weight, switchers, disaggregate)
 
