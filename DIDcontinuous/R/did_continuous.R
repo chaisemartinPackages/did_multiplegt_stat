@@ -48,9 +48,9 @@ did_continuous <- function(
   }
 
   results <- did_continuous_main(df, Y, G, T, D, Z, estimator, estimation_method, order,
-  noestrapolation, placebo, weight, switchers, disaggregate)
+  noextrapolation, placebo, weight, switchers, disaggregate)
 
-  did_continuous <- list(args, list(results))
+  did_continuous <- list(args, results)
   names(did_continuous) <- c("args", "results")
   class(did_continuous) <- c(class(did_continuous), "did_continuous")
   return(did_continuous)

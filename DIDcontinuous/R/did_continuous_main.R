@@ -8,7 +8,7 @@
 #' @param estimator estimator
 #' @param estimation_method estimation_method
 #' @param order order
-#' @param noextrapolation noestrapolation
+#' @param noextrapolation noextrapolation
 #' @param placebo placebo
 #' @param weight weight
 #' @param switchers switchers
@@ -18,6 +18,7 @@
 #' @importFrom rlang := 
 #' @importFrom rlang .data
 #' @importFrom plm pdata.frame make.pbalanced
+#' @importFrom stats sd
 #' @noRd
 did_continuous_main <- function(
     df,
@@ -35,6 +36,11 @@ did_continuous_main <- function(
     switchers,
     disaggregate
 ) {
+
+    # Preallocation of scalars
+    aoss_XX <- NULL
+    waoss_XX <- NULL
+    iwaoss_XX <- NULL
 
     # Layer 1: keep only variables of interest, as to speed up what follows
     df <- df[c(Y, G, T, D, Z, weight)]
@@ -76,11 +82,13 @@ did_continuous_main <- function(
     }
 
     # Further useful steps prior to the estimation
-    IDs_XX <- as.vector(unique(factor(df$ID_XX)))
+    IDs_XX <- as.data.frame(unique(factor(df$ID_XX)))
+    names(IDs_XX) <- "ID_XX"
+
     max_T_XX <- max(df$T_XX, na.rm = TRUE)
     scalars <- list(
         PS_sum_XX = 0,
-        delta1_1XX = 0,
+        delta_1_1_XX = 0,
         E_abs_delta_D_sum_XX = 0,
         delta_2_1_XX = 0,
         N_Switchers_2_1XX = 0,
@@ -93,13 +101,103 @@ did_continuous_main <- function(
     for (p in 2:max_T_XX) {
         p_df <- subset(df, df$T_XX %in% c(p-1,p))
 
-        est_out <- did_continuous_pairwise(df = p_df, Y = "Y_ID", G = "ID_XX", T = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, IDs = IDs_XX, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars)
+        est_out <- did_continuous_pairwise(df = p_df, Y = "Y_ID", G = "ID_XX", T = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars)
 
-        for (v in names(est_out$scalars)) {
-            assign(v, est_out$scalars[[v]])
+        IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX") 
+        IDs_XX <- IDs_XX[order(IDs_XX$ID_XX), ]
+        scalars <- est_out$scalars;
+        est_out <- NULL;
+
+        if (aoss_XX == 1) {
+            scalars$delta_1_1_XX <- scalars$delta_1_1_XX + 
+                    scalars[[paste0("P_",p,"_XX")]] * scalars[[paste0("delta_1_",p,"_XX")]]
+            
+            if (scalars[[paste0("N_Stayers_1_",p,"_XX")]] > 1)  {
+                scalars$N_Switchers_1_1_XX <- scalars$N_Switchers_1_1_XX + scalars[[paste0("N_Switchers_1_",p,"_XX")]]
+            }
+            if (scalars[[paste0("N_Switchers_1_",p,"_XX")]] > 0)  {
+                scalars$N_Stayers_1_1_XX <- scalars$N_Stayers_1_1_XX + scalars[[paste0("N_Stayers_1_",p,"_XX")]]
+            }
         }
-        est_out <- NULL
+
+        if (waoss_XX == 1) {
+            scalars$delta_2_1_XX <- scalars$delta_2_1_XX + 
+                    scalars[[paste0("E_abs_delta_D_",p,"_XX")]] * scalars[[paste0("delta_2_",p,"_XX")]]
+            
+            if (scalars[[paste0("N_Stayers_2_",p,"_XX")]] > 1)  {
+                scalars$N_Switchers_2_1_XX <- scalars$N_Switchers_2_1_XX + scalars[[paste0("N_Switchers_2_",p,"_XX")]]
+            }
+            if (scalars[[paste0("N_Switchers_2_",p,"_XX")]] > 0)  {
+                scalars$N_Stayers_2_1_XX <- scalars$N_Stayers_2_1_XX + scalars[[paste0("N_Stayers_2_",p,"_XX")]]
+            }
+        }
     }
 
+    # Compute the aggregated estimators
+    if (aoss_XX == 1) {
+        scalars$delta_1_1_XX <- scalars$delta_1_1_XX / scalars$PS_sum_XX
+    }
+    if (waoss_XX == 1) {
+        scalars$delta_1_1_XX <- scalars$delta_2_1_XX / scalars$E_abs_delta_D_sum_XX
+    }
 
+	# Compute the influence functions
+
+    IDs_XX$Phi_1_XX <- 0
+    counter_XX <- 0
+    for (p in 2:max_T_XX) {
+        if (scalars[[paste0("non_missing_",p,"_XX")]] == 0) {
+            next
+        }
+        if (aoss_XX == 1) {
+            IDs_XX[[paste0("Phi_1_",p,"_XX")]] <- (scalars[[paste0("P_",p,"_XX")]]*IDs_XX[[paste0("Phi_1_",p,"_XX")]] + (scalars[[paste0("delta_1_",p,"_XX")]] - scalars$delta_1_1_XX) * (IDs_XX[[paste0("S_",p,"_XX")]] - scalars[[paste0("P_",p,"_XX")]])) / scalars$PS_sum_XX
+            IDs_XX$Phi_1_XX <- IDs_XX$Phi_1_XX + IDs_XX[[paste0("Phi_1_",p,"_XX")]]
+            counter_XX <- counter_XX + 1
+        }
+        if (waoss_XX == 1) {
+            IDs_XX[[paste0("Phi_2_",p,"_XX")]] <- (scalars[[paste0("E_abs_delta_D_",p,"_XX")]]*IDs_XX[[paste0("Phi_2_",p,"_XX")]] + (scalars[[paste0("delta_2_",p,"_XX")]] - scalars$delta_2_1_XX) * (IDs_XX[[paste0("abs_delta_D_",p,"_XX")]] - scalars[[paste0("E_abs_delta_D_",p,"_XX")]])) / scalars$E_abs_delta_D_sum_XX
+        }
+    }
+
+    if (aoss_XX == 1) {
+        scalars$mean_IF1 <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_1_XX, na.rm = TRUE))
+        scalars$sd_delta_1_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_1_XX, na.rm = TRUE)/ sqrt(nrow(IDs_XX)))
+        scalars$LB_1_1_XX <-  scalars$delta_1_1_XX - 1.96 *  scalars$sd_delta_1_1_XX
+        scalars$UB_1_1_XX <-  scalars$delta_1_1_XX + 1.96 *  scalars$sd_delta_1_1_XX            
+    }
+
+    # Returning the results #
+
+    IDs_XX <- NULL
+    estims <- c("aoss", "waoss", "iwaoss")
+
+    ret_mat_XX <- matrix(NA, nrow = 3*max_T_XX, ncol = 6)
+    rown <- c()
+    for (j in 1:length(estims)) {
+        for (p in 1:max_T_XX) {
+            if (get(paste0(estims[j],"_XX")) == 1) {
+                if (((is.na(scalars[[paste0("N_Stayers_",j,"_",p,"_XX")]]) & is.na(scalars[[paste0("N_Switchers_",j,"_",p,"_XX")]])) | scalars[[paste0("N_Stayers_",j,"_",p,"_XX")]] < 2 | scalars[[paste0("N_Switchers_",j,"_",p,"_XX")]] == 0) & p != 1) {
+                    scalars[[paste0("delta_",j,"_",p,"_XX")]] <- NA
+                }
+                ret_mat_XX[(j-1)*max_T_XX + p, 1] <- scalars[[paste0("delta_",j,"_",p,"_XX")]]
+                ret_mat_XX[(j-1)*max_T_XX + p, 2] <- scalars[[paste0("sd_delta_",j,"_",p,"_XX")]]
+                ret_mat_XX[(j-1)*max_T_XX + p, 3] <- scalars[[paste0("LB_",j,"_",p,"_XX")]]
+                ret_mat_XX[(j-1)*max_T_XX + p, 4] <- scalars[[paste0("UB_",j,"_",p,"_XX")]]
+                ret_mat_XX[(j-1)*max_T_XX + p, 5] <- scalars[[paste0("N_Switchers_",j,"_",p,"_XX")]]
+                ret_mat_XX[(j-1)*max_T_XX + p, 6] <- scalars[[paste0("N_Stayers_",j,"_",p,"_XX")]]   
+
+            }
+
+            if (p == 1) {
+                rown <- c(rown, toupper(estims[j]))
+            } else {
+                rown <- c(rown, paste0(estims[j],"_",p))
+            }
+        }
+    }
+    rownames(ret_mat_XX) <- rown
+    colnames(ret_mat_XX) <- c("Estimate", "SE", "LB CI", "UB CI", "Switchers", "Stayers")
+
+    out <- list(table = ret_mat_XX, pairs = max_T_XX)
+    return(out)
 }
