@@ -103,7 +103,7 @@ did_continuous_main <- function(
 
         est_out <- did_continuous_pairwise(df = p_df, Y = "Y_ID", G = "ID_XX", T = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars)
 
-        IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX") 
+        IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX", all = TRUE) 
         IDs_XX <- IDs_XX[order(IDs_XX$ID_XX), ]
         scalars <- est_out$scalars;
         est_out <- NULL;
@@ -150,18 +150,22 @@ did_continuous_main <- function(
             next
         }
         if (aoss_XX == 1) {
+
             IDs_XX[[paste0("Phi_1_",p,"_XX")]] <- (scalars[[paste0("P_",p,"_XX")]]*IDs_XX[[paste0("Phi_1_",p,"_XX")]] + (scalars[[paste0("delta_1_",p,"_XX")]] - scalars$delta_1_1_XX) * (IDs_XX[[paste0("S_",p,"_XX")]] - scalars[[paste0("P_",p,"_XX")]])) / scalars$PS_sum_XX
-            IDs_XX$Phi_1_XX <- IDs_XX$Phi_1_XX + IDs_XX[[paste0("Phi_1_",p,"_XX")]]
+
+            IDs_XX$Phi_1_XX <- ifelse(is.na(IDs_XX[[paste0("Phi_1_",p,"_XX")]]), IDs_XX$Phi_1_XX, IDs_XX$Phi_1_XX + IDs_XX[[paste0("Phi_1_",p,"_XX")]])
             counter_XX <- counter_XX + 1
         }
         if (waoss_XX == 1) {
             IDs_XX[[paste0("Phi_2_",p,"_XX")]] <- (scalars[[paste0("E_abs_delta_D_",p,"_XX")]]*IDs_XX[[paste0("Phi_2_",p,"_XX")]] + (scalars[[paste0("delta_2_",p,"_XX")]] - scalars$delta_2_1_XX) * (IDs_XX[[paste0("abs_delta_D_",p,"_XX")]] - scalars[[paste0("E_abs_delta_D_",p,"_XX")]])) / scalars$E_abs_delta_D_sum_XX
         }
     }
+    View(IDs_XX)
 
     if (aoss_XX == 1) {
+        n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_1_XX)))
         scalars$mean_IF1 <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_1_XX, na.rm = TRUE))
-        scalars$sd_delta_1_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_1_XX, na.rm = TRUE)/ sqrt(nrow(IDs_XX)))
+        scalars$sd_delta_1_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_1_XX, na.rm = TRUE)/ sqrt(n_obs))
         scalars$LB_1_1_XX <-  scalars$delta_1_1_XX - 1.96 *  scalars$sd_delta_1_1_XX
         scalars$UB_1_1_XX <-  scalars$delta_1_1_XX + 1.96 *  scalars$sd_delta_1_1_XX            
     }

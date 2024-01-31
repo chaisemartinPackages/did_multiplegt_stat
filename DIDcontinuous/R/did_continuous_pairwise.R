@@ -91,7 +91,7 @@ did_continuous_pairwise <- function(
     # Generate Switcher : S = 1 if switcher-up, -1 if switcher-down, 0 if stayer
     df$S_XX <- (df$delta_D_XX > 0) - (df$delta_D_XX < 0)
     if (!is.null(switchers)) {
-        df <- subset(df, df$S_g_XX == (switchers == "up") - (switchers == "down"))
+        df <- subset(df, !(df$S_XX == (switchers == "down") - (switchers == "up")))
     }
 
     # We have all the variable we need at the first year so we can drop the 'second' year line
@@ -195,6 +195,9 @@ did_continuous_pairwise <- function(
             df[[paste0("Phi_1_",pairwise,"_XX")]] <- (df$S_over_delta_D_XX - df$mean_S_over_delta_D_XX * ((1 - df$S_bis_XX)/(1 - df$E_S_bis_XX_D1))) * df$inner_sum_delta_1_2_XX
 
             df[[paste0("Phi_1_",pairwise,"_XX")]] <- (df[[paste0("Phi_1_",pairwise,"_XX")]] - (get(paste0("delta_1_", pairwise, "_XX")) * df$S_bis_XX)) / get(paste0("P_",pairwise,"_XX"))
+            if (pairwise == 43) {
+                View(df)
+            }
 
             assign(paste0("mean_IF_1_",pairwise),
                     mean(df[[paste0("Phi_1_",pairwise,"_XX")]], na.rm = TRUE))

@@ -42,7 +42,7 @@ did_continuous <- function(
 
   # General Syntax Check
   if (!is.null(switchers)) {
-      if (switchers %in% c("up", "down")) {
+      if (!(switchers %in% c("up", "down"))) {
         stop("Switchers could be either NULL, up or down")          
       }
   }
