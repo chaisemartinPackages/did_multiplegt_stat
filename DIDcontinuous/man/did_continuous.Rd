@@ -38,17 +38,17 @@ did_continuous(
 
 \item{estimation_method}{estimation_method}
 
-\item{order}{order}
+\item{order}{order Y}
 
 \item{noextrapolation}{noestrapolation}
 
 \item{placebo}{placebo}
 
-\item{weight}{weight}
+\item{weight}{weight Y}
 
-\item{switchers}{switchers}
+\item{switchers}{switchers Y}
 
-\item{disaggregate}{disaggregate}
+\item{disaggregate}{disaggregate Y}
 }
 \description{
 This program estimates the three estimators (aoss, waoss, iv-aoss) developped in de Chaisemartin, d'Haultfoeuille, Pasquier and Vazquez‐Bare,Difference-in-Differences Estimators for Treatments Continuously Distributed at Every Period (January 18, 2022).

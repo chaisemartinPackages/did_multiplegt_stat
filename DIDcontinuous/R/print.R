@@ -8,17 +8,19 @@ print.did_continuous <- function(x, ...) {
     estims <- list(0, 1, 2)
     names(estims) <- c("aoss", "waoss", "iwaoss") 
 
-    for (t in x$args$estimator) {
-        cat("\n");
-        cat(noquote(strrep("-", 70)));cat("\n");
-        cat(strrep(" ", 20));cat(sprintf("Estimation of %s(s)", toupper(t)));cat("\n");
-        cat(noquote(strrep("-", 70)));cat("\n");
+    for (t in names(estims)){
+        if (t %in% x$args$estimator) {
+            cat("\n");
+            cat(noquote(strrep("-", 70)));cat("\n");
+            cat(strrep(" ", 20));cat(sprintf("Estimation of %s(s)", toupper(t)));cat("\n");
+            cat(noquote(strrep("-", 70)));cat("\n");
 
-        l_bound <- 1 + estims[[t]] * x$results$pairs 
-        u_bound <- l_bound + isTRUE(x$args$disaggregate) * (x$results$pairs - 1)
-        mat_sel <- x$results$table[l_bound:u_bound, ]
-        mat_print(mat_sel, t)
-        cat("\n");
+            l_bound <- 1 + estims[[t]] * x$results$pairs 
+            u_bound <- l_bound + isTRUE(x$args$disaggregate) * (x$results$pairs - 1)
+            mat_sel <- x$results$table[l_bound:u_bound, ]
+            mat_print(mat_sel, t)
+            cat("\n");
+        }
     }
 }
 

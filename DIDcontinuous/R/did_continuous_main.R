@@ -37,6 +37,7 @@ did_continuous_main <- function(
     disaggregate
 ) {
 
+    suppressWarnings({
     # Preallocation of scalars
     aoss_XX <- NULL
     waoss_XX <- NULL
@@ -74,6 +75,15 @@ did_continuous_main <- function(
             assign(paste0(v,"_XX"), 1)
         } else {
             assign(paste0(v,"_XX"), as.numeric(v %in% estimator))
+        }
+    }
+
+    # Error messages #
+    if (!is.null(estimation_method)) {
+        if (estimation_method == "ps" | estimation_method == "dr") {
+            if (waoss_XX == 0 & iwaoss_XX == 0) {
+                stop("The propensity score-based approach if only available for the waoss and iwaoss.")
+            }
         }
     }
 
@@ -224,5 +234,6 @@ did_continuous_main <- function(
     colnames(ret_mat_XX) <- c("Estimate", "SE", "LB CI", "UB CI", "Switchers", "Stayers")
 
     out <- list(table = ret_mat_XX, pairs = max_T_XX)
+    })
     return(out)
 }

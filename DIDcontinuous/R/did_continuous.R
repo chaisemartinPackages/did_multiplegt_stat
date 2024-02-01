@@ -10,12 +10,12 @@
 #' @param Z Z
 #' @param estimator estimator
 #' @param estimation_method estimation_method
-#' @param order order
+#' @param order order Y
 #' @param noextrapolation noestrapolation
 #' @param placebo placebo
-#' @param weight weight
-#' @param switchers switchers
-#' @param disaggregate disaggregate
+#' @param weight weight Y
+#' @param switchers switchers Y
+#' @param disaggregate disaggregate Y
 #' @export
 did_continuous <- function(
     df,

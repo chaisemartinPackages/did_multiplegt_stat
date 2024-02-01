@@ -216,9 +216,8 @@ did_continuous_pairwise <- function(
         if (waoss == 1) {
             df$abs_delta_D_XX <- df$S_XX * df$delta_D_XX
             E_abs_delta_D_XX <- mean(df$abs_delta_D_XX, na.rm = TRUE)
-            assign(paste0("E_abs_delta_D_",pairwise,"_XX"), E_abs_delta_D_XX)
-            E_abs_delta_D_sum_XX <- 
-                E_abs_delta_D_sum_XX + get(paste0("E_abs_delta_D_",pairwise,"_XX"))
+            assign(paste0("E_abs_delta_D_",pairwise,pl,"_XX"), E_abs_delta_D_XX)
+            assign(paste0("E_abs_delta_D_sum",pl,"_XX"), get(paste0("E_abs_delta_D_sum",pl,"_XX")) + get(paste0("E_abs_delta_D_",pairwise,pl,"_XX")))
 
             for (suffix in c("Minus", "Plus")) {
                 df$Ster_XX <- NULL
@@ -226,58 +225,67 @@ did_continuous_pairwise <- function(
                 
                 ## Computing the contribution weights ##
                 df$prod_sgn_delta_D_delta_D_XX <- df$S_XX * df$delta_D_XX
-                sum_prod_sgn_delta_D_delta_D_XX <- sum(df$prod_sgn_delta_D_delta_D_XX, na.rm = TRUE)
-                assign(paste0("w_",suffix,"_",pairwise,"_XX"), sum_prod_sgn_delta_D_delta_D_XX/N_XX)
-                assign(paste0("denom_delta_2_",suffix,"_",pairwise,"_XX"), sum(df$delta_D_XX[df$Ster_XX == 1], na.rm = TRUE))
+                sum_prod_sgn_delta_D_delta_D_XX <- sum(df$prod_sgn_delta_D_delta_D_XX[df$Ster_XX == 1], na.rm = TRUE)
+                assign(paste0("w_",suffix,"_",pairwise,pl,"_XX"), sum_prod_sgn_delta_D_delta_D_XX/N_XX)
+                assign(paste0("denom_delta_2_",suffix,"_",pairwise,pl,"_XX"), sum(df$delta_D_XX[df$Ster_XX == 1], na.rm = TRUE))
 
                 if (approach == "reg") {
-                    if (get(paste0("denom_delta_2_",suffix,"_",pairwise,"_XX")) == 0) {
-                        assign(paste0("denom_delta_2_",suffix,"_",pairwise,"_XX"), 1)
+                    if (get(paste0("denom_delta_2_",suffix,"_",pairwise,pl,"_XX")) == 0) {
+                        assign(paste0("denom_delta_2_",suffix,"_",pairwise,pl,"_XX"), 1)
                         # in case it is zero set it to 1 to avoid dividing by 0, in that case the numerator is also equal to 0	
                     }
-                    assign(paste0("num_delta_2_",suffix,"_",pairwise,"_XX"),
+                    assign(paste0("num_delta_2_",suffix,"_",pairwise,pl,"_XX"),
                     sum(df$inner_sum_delta_1_2_XX[df$Ster_XX == 1], na.rm = TRUE))
 
-                    assign(paste0("delta_2_",suffix,"_",pairwise,"_XX"), 
-                        get(paste0("num_delta_2_",suffix,"_",pairwise,"_XX")) /
-                        get(paste0("denom_delta_2_",suffix,"_",pairwise,"_XX")))
+                    assign(paste0("delta_2_",suffix,"_",pairwise,pl,"_XX"), 
+                        get(paste0("num_delta_2_",suffix,"_",pairwise,pl,"_XX")) /
+                        get(paste0("denom_delta_2_",suffix,"_",pairwise,pl,"_XX")))
+                } 
 
-                } else if (approach == "ps-dr") {
+                assign(paste0("nb_Switchers_",suffix,pl,"_XX"), nrow(subset(df, df$Ster_XX ==1)))
+                assign(paste0("PS_",suffix,1,pl,"_XX"), get(paste0("nb_Switchers_",suffix,pl,"_XX"))/N_XX)
+                if (get(paste0("PS_",suffix,"1",pl,"_XX")) == 0) {
+                    # The regression is performed iff there is at least one switcher up/down.
+                    assign(paste0("delta_2_",suffix,"_",pairwise,pl,"_XX"), 0)
+                    df[[paste0("PS_1_",suffix,"_D_1_XX")]] <- 0
+                } else {
+                    model <- stata_logit(as.formula(paste("Ster_XX",reg_pol_XX,sep="~")), df)
+                    df <- lpredict(df,paste0("PS_1_",suffix,"_D_1_XX"),model, vars_pol_XX, prob = TRUE)
 
-                }
+                    if (approach == "ps") {
+                        
+                    }
+                }                
             }
 
             if (approach == "reg" | approach == "ps") {
                 ## Computing the final weights ##
                 assign(paste0("W_Plus_",pairwise,"_XX"), get(paste0("w_Plus_",pairwise,"_XX")) /
                 (get(paste0("w_Plus_",pairwise,"_XX")) + get(paste0("w_Minus_",pairwise,"_XX"))))
+            }
 
-                ## Computing the point estimate ##
-                assign(paste0("delta_2_",pairwise,"_XX"), 
-                get(paste0("W_Plus_",pairwise,"_XX"))*get(paste0("delta_2_Plus_",pairwise,"_XX")) +
-                (1-get(paste0("W_Plus_",pairwise,"_XX")))*get(paste0("delta_2_Minus_",pairwise,"_XX")))
+            df$dr_delta_Y_XX <- (df$S_XX - ((df$PS_1_Plus_D_1_XX - df$PS_1_Minus_D_1_XX)/df$PS_0_D_1_XX) * (1 - df$S_bis_XX)) * df$inner_sum_delta_1_2_XX
+            denom_dr_delta_2_XX <- sum(df$dr_delta_Y_XX, na.rm = TRUE)
+
+            if (approach == "reg" | approach == "ps") {
+                assign(paste0("delta_2_",pairwise,pl,"_XX"), 
+                get(paste0("W_Plus_",pairwise,"_XX"))*get(paste0("delta_2_Plus_",pairwise,pl,"_XX")) +
+                (1-get(paste0("W_Plus_",pairwise,"_XX")))*get(paste0("delta_2_Minus_",pairwise,pl,"_XX")))
             } else if (approach == "dr") {
 
             }
 
             # Computing the variance
-            if (approach == "reg") {
-                df[[paste0("Phi_2_",pairwise,"_XX")]] <- (df$S_XX - df$E_S_XX_D1 * ((1 - df$S_bis_XX)/(1 - df$E_S_bis_XX_D1))) * df$inner_sum_delta_1_2_XX
-                df[[paste0("Phi_2_",pairwise,"_XX")]] <- (df[[paste0("Phi_2_",pairwise,"_XX")]] - get(paste0("delta_2_", pairwise,"_XX")) * df$abs_delta_D_XX) / E_abs_delta_D_XX
-            } else if (approach == "ps" | approach == "dr") {
+            df[[paste0("Phi_2_",pairwise,pl,"_XX")]] <- (df$dr_delta_Y_XX - get(paste0("delta_2_", pairwise,pl,"_XX")) * df$abs_delta_D_XX) / E_abs_delta_D_XX
 
-            }
+            assign(paste0("mean_IF_2_",pairwise,pl),
+                    mean(df[[paste0("Phi_2_",pairwise,pl,"_XX")]], na.rm = TRUE))
+            assign(paste0("sd_delta_2_",pairwise,pl,"_XX"),
+                    sd(df[[paste0("Phi_2_",pairwise,pl,"_XX")]], na.rm = TRUE)/sqrt(N_XX))
+            assign(paste0("LB_2_",pairwise,pl,"_XX"), get(paste0("delta_2_",pairwise,pl,"_XX")) - 1.96 * get(paste0("sd_delta_2_", pairwise,pl,"_XX")))
+            assign(paste0("UB_2_",pairwise,pl,"_XX"), get(paste0("delta_2_",pairwise,pl,"_XX")) + 1.96 * get(paste0("sd_delta_2_", pairwise,pl,"_XX")))
 
-            assign(paste0("mean_IF_2_",pairwise),
-                    mean(df[[paste0("Phi_2_",pairwise,"_XX")]], na.rm = TRUE))
-            assign(paste0("sd_delta_2_",pairwise,"_XX"),
-                    sd(df[[paste0("Phi_2_",pairwise,"_XX")]], na.rm = TRUE)/sqrt(N_XX))
-            assign(paste0("LB_2_",pairwise,"_XX"),
-                    get(paste0("delta_2_",pairwise,"_XX")) - 1.96 * get(paste0("sd_delta_2_", pairwise,"_XX")))
-            assign(paste0("UB_2_",pairwise,"_XX"),
-                    get(paste0("delta_2_",pairwise,"_XX")) + 1.96 * get(paste0("sd_delta_2_", pairwise,"_XX")))
-
-            df[[paste0("abs_delta_D_",pairwise,"_XX")]] <- df$abs_delta_D_XX
+            df[[paste0("abs_delta_D_",pairwise,pl,"_XX")]] <- df$abs_delta_D_XX
         }
 
         assign(paste0("non_missing_",pairwise,"_XX"), 1)

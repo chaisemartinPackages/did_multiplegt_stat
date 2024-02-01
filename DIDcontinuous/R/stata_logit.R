@@ -11,12 +11,12 @@ stata_logit <- function(
     df
 ) {
     suppressWarnings({
-    sig <- 10^-8
+    sensitivity <- 10^-8
     while (TRUE) {
         model <- glm(formula, data = df, weights = df$weights, family = binomial(link = 'logit'))
         df$pred <- NULL; df$pred <- predict(model, newdata = df, type="response");
-        df_temp <- subset(df, df$pred > sig & df$pred < 1 - sig)
-        if (nrow(df_temp) < nrow(df)) {
+        df_temp <- subset(df, df$pred > sensitivity & df$pred < 1 - sensitivity)
+        if (nrow(df_temp) < nrow(df) & nrow(df_temp) > 0) {
             df <- NULL; df <- df_temp; df_temp <- NULL;
         } else {
             break
