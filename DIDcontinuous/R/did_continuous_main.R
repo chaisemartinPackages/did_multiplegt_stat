@@ -1,7 +1,7 @@
 #' Internal function for did_continuous
 #' @param df df
 #' @param Y Y
-#' @param G G
+#' @param ID ID
 #' @param T T
 #' @param D D
 #' @param Z Z
@@ -23,7 +23,7 @@
 did_continuous_main <- function(
     df,
     Y,
-    G,
+    ID,
     T,
     D,
     Z,
@@ -43,10 +43,10 @@ did_continuous_main <- function(
     iwaoss_XX <- NULL
 
     # Layer 1: keep only variables of interest, as to speed up what follows
-    df <- df[c(Y, G, T, D, Z, weight)]
+    df <- df[c(Y, ID, T, D, Z, weight)]
     df <- df %>% group_by(.data[[T]]) %>% mutate(T_temp_XX = cur_group_id())
     coln <- c("Y_XX", "ID_XX", "T_XX", "D_XX", "weight_XX", "tsfilled_XX")
-    df$to_drop_XX <- (is.na(df[[Y]]) | is.na(df$T_temp_XX) | is.na(df[[D]]) | is.na(df[[G]]))
+    df$to_drop_XX <- (is.na(df[[Y]]) | is.na(df$T_temp_XX) | is.na(df[[D]]) | is.na(df[[ID]]))
     IV_req_XX <- 0
     if (!is.null(Z)) {
         df$to_drop_XX <- (is.na(df[[Z]]) | df$to_drop_XX)
@@ -57,7 +57,7 @@ did_continuous_main <- function(
 
     # Layer 2: balancing the panel and then keeping again only variables of interest
     df$tsfilled_XX <- 0
-    df <- pdata.frame(df, index = c(G, T)) 
+    df <- pdata.frame(df, index = c(ID, T)) 
     df <- make.pbalanced(df, balance.type = "fill")
     df$tsfilled_XX <- is.na(df$tsfilled_XX)
     df <- df %>% group_by(.data[[T]]) %>% mutate(T_XX = cur_group_id())
@@ -65,7 +65,7 @@ did_continuous_main <- function(
     if (!is.null(weight)) {
         df$weight_XX <- df[[weight]]
     }
-    df <- df[c(Y, G, "T_XX", D, "weight_XX", "tsfilled_XX", Z)]
+    df <- df[c(Y, ID, "T_XX", D, "weight_XX", "tsfilled_XX", Z)]
     names(df) <- coln
 
     # Patching the estimator option
@@ -91,17 +91,28 @@ did_continuous_main <- function(
         delta_1_1_XX = 0,
         E_abs_delta_D_sum_XX = 0,
         delta_2_1_XX = 0,
-        N_Switchers_2_1XX = 0,
-        N_Stayers_2_1_XX = 0,
         N_Switchers_1_1_XX = 0,
         N_Stayers_1_1_XX = 0,
+        N_Switchers_2_1_XX = 0,
+        N_Stayers_2_1_XX = 0,
         IV_req_XX = IV_req_XX
     )
+    if (isTRUE(placebo)) {
+        scalars <- c(scalars,
+        PS_sum_pl_XX = 0,
+        delta_1_1_pl_XX = 0,
+        E_abs_delta_D_sum_pl_XX = 0,
+        delta_2_1_pl_XX = 0,
+        N_Switchers_1_1_pl_XX = 0,
+        N_Stayers_1_1_pl_XX = 0,
+        N_Switchers_2_1_pl_XX = 0,
+        N_Stayers_2_1_pl_XX = 0)
+    }
+
 
     for (p in 2:max_T_XX) {
-        p_df <- subset(df, df$T_XX %in% c(p-1,p))
 
-        est_out <- did_continuous_pairwise(df = p_df, Y = "Y_ID", G = "ID_XX", T = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars)
+        est_out <- did_continuous_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", T = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = FALSE)
 
         IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX", all = TRUE) 
         IDs_XX <- IDs_XX[order(IDs_XX$ID_XX), ]
@@ -138,29 +149,30 @@ did_continuous_main <- function(
         scalars$delta_1_1_XX <- scalars$delta_1_1_XX / scalars$PS_sum_XX
     }
     if (waoss_XX == 1) {
-        scalars$delta_1_1_XX <- scalars$delta_2_1_XX / scalars$E_abs_delta_D_sum_XX
+        scalars$delta_2_1_XX <- scalars$delta_2_1_XX / scalars$E_abs_delta_D_sum_XX
     }
 
 	# Compute the influence functions
 
     IDs_XX$Phi_1_XX <- 0
+    IDs_XX$Phi_2_XX <- 0
     counter_XX <- 0
     for (p in 2:max_T_XX) {
         if (scalars[[paste0("non_missing_",p,"_XX")]] == 0) {
             next
         }
         if (aoss_XX == 1) {
-
             IDs_XX[[paste0("Phi_1_",p,"_XX")]] <- (scalars[[paste0("P_",p,"_XX")]]*IDs_XX[[paste0("Phi_1_",p,"_XX")]] + (scalars[[paste0("delta_1_",p,"_XX")]] - scalars$delta_1_1_XX) * (IDs_XX[[paste0("S_",p,"_XX")]] - scalars[[paste0("P_",p,"_XX")]])) / scalars$PS_sum_XX
 
             IDs_XX$Phi_1_XX <- ifelse(is.na(IDs_XX[[paste0("Phi_1_",p,"_XX")]]), IDs_XX$Phi_1_XX, IDs_XX$Phi_1_XX + IDs_XX[[paste0("Phi_1_",p,"_XX")]])
-            counter_XX <- counter_XX + 1
         }
         if (waoss_XX == 1) {
             IDs_XX[[paste0("Phi_2_",p,"_XX")]] <- (scalars[[paste0("E_abs_delta_D_",p,"_XX")]]*IDs_XX[[paste0("Phi_2_",p,"_XX")]] + (scalars[[paste0("delta_2_",p,"_XX")]] - scalars$delta_2_1_XX) * (IDs_XX[[paste0("abs_delta_D_",p,"_XX")]] - scalars[[paste0("E_abs_delta_D_",p,"_XX")]])) / scalars$E_abs_delta_D_sum_XX
+
+            IDs_XX$Phi_2_XX <- ifelse(is.na(IDs_XX[[paste0("Phi_2_",p,"_XX")]]), IDs_XX$Phi_2_XX, IDs_XX$Phi_2_XX + IDs_XX[[paste0("Phi_2_",p,"_XX")]])
         }
+        counter_XX <- counter_XX + 1
     }
-    View(IDs_XX)
 
     if (aoss_XX == 1) {
         n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_1_XX)))
@@ -169,6 +181,15 @@ did_continuous_main <- function(
         scalars$LB_1_1_XX <-  scalars$delta_1_1_XX - 1.96 *  scalars$sd_delta_1_1_XX
         scalars$UB_1_1_XX <-  scalars$delta_1_1_XX + 1.96 *  scalars$sd_delta_1_1_XX            
     }
+
+    if (waoss_XX == 1) {
+        n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_2_XX)))
+        scalars$mean_IF1 <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_2_XX, na.rm = TRUE))
+        scalars$sd_delta_2_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_2_XX, na.rm = TRUE)/ sqrt(n_obs))
+        scalars$LB_2_1_XX <-  scalars$delta_2_1_XX - 1.96 *  scalars$sd_delta_2_1_XX
+        scalars$UB_2_1_XX <-  scalars$delta_2_1_XX + 1.96 *  scalars$sd_delta_2_1_XX            
+    }
+
 
     # Returning the results #
 

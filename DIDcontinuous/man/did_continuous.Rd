@@ -7,7 +7,7 @@
 did_continuous(
   df,
   Y,
-  G,
+  ID,
   T,
   D,
   Z = NULL,
@@ -26,7 +26,7 @@ did_continuous(
 
 \item{Y}{Y}
 
-\item{G}{G}
+\item{ID}{ID}
 
 \item{T}{T}
 

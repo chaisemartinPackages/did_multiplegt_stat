@@ -4,7 +4,7 @@
 #' @description This program estimates the three estimators (aoss, waoss, iv-aoss) developped in de Chaisemartin, d'Haultfoeuille, Pasquier and Vazquez‐Bare,Difference-in-Differences Estimators for Treatments Continuously Distributed at Every Period (January 18, 2022). 
 #' @param df df
 #' @param Y Y
-#' @param G G
+#' @param ID ID
 #' @param T T
 #' @param D D
 #' @param Z Z
@@ -20,7 +20,7 @@
 did_continuous <- function(
     df,
     Y,
-    G,
+    ID,
     T,
     D,
     Z = NULL,
@@ -47,7 +47,7 @@ did_continuous <- function(
       }
   }
 
-  results <- did_continuous_main(df, Y, G, T, D, Z, estimator, estimation_method, order,
+  results <- did_continuous_main(df, Y, ID, T, D, Z, estimator, estimation_method, order,
   noextrapolation, placebo, weight, switchers, disaggregate)
 
   did_continuous <- list(args, results)
