@@ -170,7 +170,7 @@ did_continuous_pairwise <- function(
             model <- stata_logit(as.formula(paste("S0_XX",reg_pol_XX,sep="~")), df)
             df <- lpredict(df,"PS_0_D_1_XX", model, vars_pol_XX, prob = TRUE)
 
-            PS0_XX <- mean(df$PS_0_D_1_XX, na.rm = TRUE)
+            PS_0_XX <- mean(df$S0_XX, na.rm = TRUE)
         }
 
         ####################################################### AOSS ##########
@@ -253,7 +253,13 @@ did_continuous_pairwise <- function(
                     df <- lpredict(df,paste0("PS_1_",suffix,"_D_1_XX"),model, vars_pol_XX, prob = TRUE)
 
                     if (approach == "ps") {
-                        
+                        df[[paste0("delta_Y_P_",suffix,"_XX")]] <- df$delta_Y_XX * (df[[paste0("PS_1_",suffix,"_D_1_XX")]]/df$PS_0_D_1_XX) * (PS_0_XX / get(paste0("PS_",suffix,"1",pl,"_XX")))
+                        assign(paste0("mean_delta_Y_P_",suffix,"_XX"), 
+                        mean(df[[paste0("delta_Y_P_",suffix,"_XX")]][df$S_XX == 0], na.rm=TRUE))
+                        mean_delta_Y_XX <- mean(df$delta_Y_XX[df$Ster_XX == 1], na.rm = TRUE)
+                        mean_delta_D_XX <- mean(df$delta_D_XX[df$Ster_XX == 1], na.rm = TRUE)
+                        assign(paste0("delta_2_",suffix,"_",pairwise,pl,"_XX"), 
+                        (mean_delta_Y_XX - get(paste0("mean_delta_Y_P_",suffix,"_XX"))) / mean_delta_D_XX)
                     }
                 }                
             }
@@ -272,7 +278,8 @@ did_continuous_pairwise <- function(
                 get(paste0("W_Plus_",pairwise,"_XX"))*get(paste0("delta_2_Plus_",pairwise,pl,"_XX")) +
                 (1-get(paste0("W_Plus_",pairwise,"_XX")))*get(paste0("delta_2_Minus_",pairwise,pl,"_XX")))
             } else if (approach == "dr") {
-
+                sum_abs_delta_D_XX <- sum(df$abs_delta_D_XX, na.rm = TRUE)
+                assign(paste0("delta_2_",pairwise,pl,"_XX"), denom_dr_delta_2_XX / sum_abs_delta_D_XX)
             }
 
             # Computing the variance

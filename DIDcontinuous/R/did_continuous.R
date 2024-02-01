@@ -9,13 +9,14 @@
 #' @param D D
 #' @param Z Z
 #' @param estimator estimator
-#' @param estimation_method estimation_method
+#' @param estimation_method estimation_method Y
 #' @param order order Y
 #' @param noextrapolation noestrapolation
 #' @param placebo placebo
 #' @param weight weight Y
 #' @param switchers switchers Y
 #' @param disaggregate disaggregate Y
+#' @param aoss_vs_waoss aoss_vs_waoss Y
 #' @export
 did_continuous <- function(
     df,
@@ -31,7 +32,8 @@ did_continuous <- function(
     placebo = NULL,
     weight = NULL,
     switchers = NULL,
-    disaggregate = FALSE
+    disaggregate = FALSE,
+    aoss_vs_waoss = FALSE
 ) {
   args <- list()
   for (v in names(formals(did_continuous))) {
@@ -48,7 +50,7 @@ did_continuous <- function(
   }
 
   results <- did_continuous_main(df, Y, ID, T, D, Z, estimator, estimation_method, order,
-  noextrapolation, placebo, weight, switchers, disaggregate)
+  noextrapolation, placebo, weight, switchers, disaggregate, aoss_vs_waoss)
 
   did_continuous <- list(args, results)
   names(did_continuous) <- c("args", "results")

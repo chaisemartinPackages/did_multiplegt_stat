@@ -22,6 +22,15 @@ print.did_continuous <- function(x, ...) {
             cat("\n");
         }
     }
+
+    if (isTRUE(x$args$aoss_vs_waoss)) {
+            cat("\n");
+            cat(noquote(strrep("-", 70)));cat("\n");
+            cat(strrep(" ", 15));cat("Difference test: AOSS and WAOSS");cat("\n");
+            cat(noquote(strrep("-", 70)));cat("\n");
+            cat("H0: AOSS = WAOSS\n");
+            tab_print(x$results$aoss_vs_waoss)
+    }
 }
 
 mat_print <- function(mat, name) {
@@ -37,5 +46,15 @@ mat_print <- function(mat, name) {
         new_mat <- t(as.matrix(mat))
         rownames(new_mat) <- toupper(name)
         mat_print(new_mat) 
+    }
+}
+
+tab_print <- function(mat) {
+    if (inherits(mat,"matrix")) {
+        dis <- matrix(data = 0, nrow = nrow(mat), ncol = ncol(mat))
+        dis[,1:ncol(dis)] <- sprintf("%s", format(round(mat[,1:ncol(mat)], 5), big.mark=",", scientific=FALSE, trim=TRUE))
+        rownames(dis) <- rownames(mat)
+        colnames(dis) <- colnames(mat)
+        print(noquote(dis[, , drop = FALSE]))
     }
 }

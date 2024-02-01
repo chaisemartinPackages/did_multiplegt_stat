@@ -13,6 +13,7 @@
 #' @param weight weight
 #' @param switchers switchers
 #' @param disaggregate disaggregate
+#' @param aoss_vs_waoss aoss_vs_waoss
 #' @import dplyr
 #' @importFrom magrittr %>%
 #' @importFrom rlang := 
@@ -34,7 +35,8 @@ did_continuous_main <- function(
     placebo,
     weight,
     switchers,
-    disaggregate
+    disaggregate,
+    aoss_vs_waoss
 ) {
 
     suppressWarnings({
@@ -42,6 +44,15 @@ did_continuous_main <- function(
     aoss_XX <- NULL
     waoss_XX <- NULL
     iwaoss_XX <- NULL
+
+    # Patching the estimator option
+    for (v in c("aoss", "waoss", "iwaoss")) {
+        if (is.null(estimator)) {
+            assign(paste0(v,"_XX"), 1)
+        } else {
+            assign(paste0(v,"_XX"), as.numeric(v %in% estimator))
+        }
+    }
 
     # Layer 1: keep only variables of interest, as to speed up what follows
     df <- df[c(Y, ID, T, D, Z, weight)]
@@ -56,28 +67,6 @@ did_continuous_main <- function(
     }
     df <- subset(df, df$to_drop_XX == 0)
 
-    # Layer 2: balancing the panel and then keeping again only variables of interest
-    df$tsfilled_XX <- 0
-    df <- pdata.frame(df, index = c(ID, T)) 
-    df <- make.pbalanced(df, balance.type = "fill")
-    df$tsfilled_XX <- is.na(df$tsfilled_XX)
-    df <- df %>% group_by(.data[[T]]) %>% mutate(T_XX = cur_group_id())
-    df$weight_XX <- 1
-    if (!is.null(weight)) {
-        df$weight_XX <- df[[weight]]
-    }
-    df <- df[c(Y, ID, "T_XX", D, "weight_XX", "tsfilled_XX", Z)]
-    names(df) <- coln
-
-    # Patching the estimator option
-    for (v in c("aoss", "waoss", "iwaoss")) {
-        if (is.null(estimator)) {
-            assign(paste0(v,"_XX"), 1)
-        } else {
-            assign(paste0(v,"_XX"), as.numeric(v %in% estimator))
-        }
-    }
-
     # Error messages #
     if (!is.null(estimation_method)) {
         if (estimation_method == "ps" | estimation_method == "dr") {
@@ -90,6 +79,28 @@ did_continuous_main <- function(
     if (IV_req_XX == 0 & (iwaoss_XX == 1 | is.null(estimator))) {
         stop("To compute the iwaoss you must specify the IV variable.")
     }
+
+    if (iwaoss_XX == 1 & (waoss_XX + aoss_XX == 1)) {
+        stop("The estimation of AOSS or WAOSS cannot be combined with the estimation of IV-WAOSS (see helpfile).")
+    }
+
+    if (isTRUE(aoss_vs_waoss) & waoss_XX + aoss_XX != 2) {
+        stop("To test the equility between AOSS and WAOSS you must specify aoss and waoss in the estimator option.")
+    }
+
+
+    # Layer 2: balancing the panel and then keeping again only variables of interest
+    df$tsfilled_XX <- 0
+    df <- pdata.frame(df, index = c(ID, T)) 
+    df <- make.pbalanced(df, balance.type = "fill")
+    df$tsfilled_XX <- is.na(df$tsfilled_XX)
+    df <- df %>% group_by(.data[[T]]) %>% mutate(T_XX = cur_group_id())
+    df$weight_XX <- 1
+    if (!is.null(weight)) {
+        df$weight_XX <- df[[weight]]
+    }
+    df <- df[c(Y, ID, "T_XX", D, "weight_XX", "tsfilled_XX", Z)]
+    names(df) <- coln
 
     # Further useful steps prior to the estimation
     IDs_XX <- as.data.frame(unique(factor(df$ID_XX)))
@@ -200,6 +211,26 @@ did_continuous_main <- function(
         scalars$UB_2_1_XX <-  scalars$delta_2_1_XX + 1.96 *  scalars$sd_delta_2_1_XX            
     }
 
+    # AOSS vs WAOSS
+    if (isTRUE(aoss_vs_waoss)) {
+        diff_delta_1_2_XX <- scalars$delta_1_1_XX - scalars$delta_2_1_XX
+        IDs_XX$diff_Phi_1_2_XX <- IDs_XX$Phi_1_XX - IDs_XX$Phi_2_XX
+        sd_diff_delta_1_2_XX <- sd(IDs_XX$diff_Phi_1_2_XX, na.rm = TRUE)
+        t_diff_delta_1_2_XX <- diff_delta_1_2_XX * sqrt(nrow(IDs_XX)) / sd_diff_delta_1_2_XX
+        p_diff_delta_1_2_XX <- 2 * (1 - pnorm(abs(t_diff_delta_1_2_XX)))
+        LB_diff_delta_1_2_XX <- diff_delta_1_2_XX - 1.96 * sd_diff_delta_1_2_XX / sqrt(nrow(IDs_XX))
+        UB_diff_delta_1_2_XX <- diff_delta_1_2_XX + 1.96 * sd_diff_delta_1_2_XX / sqrt(nrow(IDs_XX))
+
+        t_mat <- matrix(0, nrow = 1, ncol = 6)
+        t_i <- 1
+        for (v in c("", "sd_", "t_", "p_", "LB_", "UB_")) {
+            t_mat[1,t_i] <- get(paste0(v,"diff_delta_1_2_XX"))
+            t_i <- t_i + 1
+        }
+        rownames(t_mat) <- c(" ")
+        colnames(t_mat) <- c("Diff.", "Sd", "t stat.", "pval.", "LB CI", "UB CI")
+    }
+
 
     # Returning the results #
 
@@ -234,6 +265,10 @@ did_continuous_main <- function(
     colnames(ret_mat_XX) <- c("Estimate", "SE", "LB CI", "UB CI", "Switchers", "Stayers")
 
     out <- list(table = ret_mat_XX, pairs = max_T_XX)
+    if (isTRUE(aoss_vs_waoss)) {
+        out <- c(out, list(t_mat))
+        names(out)[length(out)] <- "aoss_vs_waoss"
+    }
     })
     return(out)
 }
