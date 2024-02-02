@@ -20,6 +20,19 @@ print.did_continuous <- function(x, ...) {
             mat_sel <- x$results$table[l_bound:u_bound, ]
             mat_print(mat_sel, t)
             cat("\n");
+
+            if (isTRUE(x$args$placebo)) {
+                cat("\n");
+                cat(noquote(strrep("-", 70)));cat("\n");
+                cat(strrep(" ", 15));cat(sprintf("Estimation of %s(s) - Placebo", toupper(t)));cat("\n");
+                cat(noquote(strrep("-", 70)));cat("\n");
+
+                l_bound <- 1 + estims[[t]] * x$results$pairs 
+                u_bound <- l_bound + isTRUE(x$args$disaggregate) * (x$results$pairs - 1)
+                mat_sel_placebo <- x$results$table_placebo[l_bound:u_bound, ]
+                mat_print(mat_sel_placebo, t)
+                cat("\n");
+            }
         }
     }
 

@@ -165,32 +165,91 @@ did_continuous_main <- function(
         }
     }
 
+    if (isTRUE(placebo)) {
+        for (p in 3:max_T_XX) {
+
+            est_out <- did_continuous_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", T = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = TRUE)
+
+            if (!is.null(est_out$to_add)) {
+                IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX", all = TRUE) 
+            }
+            IDs_XX <- IDs_XX[order(IDs_XX$ID_XX), ]
+            scalars <- est_out$scalars;
+            est_out <- NULL;
+
+            if (aoss_XX == 1) {
+                scalars$delta_1_1_pl_XX <- scalars$delta_1_1_pl_XX + 
+                        scalars[[paste0("P_",p,"_pl_XX")]] * scalars[[paste0("delta_1_",p,"_pl_XX")]]
+                
+                if (scalars[[paste0("N_Stayers_1_",p,"_pl_XX")]] > 1)  {
+                    scalars$N_Switchers_1_1_pl_XX <- scalars$N_Switchers_1_1_pl_XX + scalars[[paste0("N_Switchers_1_",p,"_pl_XX")]]
+                }
+                if (scalars[[paste0("N_Switchers_1_",p,"_pl_XX")]] > 0)  {
+                    scalars$N_Stayers_1_1_pl_XX <- scalars$N_Stayers_1_1_pl_XX + scalars[[paste0("N_Stayers_1_",p,"_pl_XX")]]
+                }
+            }
+
+            if (waoss_XX == 1) {
+                scalars$delta_2_1_pl_XX <- scalars$delta_2_1_pl_XX + 
+                        scalars[[paste0("E_abs_delta_D_",p,"_pl_XX")]] * scalars[[paste0("delta_2_",p,"_pl_XX")]]
+                
+                if (scalars[[paste0("N_Stayers_2_",p,"_pl_XX")]] > 1)  {
+                    scalars$N_Switchers_2_1_pl_XX <- scalars$N_Switchers_2_1_pl_XX + scalars[[paste0("N_Switchers_2_",p,"_pl_XX")]]
+                }
+                if (scalars[[paste0("N_Switchers_2_",p,"_pl_XX")]] > 0)  {
+                    scalars$N_Stayers_2_1_pl_XX <- scalars$N_Stayers_2_1_pl_XX + scalars[[paste0("N_Stayers_2_",p,"_pl_XX")]]
+                }
+            }
+        }
+    }
+
     # Compute the aggregated estimators
     if (aoss_XX == 1) {
         scalars$delta_1_1_XX <- scalars$delta_1_1_XX / scalars$PS_sum_XX
+        if (isTRUE(placebo)) {
+            scalars$delta_1_1_pl_XX <- scalars$delta_1_1_pl_XX / scalars$PS_sum_pl_XX
+        }
     }
     if (waoss_XX == 1) {
         scalars$delta_2_1_XX <- scalars$delta_2_1_XX / scalars$E_abs_delta_D_sum_XX
+        if (isTRUE(placebo)) {
+            scalars$delta_2_1_pl_XX <- scalars$delta_2_1_pl_XX / scalars$E_abs_delta_D_sum_pl_XX
+        }
     }
 
 	# Compute the influence functions
-
-    IDs_XX$Phi_1_XX <- 0
-    IDs_XX$Phi_2_XX <- 0
+    for (i in 1:3) {
+        for (pl in c("","_pl")) {
+            IDs_XX[[paste0("Phi_",i,pl,"_XX")]] <- 0
+        }
+    }
     counter_XX <- 0
     for (p in 2:max_T_XX) {
-        if (scalars[[paste0("non_missing_",p,"_XX")]] == 0) {
-            next
-        }
-        if (aoss_XX == 1) {
+        if (aoss_XX == 1 & scalars[[paste0("non_missing_",p,"_XX")]] == 1) {
             IDs_XX[[paste0("Phi_1_",p,"_XX")]] <- (scalars[[paste0("P_",p,"_XX")]]*IDs_XX[[paste0("Phi_1_",p,"_XX")]] + (scalars[[paste0("delta_1_",p,"_XX")]] - scalars$delta_1_1_XX) * (IDs_XX[[paste0("S_",p,"_XX")]] - scalars[[paste0("P_",p,"_XX")]])) / scalars$PS_sum_XX
 
             IDs_XX$Phi_1_XX <- ifelse(is.na(IDs_XX[[paste0("Phi_1_",p,"_XX")]]), IDs_XX$Phi_1_XX, IDs_XX$Phi_1_XX + IDs_XX[[paste0("Phi_1_",p,"_XX")]])
+
+            if (isTRUE(placebo) & p > 2) {
+             if (scalars[[paste0("non_missing_",p,"_pl_XX")]] == 1) {
+                IDs_XX[[paste0("Phi_1_",p,"_pl_XX")]] <- (scalars[[paste0("P_",p,"_pl_XX")]]*IDs_XX[[paste0("Phi_1_",p,"_pl_XX")]] + (scalars[[paste0("delta_1_",p,"_pl_XX")]] - scalars$delta_1_1_pl_XX) * (IDs_XX[[paste0("S_",p,"_pl_XX")]] - scalars[[paste0("P_",p,"_pl_XX")]])) / scalars$PS_sum_pl_XX
+
+                IDs_XX$Phi_1_pl_XX <- ifelse(is.na(IDs_XX[[paste0("Phi_1_",p,"_pl_XX")]]), IDs_XX$Phi_1_pl_XX, IDs_XX$Phi_1_pl_XX + IDs_XX[[paste0("Phi_1_",p,"_pl_XX")]])
+             }
+            }
         }
-        if (waoss_XX == 1) {
+        if (waoss_XX == 1 & scalars[[paste0("non_missing_",p,"_XX")]] == 1) {
             IDs_XX[[paste0("Phi_2_",p,"_XX")]] <- (scalars[[paste0("E_abs_delta_D_",p,"_XX")]]*IDs_XX[[paste0("Phi_2_",p,"_XX")]] + (scalars[[paste0("delta_2_",p,"_XX")]] - scalars$delta_2_1_XX) * (IDs_XX[[paste0("abs_delta_D_",p,"_XX")]] - scalars[[paste0("E_abs_delta_D_",p,"_XX")]])) / scalars$E_abs_delta_D_sum_XX
 
             IDs_XX$Phi_2_XX <- ifelse(is.na(IDs_XX[[paste0("Phi_2_",p,"_XX")]]), IDs_XX$Phi_2_XX, IDs_XX$Phi_2_XX + IDs_XX[[paste0("Phi_2_",p,"_XX")]])
+
+            if (isTRUE(placebo) & p > 2) {
+            if (scalars[[paste0("non_missing_",p,"_pl_XX")]] == 1) {
+                IDs_XX[[paste0("Phi_2_",p,"_pl_XX")]] <- (scalars[[paste0("E_abs_delta_D_",p,"_pl_XX")]]*IDs_XX[[paste0("Phi_2_",p,"_pl_XX")]] + (scalars[[paste0("delta_2_",p,"_pl_XX")]] - scalars$delta_2_1_pl_XX) * (IDs_XX[[paste0("abs_delta_D_",p,"_pl_XX")]] - scalars[[paste0("E_abs_delta_D_",p,"_pl_XX")]])) / scalars$E_abs_delta_D_sum_pl_XX
+
+                IDs_XX$Phi_2_pl_XX <- ifelse(is.na(IDs_XX[[paste0("Phi_2_",p,"_pl_XX")]]), IDs_XX$Phi_2_pl_XX, IDs_XX$Phi_2_pl_XX + IDs_XX[[paste0("Phi_2_",p,"_pl_XX")]])
+            }
+            }
         }
         counter_XX <- counter_XX + 1
     }
@@ -199,16 +258,32 @@ did_continuous_main <- function(
         n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_1_XX)))
         scalars$mean_IF1 <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_1_XX, na.rm = TRUE))
         scalars$sd_delta_1_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_1_XX, na.rm = TRUE)/ sqrt(n_obs))
-        scalars$LB_1_1_XX <-  scalars$delta_1_1_XX - 1.96 *  scalars$sd_delta_1_1_XX
-        scalars$UB_1_1_XX <-  scalars$delta_1_1_XX + 1.96 *  scalars$sd_delta_1_1_XX            
+        scalars$LB_1_1_XX <-  scalars$delta_1_1_XX - 1.96 * scalars$sd_delta_1_1_XX
+        scalars$UB_1_1_XX <-  scalars$delta_1_1_XX + 1.96 * scalars$sd_delta_1_1_XX            
+
+        if (isTRUE(placebo)) {
+            n_obs_pl <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_1_pl_XX)))
+            scalars$mean_IF1_pl <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_1_pl_XX, na.rm = TRUE))
+            scalars$sd_delta_1_1_pl_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_1_pl_XX, na.rm = TRUE)/ sqrt(n_obs_pl))
+            scalars$LB_1_1_pl_XX <-  scalars$delta_1_1_pl_XX - 1.96 * scalars$sd_delta_1_1_pl_XX
+            scalars$UB_1_1_pl_XX <-  scalars$delta_1_1_pl_XX + 1.96 * scalars$sd_delta_1_1_pl_XX            
+        }
     }
 
     if (waoss_XX == 1) {
         n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_2_XX)))
         scalars$mean_IF1 <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_2_XX, na.rm = TRUE))
         scalars$sd_delta_2_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_2_XX, na.rm = TRUE)/ sqrt(n_obs))
-        scalars$LB_2_1_XX <-  scalars$delta_2_1_XX - 1.96 *  scalars$sd_delta_2_1_XX
-        scalars$UB_2_1_XX <-  scalars$delta_2_1_XX + 1.96 *  scalars$sd_delta_2_1_XX            
+        scalars$LB_2_1_XX <-  scalars$delta_2_1_XX - 1.96 * scalars$sd_delta_2_1_XX
+        scalars$UB_2_1_XX <-  scalars$delta_2_1_XX + 1.96 * scalars$sd_delta_2_1_XX            
+
+        if (isTRUE(placebo)) {
+            n_obs_pl <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_2_pl_XX)))
+            scalars$mean_IF1_pl <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_2_pl_XX, na.rm = TRUE))
+            scalars$sd_delta_2_1_pl_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_2_pl_XX, na.rm = TRUE)/ sqrt(n_obs_pl))
+            scalars$LB_2_1_pl_XX <-  scalars$delta_2_1_pl_XX - 1.96 * scalars$sd_delta_2_1_pl_XX
+            scalars$UB_2_1_pl_XX <-  scalars$delta_2_1_pl_XX + 1.96 * scalars$sd_delta_2_1_pl_XX            
+        }
     }
 
     # AOSS vs WAOSS
@@ -238,6 +313,9 @@ did_continuous_main <- function(
     estims <- c("aoss", "waoss", "iwaoss")
 
     ret_mat_XX <- matrix(NA, nrow = 3*max_T_XX, ncol = 6)
+    if (isTRUE(placebo)) {
+        ret_mat_pl_XX <- matrix(NA, nrow = 3*max_T_XX, ncol = 6)
+    }
     rown <- c()
     for (j in 1:length(estims)) {
         for (p in 1:max_T_XX) {
@@ -252,6 +330,17 @@ did_continuous_main <- function(
                 ret_mat_XX[(j-1)*max_T_XX + p, 5] <- scalars[[paste0("N_Switchers_",j,"_",p,"_XX")]]
                 ret_mat_XX[(j-1)*max_T_XX + p, 6] <- scalars[[paste0("N_Stayers_",j,"_",p,"_XX")]]   
 
+                if (isTRUE(placebo) & p != 2) {
+                    if (((is.na(scalars[[paste0("N_Stayers_",j,"_",p,"_pl_XX")]]) & is.na(scalars[[paste0("N_Switchers_",j,"_",p,"_pl_XX")]])) | scalars[[paste0("N_Stayers_",j,"_",p,"_pl_XX")]] < 2 | scalars[[paste0("N_Switchers_",j,"_",p,"_pl_XX")]] == 0) & p != 1) {
+                        scalars[[paste0("delta_",j,"_",p,"_pl_XX")]] <- NA
+                    }
+                    ret_mat_pl_XX[(j-1)*max_T_XX + p, 1] <- scalars[[paste0("delta_",j,"_",p,"_pl_XX")]]
+                    ret_mat_pl_XX[(j-1)*max_T_XX + p, 2] <- scalars[[paste0("sd_delta_",j,"_",p,"_pl_XX")]]
+                    ret_mat_pl_XX[(j-1)*max_T_XX + p, 3] <- scalars[[paste0("LB_",j,"_",p,"_pl_XX")]]
+                    ret_mat_pl_XX[(j-1)*max_T_XX + p, 4] <- scalars[[paste0("UB_",j,"_",p,"_pl_XX")]]
+                    ret_mat_pl_XX[(j-1)*max_T_XX + p, 5] <- scalars[[paste0("N_Switchers_",j,"_",p,"_pl_XX")]]
+                    ret_mat_pl_XX[(j-1)*max_T_XX + p, 6] <- scalars[[paste0("N_Stayers_",j,"_",p,"_pl_XX")]]   
+                }
             }
 
             if (p == 1) {
@@ -265,6 +354,12 @@ did_continuous_main <- function(
     colnames(ret_mat_XX) <- c("Estimate", "SE", "LB CI", "UB CI", "Switchers", "Stayers")
 
     out <- list(table = ret_mat_XX, pairs = max_T_XX)
+    if (isTRUE(placebo)) {
+        rownames(ret_mat_pl_XX) <- rown
+        colnames(ret_mat_pl_XX) <- c("Estimate", "SE", "LB CI", "UB CI", "Switchers", "Stayers")
+        out <- c(out, list(ret_mat_pl_XX))
+        names(out)[length(out)] <- "table_placebo"
+    }
     if (isTRUE(aoss_vs_waoss)) {
         out <- c(out, list(t_mat))
         names(out)[length(out)] <- "aoss_vs_waoss"
