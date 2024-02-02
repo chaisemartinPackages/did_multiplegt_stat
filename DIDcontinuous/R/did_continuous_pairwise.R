@@ -117,8 +117,29 @@ did_continuous_pairwise <- function(
     df <- subset(df, df$T_XX != max(df$T_XX, na.rm = TRUE))
 
     df$D1_XX <- df$D_XX; df$D_XX <- NULL;
-    if (isTRUE(noextrapolation) & (aoss == 1 | waoss == 1)) {
-
+    if (isTRUE(noextrapolation)) {
+        if (aoss == 1 | waoss == 1) {
+            assign(paste0("max_D1",pl,"_XX"), max(df$D1_XX[df$S_XX == 0], na.rm = TRUE))
+            assign(paste0("min_D1",pl,"_XX"), min(df$D1_XX[df$S_XX == 0], na.rm = TRUE))
+            df$outofBounds_XX <- (df$D1_XX < get(paste0("min_D1",pl,"_XX")) |
+                    df$D1_XX > get(paste0("max_D1",pl,"_XX"))) 
+            assign(paste0("N_drop_",pairwise,pl,"_XX"), sum(df$outofBounds_XX, na.rm = TRUE))
+            df <- subset(df, df$outofBounds_XX != 1)
+            if (get(paste0("N_drop_",pairwise,pl,"_XX")) > 0) {
+                cat(sprintf("No extrapolation: %.0f switchers dropped for t = %.0f.\n", get(paste0("N_drop_",pairwise,pl,"_XX")), pairwise))
+            }           
+        }
+        if (iwaoss == 1) {
+            assign(paste0("max_Z1",pl,"_XX"), max(df$Z1_XX[df$SI_XX == 0], na.rm = TRUE))
+            assign(paste0("min_Z1",pl,"_XX"), min(df$Z1_XX[df$SI_XX == 0], na.rm = TRUE))
+            df$outofBoundsIV_XX <- (df$Z1_XX < get(paste0("min_Z1",pl,"_XX")) |
+                    df$Z1_XX > get(paste0("max_Z1",pl,"_XX"))) 
+            assign(paste0("N_IVdrop_",pairwise,pl,"_XX"), sum(df$outofBoundsIV_XX, na.rm = TRUE))
+            df <- subset(df, df$outofBoundsIV_XX != 1)
+            if (get(paste0("N_IVdrop_",pairwise,pl,"_XX")) > 0) {
+                cat(sprintf("No extrapolation on IV: %.0f switchers dropped for t = %.0f.\n", get(paste0("N_IVdrop_",pairwise,pl,"_XX")), pairwise))
+            }           
+        }
     }
     W_XX <- sum(df$weight_XX, na.rm = TRUE)
     N_XX <- nrow(df)
