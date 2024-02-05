@@ -270,6 +270,8 @@ did_continuous_pairwise <- function(
 
             df[[paste0("Phi_1_",pairwise,pl,"_XX")]] <- (df[[paste0("Phi_1_",pairwise,pl,"_XX")]] - (get(paste0("delta_1_", pairwise,pl,"_XX")) * df$S_bis_XX)) / get(paste0("ES",pl,"_XX"))
 
+            cat(pairwise," ", get(paste0("delta_1_", pairwise,pl,"_XX")), get(paste0("ES",pl,"_XX")), "\n")
+
             assign(paste0("mean_IF_1_",pairwise,pl),
                     mean(df[[paste0("Phi_1_",pairwise,pl,"_XX")]], na.rm = TRUE))
             assign(paste0("sd_delta_1_",pairwise,pl,"_XX"),
