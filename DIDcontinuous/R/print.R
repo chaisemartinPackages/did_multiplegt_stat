@@ -8,8 +8,14 @@ print.did_continuous <- function(x, ...) {
     estims <- list(0, 1, 2)
     names(estims) <- c("aoss", "waoss", "iwaoss") 
 
+    if (is.null(x$args$estimator)) {
+        estim_list <- "aoss"
+    } else {
+        estim_list <- x$args$estimator
+    }
+
     for (t in names(estims)){
-        if (t %in% x$args$estimator) {
+        if (t %in% estim_list) {
             cat("\n");
             cat(noquote(strrep("-", 70)));cat("\n");
             cat(strrep(" ", 20));cat(sprintf("Estimation of %s(s)", toupper(t)));cat("\n");

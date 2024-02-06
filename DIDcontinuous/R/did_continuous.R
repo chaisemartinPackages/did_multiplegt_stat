@@ -49,6 +49,31 @@ did_continuous <- function(
       }
   }
 
+  if (is.null(estimation_method)) {
+    estimation_method <- "ra"
+  }
+
+  if (!(estimation_method %in% c("ra", "dr", "ps"))) {
+      stop("Syntax error in estimation_method option.")
+  }
+  
+  if (estimation_method %in% c("dr","ps") & sum(estimator == "aoss")) {
+    stop("The propensity score-based approach is only available for the waoss and the iwaoss.")
+  }
+
+  if ("woass" %in% estimator & sum(c("aoss", "waoss") %in% estimator)) {
+    stop("The estimation of AOSS or WAOSS cannot be combined with the estimation of IV-WAOSS (see helpfile).")
+  }
+
+  if (isTRUE(aoss_vs_waoss) & sum(c("aoss","waoss") %in% estimator) != 2) {
+	  stop("To test the equility between AOSS and WAOSS you must specify aoss and waoss in the estimator option.")
+  }
+
+  if ("iwaoss" %in% estimator & is.null(Z)) {
+    stop("To compute the iwaoss you must specify the IV variable.")
+  }
+
+
   results <- did_continuous_main(df, Y, ID, T, D, Z, estimator, estimation_method, order,
   noextrapolation, placebo, weight, switchers, disaggregate, aoss_vs_waoss)
 
