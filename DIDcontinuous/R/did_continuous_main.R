@@ -19,7 +19,7 @@
 #' @importFrom rlang := 
 #' @importFrom rlang .data
 #' @importFrom plm pdata.frame make.pbalanced
-#' @importFrom stats sd
+#' @importFrom stats sd pnorm
 #' @noRd
 did_continuous_main <- function(
     df,

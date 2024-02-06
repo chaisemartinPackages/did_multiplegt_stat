@@ -47,6 +47,7 @@ did_continuous_pairwise <- function(
 ) {
     # Preallocation of scalars
     IV_req_XX <- NULL
+    PS_0_XX <- NULL
 
     for (v in names(scalars)) {
         assign(v, scalars[[v]])
@@ -369,7 +370,7 @@ did_continuous_pairwise <- function(
                 } 
 
                 assign(paste0("nb_Switchers_",suffix,pl,"_XX"), nrow(subset(df, df$Ster_XX ==1)))
-                assign(paste0("PS_",suffix,1,pl,"_XX"), get(paste0("nb_Switchers_",suffix,pl,"_XX"))/get(paste0("N",pl,"_XX")))
+                assign(paste0("PS_",suffix,"1",pl,"_XX"), get(paste0("nb_Switchers_",suffix,pl,"_XX"))/get(paste0("N",pl,"_XX")))
                 if (get(paste0("PS_",suffix,"1",pl,"_XX")) == 0) {
                     # The regression is performed iff there is at least one switcher up/down.
                     assign(paste0("delta_2_",suffix,"_",pairwise,pl,"_XX"), 0)
@@ -487,9 +488,6 @@ did_continuous_pairwise <- function(
                         mean(df$prod_sgn_delta_Z_delta_D_XX, na.rm = TRUE))
                 assign(paste0("denom_delta_IV_",pairwise,pl,"_XX"), 
                 get(paste0("mean_sgn_delta_Z_delta_D",pl,"_XX")) - get(paste0("mean_delta_D_P_IV",pl,"_XX")))
-                if (pairwise == 2) {
-                    View(df)
-                }
             }
 
             if (estimation_method == "dr") {

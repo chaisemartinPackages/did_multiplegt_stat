@@ -18,7 +18,8 @@ did_continuous(
   placebo = NULL,
   weight = NULL,
   switchers = NULL,
-  disaggregate = FALSE
+  disaggregate = FALSE,
+  aoss_vs_waoss = FALSE
 )
 }
 \arguments{
@@ -36,7 +37,7 @@ did_continuous(
 
 \item{estimator}{estimator}
 
-\item{estimation_method}{estimation_method}
+\item{estimation_method}{estimation_method Y}
 
 \item{order}{order Y}
 
@@ -49,6 +50,8 @@ did_continuous(
 \item{switchers}{switchers Y}
 
 \item{disaggregate}{disaggregate Y}
+
+\item{aoss_vs_waoss}{aoss_vs_waoss Y}
 }
 \description{
 This program estimates the three estimators (aoss, waoss, iv-aoss) developped in de Chaisemartin, d'Haultfoeuille, Pasquier and Vazquez‐Bare,Difference-in-Differences Estimators for Treatments Continuously Distributed at Every Period (January 18, 2022).
