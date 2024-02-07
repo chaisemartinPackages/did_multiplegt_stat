@@ -1,22 +1,34 @@
 #' Main interface for did_continuous
 #' @importFrom haven read_dta
 #' @md
-#' @description This program estimates the three estimators (aoss, waoss, iv-aoss) developped in de Chaisemartin, d'Haultfoeuille, Pasquier and Vazquez‐Bare,Difference-in-Differences Estimators for Treatments Continuously Distributed at Every Period (January 18, 2022). 
-#' @param df df
-#' @param Y Y
-#' @param ID ID
-#' @param T T
-#' @param D D
-#' @param Z Z
-#' @param estimator estimator
-#' @param estimation_method estimation_method Y
-#' @param order order Y
-#' @param noextrapolation noestrapolation
-#' @param placebo placebo
-#' @param weight weight Y
-#' @param switchers switchers Y
-#' @param disaggregate disaggregate Y
-#' @param aoss_vs_waoss aoss_vs_waoss Y
+#' @description Estimation of Difference-in-Difference (DID) Estimators for Treatments and Instruments Continuously Distributed at Every Period with Stayers.
+#' @param df (data.frame) A dataframe object.
+#' @param Y (char) Outcome variable.
+#' @param ID (char) Identifier of the unit of analysis.
+#' @param T (char) Time variable. The command assumes that the time variable is evenly spaced (e.g.: the panel is at the yearly level, and no year is missing for all groups). When it is not (e.g.: the panel is at the yearly level, but three consecutive years are missing for all groups), the command can still be used. For example, if the year n is missing, the command does not comuptes the DID estimators of the pairs of years (n-1,n),(n,n+1), and (n-1,n+1).
+#' @param D (char) Treatment variable.
+#' @param Z (char) Instrumental variable. This option is only required when the IV-related estimator (the so-called iwaoss) is requested.
+#' @param estimator (char vector) Estimator(s) to be computed. The allowed arguments are: (1) "aoss", i.e the Average Of Switchers’ Slopes which is the average, across switchers, of the effect on their period-(t) outcome of moving their treatment from its period-(t-1) to its period-(t) value, scaled by the difference between these two values. (2) "waoss" which corresponds to a weighted version of "aoss" where slopes receive a weight proportional to switchers’ absolute treatment change from period-(t-1) to period-(t). (3) "iwaoss" which generalizes "waoss" to the instrumental-variable case, and is equal to the reduced-form "waoss" effect of the instrument on the outcome, divided by the first-stage "waoss" effect of the instrument on the treatment. If this option is not specified: by default, the command estimates both "aoss" and "waoss" if the instrumental-variable Z is not specified, or only iwaoss otherwise. 
+#' @param estimation_method (char) This option allows to specify which estimation method to use when estimating the waoss or the iwaoss, as described in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022). It takes as argument "ra" (regression adjustment-based approach), or "ps" (propensity-based approach), or "dr" (double robust-based approach).
+#' @param order (int) This option takes as argument the order of the polynomial series used to estimate the counterfactual of the variation of the outcome from period t-1 to period t  for the switchers, namely $E(Y_t - Y_t-1 |D_{t-1}, S_t = 0)$ or $E(Y_t - Y_t-1 |Z_{t-1}, SI_t = 0)$. 
+#' @param switchers (char) The allowed inputs for this option are "up" and "down". If the argument "up" is specified, the command estimates the effects on switchers-up, i.e, units whose treatments (or instruments) increase from period t-1 to period t. If the argument "down" is given, the command estimates the effects on switchers-down, i.e., units whose treaments (or instruments) decrease from period t-1 to period t.
+#' @param disaggregate (logical) If this potion is specified, the command displays the estimands of the effects for each two consecutive periods as well as the aggregated estimands. Otherwise, the command only outputs the aggregated results.
+#' @param placebo (logical) This option allows to estimate the placebos versions of the estimators requested in the estimator option. If this option is combined with the option disaggregate, the command also displays the placebo version of each two consecutive time-periods.
+#' @param weight (char) This option allows the user to specify weights for the three estimation methods.
+#' @param noextrapolation (logical) This option forces the command to use only switchers whose period-(t-1) treatments (or instruments) are between the minimum and the maximum values of the period-(t-1) treatments (or instruments) of the stayers. This a less restrictive common support assumption.
+#' @param aoss_vs_waoss (logical) As highlighted in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022), the aoss and the waoss are equal if and only if switchers’ slopes are uncorrelated with $|D_t - D_{t-1}|$. When this option is specified, the command performs and displays the test of the equality between the aoss and  the waoss. Note that the use of this option requires specifying in the estimator option both aoss and waoss.
+#' @section Overview:
+#' did_continuous estimates difference-in-differences estimators for continuous treatments with heterogeneous effects, assuming that between consecutive periods, the treatment of some units, the switchers, changes, while the treatment of other units does not change. It computes the three estimators (including an IV-related estimator) introduced in [de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022)](https://ssrn.com/abstract=4011782). The estimators computed by the command assume static effects and rely on a parallel trends assumptions.
+#' 
+#' The command can be used with more than two periods. If the number of periods is greater than two, the command estimates, for each pair of two successive periods, the requested DID estimators (aoss, waoss or iwaoss) as well as their aggregated versions defined as a weighted average of the estimators of the different pairs of periods. The command can also be used when the panel data is unbalaced or presents gaps.
+#' 
+#' The command also computes, when the number of periods is larger than two, the placebos versions of the different estimators  for each two successive time periods, and the aggregated versions. Thus, allowing to test for parallel trends assumptions under which the proposed estimators computed by did_continuous are unbiased.
+#' 
+#' This command can also be used when the treatment is discrete. In particular, when the treatment is discrete and takes a large number of values and the number of periods is equal to two, did_continuous can be used as an alternative to the did_multiplegt_dyn command, which may not be applicable in such a design since it requires finding switchers and controls with the same period-one treatment. When the number of periods is larger than two, the two commands estimate two different models (static effects for did_continuous, and dynamic effects for did_multiplegt_dyn).
+#' @section FAQ:
+#' TBD
+#' @section References:
+#' de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022). [Difference-in-Differences for Continuous Treatments and Instruments with Stayers](https://ssrn.com/abstract=4011782)
 #' @export
 did_continuous <- function(
     df,
@@ -42,6 +54,12 @@ did_continuous <- function(
     }
   }
 
+  if (is.null(estimator) & is.null(Z)) {
+      estimator <-  c("aoss", "waoss")
+  } else if (is.null(estimator) & !is.null(Z) ) {
+      estimator <- "iwaoss"
+  }
+
   # General Syntax Check
   if (!is.null(switchers)) {
       if (!(switchers %in% c("up", "down"))) {
@@ -56,12 +74,13 @@ did_continuous <- function(
   if (!(estimation_method %in% c("ra", "dr", "ps"))) {
       stop("Syntax error in estimation_method option.")
   }
-  
-  if (estimation_method %in% c("dr","ps") & sum(estimator == "aoss")) {
-    stop("The propensity score-based approach is only available for the waoss and the iwaoss.")
+  if (length(estimator) == 1) {
+    if (estimation_method %in% c("dr","ps")  & estimator == "aoss") {
+      stop("The propensity score-based approach is only available for the waoss and the iwaoss.")
+    }
   }
 
-  if ("woass" %in% estimator & sum(c("aoss", "waoss") %in% estimator)) {
+  if ("iwaoss" %in% estimator & sum(c("aoss", "waoss") %in% estimator)) {
     stop("The estimation of AOSS or WAOSS cannot be combined with the estimation of IV-WAOSS (see helpfile).")
   }
 

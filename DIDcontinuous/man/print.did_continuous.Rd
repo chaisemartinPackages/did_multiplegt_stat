@@ -2,7 +2,7 @@
 % Please edit documentation in R/print.R
 \name{print.did_continuous}
 \alias{print.did_continuous}
-\title{A print method for did_multiplegt_dyn}
+\title{print method for did_continuous}
 \usage{
 \method{print}{did_continuous}(x, ...)
 }

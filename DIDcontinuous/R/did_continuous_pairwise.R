@@ -214,8 +214,8 @@ did_continuous_pairwise <- function(
                     df$D1_XX > get(paste0("max_D1",pl,"_XX"))) 
             assign(paste0("N_drop_",pairwise,pl,"_XX"), sum(df$outofBounds_XX, na.rm = TRUE))
             df <- subset(df, df$outofBounds_XX != 1)
-            if (get(paste0("N_drop_",pairwise,pl,"_XX")) > 0) {
-                cat(sprintf("No extrapolation: %.0f switchers dropped for t = %.0f.\n", get(paste0("N_drop_",pairwise,pl,"_XX")), pairwise))
+            if (get(paste0("N_drop_",pairwise,pl,"_XX")) > 0 & isFALSE(placebo)) {
+                N_drop_total_XX <- N_drop_total_XX + get(paste0("N_drop_",pairwise,pl,"_XX"))
             }           
         }
         if (iwaoss == 1) {
@@ -225,8 +225,8 @@ did_continuous_pairwise <- function(
                     df$Z1_XX > get(paste0("max_Z1",pl,"_XX"))) 
             assign(paste0("N_IVdrop_",pairwise,pl,"_XX"), sum(df$outofBoundsIV_XX, na.rm = TRUE))
             df <- subset(df, df$outofBoundsIV_XX != 1)
-            if (get(paste0("N_IVdrop_",pairwise,pl,"_XX")) > 0) {
-                cat(sprintf("No extrapolation on IV: %.0f switchers dropped for t = %.0f.\n", get(paste0("N_IVdrop_",pairwise,pl,"_XX")), pairwise))
+            if (get(paste0("N_IVdrop_",pairwise,pl,"_XX")) > 0 & isFALSE(placebo)) {
+                N_drop_total_IV_XX <- N_drop_total_IV_XX + get(paste0("N_IVdrop_",pairwise,pl,"_XX"))
             }           
         }
     }

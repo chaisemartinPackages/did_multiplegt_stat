@@ -47,11 +47,7 @@ did_continuous_main <- function(
 
     # Patching the estimator option
     for (v in c("aoss", "waoss", "iwaoss")) {
-        if (is.null(estimator)) {
-            assign(paste0(v,"_XX"), as.numeric(v == "aoss"))
-        } else {
-            assign(paste0(v,"_XX"), as.numeric(v %in% estimator))
-        }
+        assign(paste0(v,"_XX"), as.numeric(v %in% estimator))
     }
 
     # Layer 1: keep only variables of interest, as to speed up what follows
@@ -106,6 +102,7 @@ did_continuous_main <- function(
         N_Switchers_3_1_XX = 0,
         N_Stayers_3_1_XX = 0,
         denom_delta_IV_sum_XX = 0,
+        N_drop_total_XX = 0,
         IV_req_XX = IV_req_XX
     )
     if (isTRUE(placebo)) {
@@ -122,6 +119,7 @@ did_continuous_main <- function(
         N_Stayers_2_1_pl_XX = 0,
         N_Switchers_3_1_pl_XX = 0,
         N_Stayers_3_1_pl_XX = 0,
+        N_drop_total_IV_XX = 0,
         denom_delta_IV_sum_pl_XX = 0)
     }
 
@@ -362,6 +360,14 @@ did_continuous_main <- function(
 
 
     # Returning the results #
+    if (isTRUE(noextrapolation)) {
+        if (aoss_XX == 1 | waoss_XX == 1) {
+            cat(sprintf("No extrapolation: %.0f switchers dropped.\n", scalars$N_drop_total_XX))
+        } else if (iwaoss_XX == 1) {
+            cat(sprintf("No extrapolation on IV: %.0f switchers dropped.\n", 
+            scalars$N_drop_total_IV_XX))
+        }
+    }
 
     IDs_XX <- NULL
     estims <- c("aoss", "waoss", "iwaoss")
