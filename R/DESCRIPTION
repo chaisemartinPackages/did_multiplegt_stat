@@ -4,7 +4,7 @@ Version: 1.0.0
 Authors@R: 
     c(person("Diego", "Ciccia", role = c("aut", "cre"), email = "diego.ciccia@sciencespo.fr"),
 	person("Felix", "Knau", role = "aut", email = "felix.knau@sciencespo.fr"),
-	person("Doulo", "Sow", role = "aut", email = "doulo.sow@ensae.fr"),
+	person("Doulo", "Sow", role = "aut", email = "doulo.sow@sciencespo.fr"),
     person("Clément", "de Chaisemartin", role = "aut", email = "clement.dechaisemartin@sciencespo.fr"))
 Maintainer: Diego Ciccia <diego.ciccia@sciencespo.fr>
 Description: This program estimates the three estimators (aoss, waoss, iv-aoss) developped in de Chaisemartin, Clément and d'Haultfoeuille, Xavier and Pasquier, Félix and Vazquez-Bare, Gonzalo, Difference-in-Differences Estimators for Treatments Continuously Distributed at Every Period (January 18, 2022). 
