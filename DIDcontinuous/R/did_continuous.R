@@ -29,6 +29,56 @@
 #' TBD
 #' @section References:
 #' de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022). [Difference-in-Differences for Continuous Treatments and Instruments with Stayers](https://ssrn.com/abstract=4011782)
+#' @examples
+#' # In the following example, we use data from Li et al. (2014). 
+#' # The dataset can be downloaded from GitHub:
+#' repo <- "chaisemartinPackages/ApplicationData/main" 
+#' file <- "data_gazoline.dta"
+#' url <- paste("https://raw.githubusercontent.com", repo, file, sep = "/")
+#' gazoline <-  haven::read_dta(url)
+
+#' # Example 1: Estimating the effect of gasoline taxes on gasoline consumption and prices
+#' summary(did_continuous(
+#'     df = gazoline,
+#'     Y = "lngca",
+#'     ID = "id",
+#'     T = "year",
+#'     D = "tau",
+#'     order = 2,
+#'     estimator = c("aoss", "waoss"),
+#'     estimation_method = "dr",
+#'     aoss_vs_waoss = TRUE,
+#'     placebo = TRUE,
+#'     noextrapolation = TRUE
+#' ))
+#' summary(did_continuous(
+#'     df = gazoline,
+#'     Y = "lngpinc",
+#'     ID = "id",
+#'     T = "year",
+#'     D = "tau",
+#'     order = 2,
+#'     estimator = c("aoss", "waoss"),
+#'     estimation_method = "dr",
+#'     aoss_vs_waoss = TRUE,
+#'     placebo = TRUE,
+#'     noextrapolation = TRUE
+#' ))
+
+#' # Example 2: Estimating the price-elasticity of gasoline consumption, using taxes as an instrument
+#' summary(did_continuous(
+#'     df = gazoline,
+#'     Y = "lngca",
+#'     ID = "id",
+#'     T = "year",
+#'     D = "lngpinc",
+#'     Z = "tau",
+#'     order = 2,
+#'     estimator = "iwaoss",
+#'     estimation_method = "ra",
+#'     placebo = TRUE,
+#'     noextrapolation = TRUE
+#' ))
 #' @export
 did_continuous <- function(
     df,
@@ -58,6 +108,10 @@ did_continuous <- function(
       estimator <-  c("aoss", "waoss")
   } else if (is.null(estimator) & !is.null(Z) ) {
       estimator <- "iwaoss"
+  }
+
+  if (!is.null(estimator) & length(intersect(estimator, c("aoss","waoss","iwaoss"))) != length(estimator)) {
+    stop("Syntax error in estimator option: only aoss, waoss and iwaoss allowed.")
   }
 
   # General Syntax Check

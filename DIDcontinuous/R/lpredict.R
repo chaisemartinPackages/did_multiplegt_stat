@@ -14,7 +14,7 @@ lpredict <- function(
     const = TRUE,
     prob = FALSE
 ) {
-    sensitivity <- 10^-8
+    sensitivity <- 10^-10
     df[[varname]] <- 0
     for (v in varlist) {
         if (is.na(model$coefficients[[v]])) {

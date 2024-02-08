@@ -77,3 +77,52 @@ TBD
 de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022). \href{https://ssrn.com/abstract=4011782}{Difference-in-Differences for Continuous Treatments and Instruments with Stayers}
 }
 
+\examples{
+# In the following example, we use data from Li et al. (2014). 
+# The dataset can be downloaded from GitHub:
+repo <- "chaisemartinPackages/ApplicationData/main" 
+file <- "data_gazoline.dta"
+url <- paste("https://raw.githubusercontent.com", repo, file, sep = "/")
+gazoline <-  haven::read_dta(url)
+# Example 1: Estimating the effect of gasoline taxes on gasoline consumption and prices
+summary(did_continuous(
+    df = gazoline,
+    Y = "lngca",
+    ID = "id",
+    T = "year",
+    D = "tau",
+    order = 2,
+    estimator = c("aoss", "waoss"),
+    estimation_method = "dr",
+    aoss_vs_waoss = TRUE,
+    placebo = TRUE,
+    noextrapolation = TRUE
+))
+summary(did_continuous(
+    df = gazoline,
+    Y = "lngpinc",
+    ID = "id",
+    T = "year",
+    D = "tau",
+    order = 2,
+    estimator = c("aoss", "waoss"),
+    estimation_method = "dr",
+    aoss_vs_waoss = TRUE,
+    placebo = TRUE,
+    noextrapolation = TRUE
+))
+# Example 2: Estimating the price-elasticity of gasoline consumption, using taxes as an instrument
+summary(did_continuous(
+    df = gazoline,
+    Y = "lngca",
+    ID = "id",
+    T = "year",
+    D = "lngpinc",
+    Z = "tau",
+    order = 2,
+    estimator = "iwaoss",
+    estimation_method = "ra",
+    placebo = TRUE,
+    noextrapolation = TRUE
+))
+}
