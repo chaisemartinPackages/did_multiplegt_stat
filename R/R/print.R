@@ -18,6 +18,7 @@ summary.did_continuous <- function(object, ...) {
 
     for (t in names(estims)){
         if (t %in% estim_list) {
+
             cat("\n");
             cat(noquote(strrep("-", 70)));cat("\n");
             cat(strrep(" ", 20));cat(sprintf("Estimation of %s(s)", toupper(t)));cat("\n");
@@ -30,6 +31,7 @@ summary.did_continuous <- function(object, ...) {
             cat("\n");
 
             if (isTRUE(object$args$placebo)) {
+
                 cat("\n");
                 cat(noquote(strrep("-", 70)));cat("\n");
                 cat(strrep(" ", 15));cat(sprintf("Estimation of %s(s) - Placebo", toupper(t)));cat("\n");
@@ -38,18 +40,22 @@ summary.did_continuous <- function(object, ...) {
                 l_bound <- 1 + estims[[t]] * object$results$pairs 
                 u_bound <- l_bound + isTRUE(object$args$disaggregate) * (object$results$pairs - 1)
                 mat_sel_placebo <- object$results$table_placebo[l_bound:u_bound, ]
+
                 mat_print(mat_sel_placebo, t)
                 cat("\n");
             }
         }
     }
 
+
     if (isTRUE(object$args$aoss_vs_waoss)) {
+
             cat("\n");
             cat(noquote(strrep("-", 70)));cat("\n");
             cat(strrep(" ", 15));cat("Difference test: AOSS and WAOSS");cat("\n");
             cat(noquote(strrep("-", 70)));cat("\n");
             cat("H0: AOSS = WAOSS\n");
+      
             tab_print(object$results$aoss_vs_waoss)
     }
 }

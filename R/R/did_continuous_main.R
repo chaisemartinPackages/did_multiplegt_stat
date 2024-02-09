@@ -99,6 +99,7 @@ did_continuous_main <- function(
         N_Stayers_1_1_XX = 0,
         N_Switchers_2_1_XX = 0,
         N_Stayers_2_1_XX = 0,
+
         N_Switchers_3_1_XX = 0,
         N_Stayers_3_1_XX = 0,
         denom_delta_IV_sum_XX = 0,
@@ -186,6 +187,7 @@ did_continuous_main <- function(
                 scalars$delta_1_1_pl_XX <- scalars$delta_1_1_pl_XX + 
                         scalars[[paste0("P_",p,"_pl_XX")]] * scalars[[paste0("delta_1_",p,"_pl_XX")]]
                 
+
                 if (scalars[[paste0("N_Stayers_1_",p,"_pl_XX")]] > 1 & !is.na(paste0("N_Stayers_1_",p,"_pl_XX")))  {
                     scalars$N_Switchers_1_1_pl_XX <- scalars$N_Switchers_1_1_pl_XX + scalars[[paste0("N_Switchers_1_",p,"_pl_XX")]]
                 }
@@ -198,6 +200,7 @@ did_continuous_main <- function(
                 scalars$delta_2_1_pl_XX <- scalars$delta_2_1_pl_XX + 
                         scalars[[paste0("E_abs_delta_D_",p,"_pl_XX")]] * scalars[[paste0("delta_2_",p,"_pl_XX")]]
                 
+
                 if (scalars[[paste0("N_Stayers_2_",p,"_pl_XX")]] > 1 & !is.na(paste0("N_Stayers_2_",p,"_pl_XX")))  {
                     scalars$N_Switchers_2_1_pl_XX <- scalars$N_Switchers_2_1_pl_XX + scalars[[paste0("N_Switchers_2_",p,"_pl_XX")]]
                 }
@@ -233,12 +236,14 @@ did_continuous_main <- function(
             scalars$delta_2_1_pl_XX <- scalars$delta_2_1_pl_XX / scalars$E_abs_delta_D_sum_pl_XX
         }
     }
+
     if (iwaoss_XX == 1) {
         scalars$delta_3_1_XX <- scalars$delta_3_1_XX / scalars$denom_delta_IV_sum_XX
         if (isTRUE(placebo)) {
             scalars$delta_3_1_pl_XX <- scalars$delta_3_1_pl_XX / scalars$denom_delta_IV_sum_pl_XX
         }
     }
+
 
 	# Compute the influence functions
     for (i in 1:3) {
@@ -274,6 +279,7 @@ did_continuous_main <- function(
             }
             }
         }
+
         if (iwaoss_XX == 1 & scalars[[paste0("non_missing_",p,"_XX")]] == 1) {
             IDs_XX[[paste0("Phi_3_",p,"_XX")]] <- ((scalars[[paste0("denom_delta_IV_",p,"_XX")]] * IDs_XX[[paste0("Phi_3_",p,"_XX")]]) + (scalars[[paste0("delta_3_",p,"_XX")]] - scalars$delta_3_1_XX) * (IDs_XX[[paste0("inner_sum_IV_denom_",p,"_XX")]] - scalars[[paste0("denom_delta_IV_",p,"_XX")]])) / scalars$denom_delta_IV_sum_XX
 
@@ -287,6 +293,7 @@ did_continuous_main <- function(
                 }
             }
         }
+
         counter_XX <- counter_XX + 1
     }
 
@@ -322,6 +329,7 @@ did_continuous_main <- function(
         }
     }
 
+
     if (iwaoss_XX == 1) {
         n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_3_XX)))
         scalars$mean_IF3 <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_3_XX, na.rm = TRUE))
@@ -338,6 +346,7 @@ did_continuous_main <- function(
         }
     }
 
+
     # AOSS vs WAOSS
     if (isTRUE(aoss_vs_waoss)) {
         diff_delta_1_2_XX <- scalars$delta_1_1_XX - scalars$delta_2_1_XX
@@ -350,6 +359,7 @@ did_continuous_main <- function(
 
         t_mat <- matrix(0, nrow = 1, ncol = 6)
         t_i <- 1
+
         for (v in c("", "sd_", "LB_", "UB_", "t_", "p_")) {
             t_mat[1,t_i] <- get(paste0(v,"diff_delta_1_2_XX"))
             t_i <- t_i + 1
@@ -360,6 +370,7 @@ did_continuous_main <- function(
 
 
     # Returning the results #
+
     if (isTRUE(noextrapolation)) {
         if (aoss_XX == 1 | waoss_XX == 1) {
             cat(sprintf("No extrapolation: %.0f switchers dropped.\n", scalars$N_drop_total_XX))
@@ -368,6 +379,7 @@ did_continuous_main <- function(
             scalars$N_drop_total_IV_XX))
         }
     }
+
 
     IDs_XX <- NULL
     estims <- c("aoss", "waoss", "iwaoss")

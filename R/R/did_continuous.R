@@ -121,6 +121,7 @@ did_continuous <- function(
       }
   }
 
+
   if (is.null(estimation_method)) {
     estimation_method <- "ra"
   }
@@ -145,7 +146,6 @@ did_continuous <- function(
   if ("iwaoss" %in% estimator & is.null(Z)) {
     stop("To compute the iwaoss you must specify the IV variable.")
   }
-
 
   results <- did_continuous_main(df, Y, ID, T, D, Z, estimator, estimation_method, order,
   noextrapolation, placebo, weight, switchers, disaggregate, aoss_vs_waoss)
