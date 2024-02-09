@@ -27,6 +27,23 @@
 #' This command can also be used when the treatment is discrete. In particular, when the treatment is discrete and takes a large number of values and the number of periods is equal to two, did_continuous can be used as an alternative to the did_multiplegt_dyn command, which may not be applicable in such a design since it requires finding switchers and controls with the same period-one treatment. When the number of periods is larger than two, the two commands estimate two different models (static effects for did_continuous, and dynamic effects for did_multiplegt_dyn).
 #' @section FAQ:
 #' TBD
+#' @section Comparison with Stata command:
+#' Stata "logit" and R "glm" functions handle binary prediction with slightly different conventions. These discrepancies are usually negligible, but they may add up to detectable (yet small) differences in the final estimates. The next code blocks showcase an instance where the logit and glm predictions differ. We estimate a logistic regression of a binary variable D on an order 2 polynomial of a continuous variable X. The binary variable D takes value 1 only for D = 38.4. Due to these sample features, the logit command fails to converge. Both commands yield non missing predictions from their respective regression outputs. However, the predicted values at rows 8 and 9 are strictly different, with Stata reporting way larger predictions than R.
+#' ## Stata
+#' use "https://raw.githubusercontent.com/chaisemartinPackages/ApplicationData/main/Tests/logit_tests.dta", clear
+#' cap logit D X X_sq, asis
+#' predict D_hat, pr asif
+#' browse
+#' 
+#' ## R
+#' ```{r}
+#' library(haven)
+#' library(stats)
+#' data <- haven::read_dta("https://raw.githubusercontent.com/chaisemartinPackages/ApplicationData/main/Tests/logit_tests.dta")
+#' model <- glm(D ~ X + X_sq, data = data, family = binomial(link = "logit"))
+#' data$D_hat <- predict(model, newdata = data, type="response")
+#' cat(data$D_hat[8], data$D_hat[9], "\n")
+#' ```
 #' @section References:
 #' de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022). [Difference-in-Differences for Continuous Treatments and Instruments with Stayers](https://ssrn.com/abstract=4011782)
 #' @examples
