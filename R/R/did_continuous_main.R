@@ -19,7 +19,7 @@
 #' @importFrom rlang := 
 #' @importFrom rlang .data
 #' @importFrom plm pdata.frame make.pbalanced
-#' @importFrom stats sd
+#' @importFrom stats sd pnorm
 #' @noRd
 did_continuous_main <- function(
     df,
@@ -47,60 +47,41 @@ did_continuous_main <- function(
 
     # Patching the estimator option
     for (v in c("aoss", "waoss", "iwaoss")) {
-        if (is.null(estimator)) {
-            assign(paste0(v,"_XX"), 1)
-        } else {
-            assign(paste0(v,"_XX"), as.numeric(v %in% estimator))
-        }
+        assign(paste0(v,"_XX"), as.numeric(v %in% estimator))
     }
 
     # Layer 1: keep only variables of interest, as to speed up what follows
     df <- df[c(Y, ID, T, D, Z, weight)]
-    df <- df %>% group_by(.data[[T]]) %>% mutate(T_temp_XX = cur_group_id())
-    coln <- c("Y_XX", "ID_XX", "T_XX", "D_XX", "weight_XX", "tsfilled_XX")
-    df$to_drop_XX <- (is.na(df[[Y]]) | is.na(df$T_temp_XX) | is.na(df[[D]]) | is.na(df[[ID]]))
+    df_base <- list(Y = Y, ID = ID, T = T, D = D, Z = Z, weight = weight)
+    for (i in 1:length(df_base)) {
+        if (!is.null(df_base[[i]])) {
+            col <- as.character(df_base[[i]])
+            df[[paste0(names(df_base)[i],"_XX")]] <- df[[col]]
+            df[[col]] <- NULL
+        }
+    }
+    df_base <- NULL
+
+    df$to_drop_XX <- (is.na(df$T_XX) | is.na(df$D_XX) | is.na(df$ID_XX))
     IV_req_XX <- 0
-    if (!is.null(Z)) {
-        df$to_drop_XX <- (is.na(df[[Z]]) | df$to_drop_XX)
+    if (iwaoss_XX == 1) {
+        df$to_drop_XX <- (is.na(df$Z_XX) | df$to_drop_XX)
         IV_req_XX <- 1
-        coln <- c(coln, "Z_XX")
     }
     df <- subset(df, df$to_drop_XX == 0)
 
-    # Error messages #
-    if (!is.null(estimation_method)) {
-        if (estimation_method == "ps" | estimation_method == "dr") {
-            if (waoss_XX == 0 & iwaoss_XX == 0) {
-                stop("The propensity score-based approach if only available for the waoss and iwaoss.")
-            }
-        }
-    }
-
-    if (IV_req_XX == 0 & (iwaoss_XX == 1 | is.null(estimator))) {
-        stop("To compute the iwaoss you must specify the IV variable.")
-    }
-
-    if (iwaoss_XX == 1 & (waoss_XX + aoss_XX == 1)) {
-        stop("The estimation of AOSS or WAOSS cannot be combined with the estimation of IV-WAOSS (see helpfile).")
-    }
-
-    if (isTRUE(aoss_vs_waoss) & waoss_XX + aoss_XX != 2) {
-        stop("To test the equility between AOSS and WAOSS you must specify aoss and waoss in the estimator option.")
-    }
-
-
     # Layer 2: balancing the panel and then keeping again only variables of interest
     df$tsfilled_XX <- 0
-    df <- pdata.frame(df, index = c(ID, T)) 
+    df <- pdata.frame(df, index = c("ID_XX", "T_XX")) 
     df <- make.pbalanced(df, balance.type = "fill")
     df$tsfilled_XX <- is.na(df$tsfilled_XX)
-    df <- df %>% group_by(.data[[T]]) %>% mutate(T_XX = cur_group_id())
-    df$weight_XX <- 1
-    if (!is.null(weight)) {
-        df$weight_XX <- df[[weight]]
+    df$T_temp_XX <- NULL; df$T_temp_XX <- df$T_XX; df$T_XX <- NULL; 
+    df <- df %>% group_by(.data$T_temp_XX) %>% mutate(T_XX = cur_group_id())
+    df$T_temp_XX <- NULL   
+
+    if (is.null(weight)) {
+        df$weight_XX <- 1
     }
-    df <- df[c(Y, ID, "T_XX", D, "weight_XX", "tsfilled_XX", Z)]
-    names(df) <- coln
 
     # Further useful steps prior to the estimation
     IDs_XX <- as.data.frame(unique(factor(df$ID_XX)))
@@ -112,10 +93,17 @@ did_continuous_main <- function(
         delta_1_1_XX = 0,
         E_abs_delta_D_sum_XX = 0,
         delta_2_1_XX = 0,
+        denom_delta_IV_sum_XX = 0,
+        delta_3_1_XX = 0,
         N_Switchers_1_1_XX = 0,
         N_Stayers_1_1_XX = 0,
         N_Switchers_2_1_XX = 0,
         N_Stayers_2_1_XX = 0,
+
+        N_Switchers_3_1_XX = 0,
+        N_Stayers_3_1_XX = 0,
+        denom_delta_IV_sum_XX = 0,
+        N_drop_total_XX = 0,
         IV_req_XX = IV_req_XX
     )
     if (isTRUE(placebo)) {
@@ -124,10 +112,16 @@ did_continuous_main <- function(
         delta_1_1_pl_XX = 0,
         E_abs_delta_D_sum_pl_XX = 0,
         delta_2_1_pl_XX = 0,
+        denom_delta_IV_sum_pl_XX = 0,
+        delta_3_1_pl_XX = 0,
         N_Switchers_1_1_pl_XX = 0,
         N_Stayers_1_1_pl_XX = 0,
         N_Switchers_2_1_pl_XX = 0,
-        N_Stayers_2_1_pl_XX = 0)
+        N_Stayers_2_1_pl_XX = 0,
+        N_Switchers_3_1_pl_XX = 0,
+        N_Stayers_3_1_pl_XX = 0,
+        N_drop_total_IV_XX = 0,
+        denom_delta_IV_sum_pl_XX = 0)
     }
 
 
@@ -144,10 +138,10 @@ did_continuous_main <- function(
             scalars$delta_1_1_XX <- scalars$delta_1_1_XX + 
                     scalars[[paste0("P_",p,"_XX")]] * scalars[[paste0("delta_1_",p,"_XX")]]
             
-            if (scalars[[paste0("N_Stayers_1_",p,"_XX")]] > 1)  {
+            if (scalars[[paste0("N_Stayers_1_",p,"_XX")]] > 1 & !is.na(scalars[[paste0("N_Stayers_1_",p,"_XX")]]))  {
                 scalars$N_Switchers_1_1_XX <- scalars$N_Switchers_1_1_XX + scalars[[paste0("N_Switchers_1_",p,"_XX")]]
             }
-            if (scalars[[paste0("N_Switchers_1_",p,"_XX")]] > 0)  {
+            if (scalars[[paste0("N_Switchers_1_",p,"_XX")]] > 0 & !is.na(scalars[[paste0("N_Switchers_1_",p,"_XX")]]))  {
                 scalars$N_Stayers_1_1_XX <- scalars$N_Stayers_1_1_XX + scalars[[paste0("N_Stayers_1_",p,"_XX")]]
             }
         }
@@ -156,11 +150,23 @@ did_continuous_main <- function(
             scalars$delta_2_1_XX <- scalars$delta_2_1_XX + 
                     scalars[[paste0("E_abs_delta_D_",p,"_XX")]] * scalars[[paste0("delta_2_",p,"_XX")]]
             
-            if (scalars[[paste0("N_Stayers_2_",p,"_XX")]] > 1)  {
+            if (scalars[[paste0("N_Stayers_2_",p,"_XX")]] > 1 & !is.na(scalars[[paste0("N_Stayers_2_",p,"_XX")]]))  {
                 scalars$N_Switchers_2_1_XX <- scalars$N_Switchers_2_1_XX + scalars[[paste0("N_Switchers_2_",p,"_XX")]]
             }
-            if (scalars[[paste0("N_Switchers_2_",p,"_XX")]] > 0)  {
+            if (scalars[[paste0("N_Switchers_2_",p,"_XX")]] > 0 & !is.na(scalars[[paste0("N_Switchers_2_",p,"_XX")]]))  {
                 scalars$N_Stayers_2_1_XX <- scalars$N_Stayers_2_1_XX + scalars[[paste0("N_Stayers_2_",p,"_XX")]]
+            }
+        }
+
+        if (iwaoss_XX == 1) {
+            scalars$delta_3_1_XX <- scalars$delta_3_1_XX + 
+                    scalars[[paste0("denom_delta_IV_",p,"_XX")]] * scalars[[paste0("delta_3_",p,"_XX")]]
+            
+            if (scalars[[paste0("N_Stayers_3_",p,"_XX")]] > 1 & !is.na(scalars[[paste0("N_Stayers_3_",p,"_XX")]]))  {
+                scalars$N_Switchers_3_1_XX <- scalars$N_Switchers_3_1_XX + scalars[[paste0("N_Switchers_3_",p,"_XX")]]
+            }
+            if (scalars[[paste0("N_Switchers_3_",p,"_XX")]] > 0 & !is.na(scalars[[paste0("N_Switchers_3_",p,"_XX")]]))  {
+                scalars$N_Stayers_3_1_XX <- scalars$N_Stayers_3_1_XX + scalars[[paste0("N_Stayers_3_",p,"_XX")]]
             }
         }
     }
@@ -181,10 +187,11 @@ did_continuous_main <- function(
                 scalars$delta_1_1_pl_XX <- scalars$delta_1_1_pl_XX + 
                         scalars[[paste0("P_",p,"_pl_XX")]] * scalars[[paste0("delta_1_",p,"_pl_XX")]]
                 
-                if (scalars[[paste0("N_Stayers_1_",p,"_pl_XX")]] > 1)  {
+
+                if (scalars[[paste0("N_Stayers_1_",p,"_pl_XX")]] > 1 & !is.na(paste0("N_Stayers_1_",p,"_pl_XX")))  {
                     scalars$N_Switchers_1_1_pl_XX <- scalars$N_Switchers_1_1_pl_XX + scalars[[paste0("N_Switchers_1_",p,"_pl_XX")]]
                 }
-                if (scalars[[paste0("N_Switchers_1_",p,"_pl_XX")]] > 0)  {
+                if (scalars[[paste0("N_Switchers_1_",p,"_pl_XX")]] > 0 & !is.na(paste0("N_Switchres_1_",p,"_pl_XX")))  {
                     scalars$N_Stayers_1_1_pl_XX <- scalars$N_Stayers_1_1_pl_XX + scalars[[paste0("N_Stayers_1_",p,"_pl_XX")]]
                 }
             }
@@ -193,11 +200,24 @@ did_continuous_main <- function(
                 scalars$delta_2_1_pl_XX <- scalars$delta_2_1_pl_XX + 
                         scalars[[paste0("E_abs_delta_D_",p,"_pl_XX")]] * scalars[[paste0("delta_2_",p,"_pl_XX")]]
                 
-                if (scalars[[paste0("N_Stayers_2_",p,"_pl_XX")]] > 1)  {
+
+                if (scalars[[paste0("N_Stayers_2_",p,"_pl_XX")]] > 1 & !is.na(paste0("N_Stayers_2_",p,"_pl_XX")))  {
                     scalars$N_Switchers_2_1_pl_XX <- scalars$N_Switchers_2_1_pl_XX + scalars[[paste0("N_Switchers_2_",p,"_pl_XX")]]
                 }
-                if (scalars[[paste0("N_Switchers_2_",p,"_pl_XX")]] > 0)  {
+                if (scalars[[paste0("N_Switchers_2_",p,"_pl_XX")]] > 0 & !is.na(paste0("N_Switchers_2_",p,"_pl_XX")))  {
                     scalars$N_Stayers_2_1_pl_XX <- scalars$N_Stayers_2_1_pl_XX + scalars[[paste0("N_Stayers_2_",p,"_pl_XX")]]
+                }
+            }
+
+            if (iwaoss_XX == 1) {
+                scalars$delta_3_1_pl_XX <- scalars$delta_3_1_pl_XX + 
+                        scalars[[paste0("denom_delta_IV_",p,"_pl_XX")]] * scalars[[paste0("delta_3_",p,"_pl_XX")]]
+                
+                if (scalars[[paste0("N_Stayers_3_",p,"_pl_XX")]] > 1 & !is.na(paste0("N_Stayers_3_",p,"_pl_XX")))  {
+                    scalars$N_Switchers_3_1_pl_XX <- scalars$N_Switchers_3_1_pl_XX + scalars[[paste0("N_Switchers_3_",p,"_pl_XX")]]
+                }
+                if (scalars[[paste0("N_Switchers_3_",p,"_pl_XX")]] > 0 & !is.na(paste0("N_Switchers_3_",p,"_pl_XX")))  {
+                    scalars$N_Stayers_3_1_pl_XX <- scalars$N_Stayers_3_1_pl_XX + scalars[[paste0("N_Stayers_3_",p,"_pl_XX")]]
                 }
             }
         }
@@ -216,6 +236,14 @@ did_continuous_main <- function(
             scalars$delta_2_1_pl_XX <- scalars$delta_2_1_pl_XX / scalars$E_abs_delta_D_sum_pl_XX
         }
     }
+
+    if (iwaoss_XX == 1) {
+        scalars$delta_3_1_XX <- scalars$delta_3_1_XX / scalars$denom_delta_IV_sum_XX
+        if (isTRUE(placebo)) {
+            scalars$delta_3_1_pl_XX <- scalars$delta_3_1_pl_XX / scalars$denom_delta_IV_sum_pl_XX
+        }
+    }
+
 
 	# Compute the influence functions
     for (i in 1:3) {
@@ -251,6 +279,21 @@ did_continuous_main <- function(
             }
             }
         }
+
+        if (iwaoss_XX == 1 & scalars[[paste0("non_missing_",p,"_XX")]] == 1) {
+            IDs_XX[[paste0("Phi_3_",p,"_XX")]] <- ((scalars[[paste0("denom_delta_IV_",p,"_XX")]] * IDs_XX[[paste0("Phi_3_",p,"_XX")]]) + (scalars[[paste0("delta_3_",p,"_XX")]] - scalars$delta_3_1_XX) * (IDs_XX[[paste0("inner_sum_IV_denom_",p,"_XX")]] - scalars[[paste0("denom_delta_IV_",p,"_XX")]])) / scalars$denom_delta_IV_sum_XX
+
+            IDs_XX$Phi_3_XX <- ifelse(is.na(IDs_XX[[paste0("Phi_3_",p,"_XX")]]), IDs_XX$Phi_3_XX, IDs_XX$Phi_3_XX + IDs_XX[[paste0("Phi_3_",p,"_XX")]])
+
+            if (isTRUE(placebo) & p > 2) {
+            if (scalars[[paste0("non_missing_",p,"_pl_XX")]] == 1) {
+                IDs_XX[[paste0("Phi_3_",p,"_pl_XX")]] <- (scalars[[paste0("denom_delta_IV_",p,"_pl_XX")]] * IDs_XX[[paste0("Phi_3_",p,"_pl_XX")]] + (scalars[[paste0("delta_3_",p,"_pl_XX")]] - scalars$delta_3_1_pl_XX) * (IDs_XX[[paste0("inner_sum_IV_denom_",p,"_pl_XX")]] - scalars[[paste0("denom_delta_IV_",p,"_pl_XX")]])) / scalars$denom_delta_IV_sum_pl_XX
+
+                IDs_XX$Phi_3_pl_XX <- ifelse(is.na(IDs_XX[[paste0("Phi_3_",p,"_pl_XX")]]), IDs_XX$Phi_3_pl_XX, IDs_XX$Phi_3_pl_XX + IDs_XX[[paste0("Phi_3_",p,"_pl_XX")]])
+                }
+            }
+        }
+
         counter_XX <- counter_XX + 1
     }
 
@@ -286,6 +329,24 @@ did_continuous_main <- function(
         }
     }
 
+
+    if (iwaoss_XX == 1) {
+        n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_3_XX)))
+        scalars$mean_IF3 <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_3_XX, na.rm = TRUE))
+        scalars$sd_delta_3_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_3_XX, na.rm = TRUE)/ sqrt(n_obs))
+        scalars$LB_3_1_XX <-  scalars$delta_3_1_XX - 1.96 * scalars$sd_delta_3_1_XX
+        scalars$UB_3_1_XX <-  scalars$delta_3_1_XX + 1.96 * scalars$sd_delta_3_1_XX            
+
+        if (isTRUE(placebo)) {
+            n_obs_pl <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_3_pl_XX)))
+            scalars$mean_IF3_pl <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_3_pl_XX, na.rm = TRUE))
+            scalars$sd_delta_3_1_pl_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_3_pl_XX, na.rm = TRUE)/ sqrt(n_obs_pl))
+            scalars$LB_3_1_pl_XX <-  scalars$delta_3_1_pl_XX - 1.96 * scalars$sd_delta_3_1_pl_XX
+            scalars$UB_3_1_pl_XX <-  scalars$delta_3_1_pl_XX + 1.96 * scalars$sd_delta_3_1_pl_XX            
+        }
+    }
+
+
     # AOSS vs WAOSS
     if (isTRUE(aoss_vs_waoss)) {
         diff_delta_1_2_XX <- scalars$delta_1_1_XX - scalars$delta_2_1_XX
@@ -298,16 +359,27 @@ did_continuous_main <- function(
 
         t_mat <- matrix(0, nrow = 1, ncol = 6)
         t_i <- 1
-        for (v in c("", "sd_", "t_", "p_", "LB_", "UB_")) {
+
+        for (v in c("", "sd_", "LB_", "UB_", "t_", "p_")) {
             t_mat[1,t_i] <- get(paste0(v,"diff_delta_1_2_XX"))
             t_i <- t_i + 1
         }
-        rownames(t_mat) <- c(" ")
-        colnames(t_mat) <- c("Diff.", "Sd", "t stat.", "pval.", "LB CI", "UB CI")
+        rownames(t_mat) <- c("Diff.")
+        colnames(t_mat) <- c("Estimate", "SE", "LB CI", "UB CI", "t stat.", "pval.")
     }
 
 
     # Returning the results #
+
+    if (isTRUE(noextrapolation)) {
+        if (aoss_XX == 1 | waoss_XX == 1) {
+            cat(sprintf("No extrapolation: %.0f switchers dropped.\n", scalars$N_drop_total_XX))
+        } else if (iwaoss_XX == 1) {
+            cat(sprintf("No extrapolation on IV: %.0f switchers dropped.\n", 
+            scalars$N_drop_total_IV_XX))
+        }
+    }
+
 
     IDs_XX <- NULL
     estims <- c("aoss", "waoss", "iwaoss")

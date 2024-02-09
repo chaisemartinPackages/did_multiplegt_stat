@@ -1,49 +1,73 @@
-#' @title A print method for did_multiplegt_dyn
-#' @name print.did_continuous
-#' @description A customized printed display for did_continous output
-#' @param x A did_continuous object
+#' @title summary method for did_continuous
+#' @name summary.did_continuous
+#' @description A customized printed display for did_continuous output
+#' @param object A did_continuous object
 #' @param ... Undocumented
 #' @export
-print.did_continuous <- function(x, ...) {
+summary.did_continuous <- function(object, ...) {
     estims <- list(0, 1, 2)
     names(estims) <- c("aoss", "waoss", "iwaoss") 
 
+    if (is.null(object$args$estimator) & is.null(object$args$Z)) {
+        estim_list <- c("aoss","waoss")
+    } else if (is.null(object$args$estimator) & !is.null(object$args$Z)) {
+        estim_list <- "iwaoss"
+    } else {
+        estim_list <- object$args$estimator
+    }
+
     for (t in names(estims)){
-        if (t %in% x$args$estimator) {
+        if (t %in% estim_list) {
+
             cat("\n");
             cat(noquote(strrep("-", 70)));cat("\n");
             cat(strrep(" ", 20));cat(sprintf("Estimation of %s(s)", toupper(t)));cat("\n");
             cat(noquote(strrep("-", 70)));cat("\n");
 
-            l_bound <- 1 + estims[[t]] * x$results$pairs 
-            u_bound <- l_bound + isTRUE(x$args$disaggregate) * (x$results$pairs - 1)
-            mat_sel <- x$results$table[l_bound:u_bound, ]
+            l_bound <- 1 + estims[[t]] * object$results$pairs 
+            u_bound <- l_bound + isTRUE(object$args$disaggregate) * (object$results$pairs - 1)
+            mat_sel <- object$results$table[l_bound:u_bound, ]
             mat_print(mat_sel, t)
             cat("\n");
 
-            if (isTRUE(x$args$placebo)) {
+            if (isTRUE(object$args$placebo)) {
+
                 cat("\n");
                 cat(noquote(strrep("-", 70)));cat("\n");
                 cat(strrep(" ", 15));cat(sprintf("Estimation of %s(s) - Placebo", toupper(t)));cat("\n");
                 cat(noquote(strrep("-", 70)));cat("\n");
 
-                l_bound <- 1 + estims[[t]] * x$results$pairs 
-                u_bound <- l_bound + isTRUE(x$args$disaggregate) * (x$results$pairs - 1)
-                mat_sel_placebo <- x$results$table_placebo[l_bound:u_bound, ]
+                l_bound <- 1 + estims[[t]] * object$results$pairs 
+                u_bound <- l_bound + isTRUE(object$args$disaggregate) * (object$results$pairs - 1)
+                mat_sel_placebo <- object$results$table_placebo[l_bound:u_bound, ]
+
                 mat_print(mat_sel_placebo, t)
                 cat("\n");
             }
         }
     }
 
-    if (isTRUE(x$args$aoss_vs_waoss)) {
+
+    if (isTRUE(object$args$aoss_vs_waoss)) {
+
             cat("\n");
             cat(noquote(strrep("-", 70)));cat("\n");
             cat(strrep(" ", 15));cat("Difference test: AOSS and WAOSS");cat("\n");
             cat(noquote(strrep("-", 70)));cat("\n");
             cat("H0: AOSS = WAOSS\n");
-            tab_print(x$results$aoss_vs_waoss)
+      
+            tab_print(object$results$aoss_vs_waoss)
     }
+}
+
+#' @title print method for did_continuous
+#' @name print.did_continuous
+#' @description A customized printed display for did_continous output
+#' @param x A did_continuous object
+#' @param ... Undocumented
+#' @export
+print.did_continuous <- function(x, ...) {
+    summary(x)
 }
 
 mat_print <- function(mat, name) {
