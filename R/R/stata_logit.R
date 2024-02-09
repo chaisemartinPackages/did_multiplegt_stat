@@ -16,7 +16,6 @@ stata_logit <- function(
     ## Detect warnings from glm ##
     if (!model$converged) {
         #warning("Convergence not achieved.")
-
     }
     })
     return(model)
