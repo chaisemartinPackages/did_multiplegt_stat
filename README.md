@@ -28,12 +28,15 @@ install_github("chaisemartinPackages/did_continuous/R", force = TRUE)
 
 ### Stata
 ```r
-did_continuous Y ID T D [Z] [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) NOEXTRApolation placebo weight(varlist numeric) switchers(string) DISAGgregate aoss_vs_waoss]
+did_continuous Y ID T D [Z] [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) 
+NOEXTRApolation placebo weight(varlist numeric) switchers(string) DISAGgregate aoss_vs_waoss]
 ```
 
 ### R 
 ```r
-did_continuous(df, Y, ID, T, D, Z = NULL, estimator = NULL, estimation_method = NULL, order = 1, noextrapolation = FALSE, placebo = NULL,  weight = NULL, switchers = NULL, disaggregate = FALSE, aoss_vs_waoss = FALSE)
+did_continuous(df, Y, ID, T, D, Z = NULL, estimator = NULL, estimation_method = NULL, order = 1, 
+noextrapolation = FALSE, placebo = NULL,  weight = NULL, switchers = NULL, 
+disaggregate = FALSE, aoss_vs_waoss = FALSE)
 ```
 
 ## Description
