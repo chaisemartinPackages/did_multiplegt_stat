@@ -45,7 +45,7 @@ did_continuous(
 
 \item{placebo}{(logical) This option allows to estimate the placebos versions of the estimators requested in the estimator option. If this option is combined with the option disaggregate, the command also displays the placebo version of each two consecutive time-periods.}
 
-\item{weight}{(char) This option allows the user to specify weights for the three estimation methods.}
+\item{weight}{(char) TBD.}
 
 \item{switchers}{(char) The allowed inputs for this option are "up" and "down". If the argument "up" is specified, the command estimates the effects on switchers-up, i.e, units whose treatments (or instruments) increase from period t-1 to period t. If the argument "down" is given, the command estimates the effects on switchers-down, i.e., units whose treaments (or instruments) decrease from period t-1 to period t.}
 
@@ -77,24 +77,32 @@ TBD
 Stata "logit" and R "glm" functions handle binary prediction with slightly different conventions. These discrepancies are usually negligible, but they may add up to detectable (yet small) differences in the final estimates. The next code blocks showcase an instance where the logit and glm predictions differ. We estimate a logistic regression of a binary variable D on an order 2 polynomial of a continuous variable X. The binary variable D takes value 1 only for D = 38.4. Due to these sample features, the logit command fails to converge. Both commands yield non missing predictions from their respective regression outputs. However, the predicted values at rows 8 and 9 are strictly different, with Stata reporting way larger predictions than R.
 \subsection{Stata}{
 
-use "https://raw.githubusercontent.com/chaisemartinPackages/ApplicationData/main/Tests/logit_tests.dta", clear
+global rep "https://raw.githubusercontent.com/chaisemartinPackages"
+
+use "$rep/ApplicationData/main/Tests/logit_tests.dta", clear
+
 cap logit D X X_sq, asis
+
 predict D_hat, pr asif
+
 browse
 }
 
 \subsection{R}{
 
-\if{html}{\out{<div class="sourceCode r">}}\preformatted{library(haven)
+library(haven)
+
 library(stats)
-data <- haven::read_dta("https://raw.githubusercontent.com/chaisemartinPackages/ApplicationData/main/Tests/logit_tests.dta")
+
+rep <- "https://raw.githubusercontent.com/chaisemartinPackages"
+
+data <- haven::read_dta(paste0(rep,"/ApplicationData/main/Tests/logit_tests.dta"))
+
 model <- glm(D ~ X + X_sq, data = data, family = binomial(link = "logit"))
-#> Warning: glm.fit: algorithm did not converge
-#> Warning: glm.fit: fitted probabilities numerically 0 or 1 occurred
+
 data$D_hat <- predict(model, newdata = data, type="response")
-cat(data$D_hat[8], data$D_hat[9], "\\n")
-#> 7.879506e-08 2.709086e-08
-}\if{html}{\out{</div>}}
+
+View(data)
 }
 }
 

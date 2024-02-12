@@ -14,7 +14,7 @@
 #' @param switchers (char) The allowed inputs for this option are "up" and "down". If the argument "up" is specified, the command estimates the effects on switchers-up, i.e, units whose treatments (or instruments) increase from period t-1 to period t. If the argument "down" is given, the command estimates the effects on switchers-down, i.e., units whose treaments (or instruments) decrease from period t-1 to period t.
 #' @param disaggregate (logical) If this potion is specified, the command displays the estimands of the effects for each two consecutive periods as well as the aggregated estimands. Otherwise, the command only outputs the aggregated results.
 #' @param placebo (logical) This option allows to estimate the placebos versions of the estimators requested in the estimator option. If this option is combined with the option disaggregate, the command also displays the placebo version of each two consecutive time-periods.
-#' @param weight (char) This option allows the user to specify weights for the three estimation methods.
+#' @param weight (char) TBD.
 #' @param noextrapolation (logical) This option forces the command to use only switchers whose period-(t-1) treatments (or instruments) are between the minimum and the maximum values of the period-(t-1) treatments (or instruments) of the stayers. This a less restrictive common support assumption.
 #' @param aoss_vs_waoss (logical) As highlighted in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022), the aoss and the waoss are equal if and only if switchers’ slopes are uncorrelated with $|D_t - D_{t-1}|$. When this option is specified, the command performs and displays the test of the equality between the aoss and  the waoss. Note that the use of this option requires specifying in the estimator option both aoss and waoss.
 #' @section Overview:
@@ -30,20 +30,33 @@
 #' @section Comparison with Stata command:
 #' Stata "logit" and R "glm" functions handle binary prediction with slightly different conventions. These discrepancies are usually negligible, but they may add up to detectable (yet small) differences in the final estimates. The next code blocks showcase an instance where the logit and glm predictions differ. We estimate a logistic regression of a binary variable D on an order 2 polynomial of a continuous variable X. The binary variable D takes value 1 only for D = 38.4. Due to these sample features, the logit command fails to converge. Both commands yield non missing predictions from their respective regression outputs. However, the predicted values at rows 8 and 9 are strictly different, with Stata reporting way larger predictions than R.
 #' ## Stata
-#' use "https://raw.githubusercontent.com/chaisemartinPackages/ApplicationData/main/Tests/logit_tests.dta", clear
+#' 
+#' global rep "https://raw.githubusercontent.com/chaisemartinPackages"
+#' 
+#' use "$rep/ApplicationData/main/Tests/logit_tests.dta", clear
+#' 
 #' cap logit D X X_sq, asis
+#' 
 #' predict D_hat, pr asif
+#' 
 #' browse
 #' 
 #' ## R
-#' ```{r}
+#' 
 #' library(haven)
+#' 
 #' library(stats)
-#' data <- haven::read_dta("https://raw.githubusercontent.com/chaisemartinPackages/ApplicationData/main/Tests/logit_tests.dta")
+#' 
+#' rep <- "https://raw.githubusercontent.com/chaisemartinPackages"
+#' 
+#' data <- haven::read_dta(paste0(rep,"/ApplicationData/main/Tests/logit_tests.dta"))
+#' 
 #' model <- glm(D ~ X + X_sq, data = data, family = binomial(link = "logit"))
+#' 
 #' data$D_hat <- predict(model, newdata = data, type="response")
-#' cat(data$D_hat[8], data$D_hat[9], "\n")
-#' ```
+#' 
+#' View(data)
+#' 
 #' @section References:
 #' de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022). [Difference-in-Differences for Continuous Treatments and Instruments with Stayers](https://ssrn.com/abstract=4011782)
 #' @examples
