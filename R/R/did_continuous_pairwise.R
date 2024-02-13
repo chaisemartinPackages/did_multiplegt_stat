@@ -17,6 +17,7 @@
 #' @param estimation_method estimation_method
 #' @param scalars scalars
 #' @param placebo placebo
+#' @param exact_match exact_match
 #' @import dplyr
 #' @importFrom magrittr %>%
 #' @importFrom rlang := 
@@ -245,6 +246,20 @@ did_continuous_pairwise <- function(
             }           
         }
     }
+    
+    if (isTRUE(exact_match)) {
+      if (aoss == 1 | waoss == 1) {
+        df <- df %>% group_by(.data$D1_XX) %>% 
+          mutate(has_match = ifelse(S_XX==0, NA, min(abs_delta_D_XX, na.rm = TRUE)))
+      }
+      if (iwaoss == 1) {
+        df <- df %>% group_by(.data$Z1_XX) %>% 
+          mutate(has_match = ifelse(SI_XX==0, NA, min(abs_delta_Z_XX, na.rm = TRUE)))
+      }
+      df <- subset(df, df$has_match %in%c(NA, 1))
+      assign(paste0("N_drop_",pairwise,pl,"_XX"), sum(df$has_match, na.rm = TRUE))
+    }
+    
     assign(paste0("W",pl,"_XX"), sum(df$weight_XX, na.rm = TRUE))
     assign(paste0("N",pl,"_XX"), nrow(df))
 
