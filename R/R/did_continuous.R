@@ -5,7 +5,7 @@
 #' @param df (data.frame) A dataframe object.
 #' @param Y (char) Outcome variable.
 #' @param ID (char) Identifier of the unit of analysis.
-#' @param T (char) Time variable. The command assumes that the time variable is evenly spaced (e.g.: the panel is at the yearly level, and no year is missing for all groups). When it is not (e.g.: the panel is at the yearly level, but three consecutive years are missing for all groups), the command can still be used. For example, if the year n is missing, the command does not comuptes the DID estimators of the pairs of years (n-1,n),(n,n+1), and (n-1,n+1).
+#' @param Time (char) Time variable. The command assumes that the time variable is evenly spaced (e.g.: the panel is at the yearly level, and no year is missing for all groups). When it is not (e.g.: the panel is at the yearly level, but three consecutive years are missing for all groups), the command can still be used. For example, if the year n is missing, the command does not comuptes the DID estimators of the pairs of years (n-1,n),(n,n+1), and (n-1,n+1).
 #' @param D (char) Treatment variable.
 #' @param Z (char) Instrumental variable. This option is only required when the IV-related estimator (the so-called iwaoss) is requested.
 #' @param estimator (char vector) Estimator(s) to be computed. The allowed arguments are: (1) "aoss", i.e the Average Of Switchers’ Slopes which is the average, across switchers, of the effect on their period-(t) outcome of moving their treatment from its period-(t-1) to its period-(t) value, scaled by the difference between these two values. (2) "waoss" which corresponds to a weighted version of "aoss" where slopes receive a weight proportional to switchers’ absolute treatment change from period-(t-1) to period-(t). (3) "iwaoss" which generalizes "waoss" to the instrumental-variable case, and is equal to the reduced-form "waoss" effect of the instrument on the outcome, divided by the first-stage "waoss" effect of the instrument on the treatment. If this option is not specified: by default, the command estimates both "aoss" and "waoss" if the instrumental-variable Z is not specified, or only iwaoss otherwise. 
@@ -17,6 +17,8 @@
 #' @param weight (char) TBD.
 #' @param noextrapolation (logical) This option forces the command to use only switchers whose period-(t-1) treatments (or instruments) are between the minimum and the maximum values of the period-(t-1) treatments (or instruments) of the stayers. This a less restrictive common support assumption.
 #' @param aoss_vs_waoss (logical) As highlighted in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022), the aoss and the waoss are equal if and only if switchers’ slopes are uncorrelated with $|D_t - D_{t-1}|$. When this option is specified, the command performs and displays the test of the equality between the aoss and  the waoss. Note that the use of this option requires specifying in the estimator option both aoss and waoss.
+#' @param exact_match exact_match
+#' @param cluster cluster
 #' @section Overview:
 #' did_continuous estimates difference-in-differences estimators for continuous treatments with heterogeneous effects, assuming that between consecutive periods, the treatment of some units, the switchers, changes, while the treatment of other units does not change. It computes the three estimators (including an IV-related estimator) introduced in [de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022)](https://ssrn.com/abstract=4011782). The estimators computed by the command assume static effects and rely on a parallel trends assumptions.
 #' 
@@ -67,46 +69,16 @@
 #' url <- paste("https://raw.githubusercontent.com", repo, file, sep = "/")
 #' gazoline <-  haven::read_dta(url)
 
-#' # Example 1: Estimating the effect of gasoline taxes on gasoline consumption and prices
+#' # Estimating the effect of gasoline taxes on gasoline consumption and prices
 #' summary(did_continuous(
 #'     df = gazoline,
 #'     Y = "lngca",
 #'     ID = "id",
-#'     T = "year",
+#'     Time = "year",
 #'     D = "tau",
-#'     order = 2,
-#'     estimator = c("aoss", "waoss"),
+#'     order = 1,
+#'     estimator = "waoss",
 #'     estimation_method = "dr",
-#'     aoss_vs_waoss = TRUE,
-#'     placebo = TRUE,
-#'     noextrapolation = TRUE
-#' ))
-#' summary(did_continuous(
-#'     df = gazoline,
-#'     Y = "lngpinc",
-#'     ID = "id",
-#'     T = "year",
-#'     D = "tau",
-#'     order = 2,
-#'     estimator = c("aoss", "waoss"),
-#'     estimation_method = "dr",
-#'     aoss_vs_waoss = TRUE,
-#'     placebo = TRUE,
-#'     noextrapolation = TRUE
-#' ))
-
-#' # Example 2: Estimating the price-elasticity of gasoline consumption, using taxes as an instrument
-#' summary(did_continuous(
-#'     df = gazoline,
-#'     Y = "lngca",
-#'     ID = "id",
-#'     T = "year",
-#'     D = "lngpinc",
-#'     Z = "tau",
-#'     order = 2,
-#'     estimator = "iwaoss",
-#'     estimation_method = "ra",
-#'     placebo = TRUE,
 #'     noextrapolation = TRUE
 #' ))
 #' @export
@@ -114,7 +86,7 @@ did_continuous <- function(
     df,
     Y,
     ID,
-    T,
+    Time,
     D,
     Z = NULL,
     estimator = NULL,
@@ -125,7 +97,9 @@ did_continuous <- function(
     weight = NULL,
     switchers = NULL,
     disaggregate = FALSE,
-    aoss_vs_waoss = FALSE
+    aoss_vs_waoss = FALSE,
+    exact_match = FALSE,
+    cluster = NULL
 ) {
   args <- list()
   for (v in names(formals(did_continuous))) {
@@ -151,9 +125,23 @@ did_continuous <- function(
       }
   }
 
-
   if (is.null(estimation_method)) {
     estimation_method <- "ra"
+  }
+
+  if (isTRUE(exact_match)) {
+    if (estimation_method != "ra") {
+      stop("The exact_match option is only compatible with regression adjustment estimation method")
+    }
+    if (isTRUE(noextrapolation)) {
+      message("When exact_match and noextrapolation are both specified, the command will only consider the option exact_match.")
+      noextrapolation <- FALSE
+    }
+    if (order != 1) {
+      stop("The order option is not compatible with exact_match.")
+    } else {
+      order <- 1
+    }
   }
 
   if (!(estimation_method %in% c("ra", "dr", "ps"))) {
@@ -177,8 +165,8 @@ did_continuous <- function(
     stop("To compute the iwaoss you must specify the IV variable.")
   }
 
-  results <- did_continuous_main(df, Y, ID, T, D, Z, estimator, estimation_method, order,
-  noextrapolation, placebo, weight, switchers, disaggregate, aoss_vs_waoss)
+  results <- did_continuous_main(df, Y, ID, Time, D, Z, estimator, estimation_method, order,
+  noextrapolation, placebo, weight, switchers, disaggregate, aoss_vs_waoss, exact_match)
 
   did_continuous <- list(args, results)
   names(did_continuous) <- c("args", "results")

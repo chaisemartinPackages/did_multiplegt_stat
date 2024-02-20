@@ -2,7 +2,7 @@
 #' @param df df
 #' @param Y Y
 #' @param ID ID
-#' @param T T
+#' @param Time Time
 #' @param D D
 #' @param Z Z
 #' @param estimator estimator
@@ -14,6 +14,7 @@
 #' @param switchers switchers
 #' @param disaggregate disaggregate
 #' @param aoss_vs_waoss aoss_vs_waoss
+#' @param exact_match exact_match
 #' @import dplyr
 #' @importFrom magrittr %>%
 #' @importFrom rlang := 
@@ -25,7 +26,7 @@ did_continuous_main <- function(
     df,
     Y,
     ID,
-    T,
+    Time,
     D,
     Z,
     estimator,
@@ -36,7 +37,8 @@ did_continuous_main <- function(
     weight,
     switchers,
     disaggregate,
-    aoss_vs_waoss
+    aoss_vs_waoss,
+    exact_match
 ) {
 
     suppressWarnings({
@@ -51,8 +53,8 @@ did_continuous_main <- function(
     }
 
     # Layer 1: keep only variables of interest, as to speed up what follows
-    df <- df[c(Y, ID, T, D, Z, weight)]
-    df_base <- list(Y = Y, ID = ID, T = T, D = D, Z = Z, weight = weight)
+    df <- df[c(Y, ID, Time, D, Z, weight)]
+    df_base <- list(Y = Y, ID = ID, T = Time, D = D, Z = Z, weight = weight)
     for (i in 1:length(df_base)) {
         if (!is.null(df_base[[i]])) {
             col <- as.character(df_base[[i]])
@@ -127,7 +129,7 @@ did_continuous_main <- function(
 
     for (p in 2:max_T_XX) {
 
-        est_out <- did_continuous_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", T = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = FALSE)
+        est_out <- did_continuous_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = FALSE, exact_match = exact_match)
 
         IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX", all = TRUE) 
         IDs_XX <- IDs_XX[order(IDs_XX$ID_XX), ]
@@ -174,7 +176,7 @@ did_continuous_main <- function(
     if (isTRUE(placebo)) {
         for (p in 3:max_T_XX) {
 
-            est_out <- did_continuous_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", T = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = TRUE)
+            est_out <- did_continuous_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = TRUE, exact_match = exact_match)
 
             if (!is.null(est_out$to_add)) {
                 IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX", all = TRUE) 
@@ -371,15 +373,18 @@ did_continuous_main <- function(
 
     # Returning the results #
 
-    if (isTRUE(noextrapolation)) {
-        if (aoss_XX == 1 | waoss_XX == 1) {
-            cat(sprintf("No extrapolation: %.0f switchers dropped.\n", scalars$N_drop_total_XX))
-        } else if (iwaoss_XX == 1) {
-            cat(sprintf("No extrapolation on IV: %.0f switchers dropped.\n", 
-            scalars$N_drop_total_IV_XX))
+    ## Message for quasi stayers ##
+    if (aoss_XX == 1 & waoss_XX == 1) {
+        if (scalars$delta_1_1_XX / scalars$delta_2_1_XX > 10) {
+            message("You might have quasi-stayers in your data. The aoss estimand is likely to be biased.")
         }
     }
 
+    if (isTRUE(noextrapolation) | isTRUE(exact_match)) {
+        if (scalars$N_drop_total_XX > 0) {
+            message(sprintf("%.0f switchers are dropped out of the estimation because their baseline treatments do not belong to the support of stayers' baseline treatments.", scalars$N_drop_total_XX))
+        }
+    }
 
     IDs_XX <- NULL
     estims <- c("aoss", "waoss", "iwaoss")

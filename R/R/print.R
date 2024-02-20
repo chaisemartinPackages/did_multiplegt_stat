@@ -16,6 +16,42 @@ summary.did_continuous <- function(object, ...) {
         estim_list <- object$args$estimator
     }
 
+    cat("\n");
+    cat(noquote(strrep("-", 35)));cat("\n");
+    if ("iwaoss" %in% estim_list) {
+        strdisplay("N",object$results$table[2*object$results$pairs+1,5] + object$results$table[2*object$results$pairs+1,6])
+    } else {
+        if ("waoss" %in% estim_list) {
+            strdisplay("N",object$results$table[object$results$pairs+1,5] + object$results$table[object$results$pairs+1,6])
+        } else {
+            strdisplay("N",object$results$table[1,5] + object$results$table[1,6])
+        }
+    }
+    methods <- list(ra = "Reg. Adjustment", dr = "Doubly Robust", ps = "Propensity Score")
+    method <- ifelse(is.null(object$args$estimation_method), "ra", object$args$estimation_method)
+    for (m in c("waoss", "iwaoss")) {
+        if (m %in% estim_list) { 
+            strdisplay(paste0(toupper(m), " Method"), methods[[method]])            
+        }
+    }
+    if (isFALSE(object$args$exact_match)) {
+        strdisplay("Polynomial Order",object$args$order)
+    }
+    support <- c("Exact Matching", "No Extrapolation")
+    index <- 1
+    for (m in c("exact_match", "noextrapolation")) {
+        if (isTRUE(object$args[[m]])) {
+            strdisplay("Common Support",support[index])
+        }
+        index <- index + 1
+    }
+    if (!is.null(object$args$switchers)) {
+        strdisplay("Switchers", objects$args$switchers)
+    }
+
+    cat(noquote(strrep("-", 35)));cat("\n");
+
+
     for (t in names(estims)){
         if (t %in% estim_list) {
 
@@ -93,5 +129,17 @@ tab_print <- function(mat) {
         rownames(dis) <- rownames(mat)
         colnames(dis) <- colnames(mat)
         print(noquote(dis[, , drop = FALSE]))
+    }
+}
+
+strdisplay <- function(objs, objn) {
+    ltot1 <- 16; ltot2 <- 16;
+    out1 <- ifelse(nchar(objs) <= ltot1, paste0(objs,strrep(" ",ltot1 - nchar(objs))), substr(objs, 1, ltot1))
+    if (inherits(objn, "character")) {
+        out2 <- ifelse(nchar(objn) <= ltot2, paste0(strrep(" ",ltot2 - nchar(objn)), objn), substr(objn, 2, ltot2))
+        cat(paste0(out1," = ",out2),"\n")
+    } else {
+        objns <- sprintf("%.0f", objn)
+        strdisplay(objs, objns)
     }
 }

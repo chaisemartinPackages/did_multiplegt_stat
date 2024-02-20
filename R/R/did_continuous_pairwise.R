@@ -2,7 +2,7 @@
 #' @param df df
 #' @param Y Y
 #' @param ID ID
-#' @param T T
+#' @param Time Time
 #' @param D D
 #' @param Z Z
 #' @param estimator estimator
@@ -17,6 +17,7 @@
 #' @param estimation_method estimation_method
 #' @param scalars scalars
 #' @param placebo placebo
+#' @param exact_match exact_match
 #' @import dplyr
 #' @importFrom magrittr %>%
 #' @importFrom rlang := 
@@ -28,7 +29,7 @@ did_continuous_pairwise <- function(
     df,
     Y,
     ID,
-    T,
+    Time,
     D,
     Z,
     estimator,
@@ -43,7 +44,8 @@ did_continuous_pairwise <- function(
     iwaoss,
     estimation_method,
     scalars,
-    placebo
+    placebo,
+    exact_match
 ) {
     # Preallocation of scalars
     IV_req_XX <- NULL
@@ -62,7 +64,6 @@ did_continuous_pairwise <- function(
         df <- subset(df, df$T_XX %in% c(pairwise-1,pairwise))
         pl <- ""
     }
-
 
     ## Start of the program
     df <- df %>% group_by(.data$T_XX) %>% 
@@ -210,8 +211,9 @@ did_continuous_pairwise <- function(
         if (!is.null(switchers)) {
             df <- subset(df, !(df$SI_XX == (switchers == "down") - (switchers == "up")))
         }
-
+        df$abs_delta_Z_XX <- df$SI_XX * df$delta_Z_XX
     }
+    df$abs_delta_D_XX <- df$S_XX * df$delta_D_XX
 
     # We have all the variable we need at the first year so we can drop the 'second' year line
     df <- subset(df, df$T_XX != max(df$T_XX, na.rm = TRUE))
@@ -240,10 +242,32 @@ did_continuous_pairwise <- function(
             df <- subset(df, df$outofBoundsIV_XX != 1)
           
             if (get(paste0("N_IVdrop_",pairwise,pl,"_XX")) > 0 & isFALSE(placebo) & gap_XX == 0) {
-                N_drop_total_IV_XX <- N_drop_total_IV_XX + get(paste0("N_IVdrop_",pairwise,pl,"_XX"))
+                N_drop_total_XX <- N_drop_total_XX + get(paste0("N_IVdrop_",pairwise,pl,"_XX"))
 
             }           
         }
+    }
+    if (isTRUE(exact_match)) {
+        if (aoss == 1 | waoss == 1) {
+            df <- df %>% group_by(.data$D1_XX) %>% 
+                    mutate(has_match_temp_XX = min(.data$abs_delta_D_XX, na.rm = TRUE)) %>% ungroup()
+            df$has_match_XX <- as.numeric(df$has_match_temp_XX == 0)
+            df$has_match_XX <- ifelse(df$S_XX == 0, NA, df$has_match_XX)
+            df$has_match_temp_XX <- NULL
+        } else if (iwaoss == 1) {
+            df <- df %>% group_by(.data$Z1_XX) %>% 
+                    mutate(has_match_temp_XX = min(.data$abs_delta_Z_XX, na.rm = TRUE)) %>% ungroup()
+            df$has_match_XX <- as.numeric(df$has_match_temp_XX == 0)
+            df$has_match_XX <- ifelse(df$SI_XX == 0, NA, df$has_match_XX)
+            df$has_match_temp_XX <- NULL
+        }
+        assign(paste0("N_drop_",pairwise,pl,"_XX"), nrow(subset(df, df$has_match_XX == 0)))
+        df <- subset(df, (!is.na(df$has_match_XX) & df$has_match_XX != 0) | is.na(df$has_match_XX))
+        if (get(paste0("N_drop_",pairwise,pl,"_XX")) > 0 & gap_XX == 0) {
+            N_drop_total_XX <- N_drop_total_XX + get(paste0("N_drop_",pairwise,pl,"_XX")) 
+        }
+
+        order <- length(unique(df$D1_XX))
     }
     assign(paste0("W",pl,"_XX"), sum(df$weight_XX, na.rm = TRUE))
     assign(paste0("N",pl,"_XX"), nrow(df))
@@ -286,7 +310,7 @@ did_continuous_pairwise <- function(
         } 
     }
 
-    df$S_bis_XX <- df$S_XX != 0
+    df$S_bis_XX <- df$S_XX != 0 & !is.na(df$S_XX)
 
     # Feasibility conditions:
     feasible_est <- FALSE
@@ -310,9 +334,20 @@ did_continuous_pairwise <- function(
             df$inner_sum_delta_1_2_XX <- df$delta_Y_XX -  df$mean_pred_XX
 
             df$S0_XX <- 1 - df$S_bis_XX
-            model <- stata_logit(as.formula(paste("S0_XX",reg_pol_XX,sep="~")), df)
-            df <- lpredict(df,"PS_0_D_1_XX", model, vars_pol_XX, prob = TRUE)
 
+            if (isFALSE(exact_match)) {
+                ## 1. Estimation of P(S = 0|D_1) 
+                model <- stata_logit(as.formula(paste("S0_XX",reg_pol_XX,sep="~")), df)
+                df <- lpredict(df,"PS_0_D_1_XX", model, vars_pol_XX, prob = TRUE)
+            } else {
+		        ## Estimation of 1-E(S|D1) = P(S = 0|D_1) in exact_match case
+                model <- lm(as.formula(paste("S_bis_XX",reg_pol_XX,sep="~")),data=df,weights= df$weight_XX)
+                df <- lpredict(df, "ES_bis_XX_D_1", model, vars_pol_XX)
+
+		        ## Estimation of \hat{E}(S+-S-|D1) for both \Phi_2:
+                model <- lm(as.formula(paste("S_XX",reg_pol_XX,sep="~")),data=df,weights= df$weight_XX)
+                df <- lpredict(df, "ES_XX_D_1", model, vars_pol_XX)
+            }
             assign(paste0("PS_0",pl,"_XX"), mean(df$S0_XX, na.rm = TRUE))
         }
 
@@ -338,7 +373,11 @@ did_continuous_pairwise <- function(
             df <- lpredict(df, "mean_S_over_delta_D_XX", modelvar, vars_pol_XX)
 
 		    # i. estimation of \hat{E}(S/deltaD|D1)
-            df[[paste0("Phi_1_",pairwise,pl,"_XX")]] <- (df$S_over_delta_D_XX - df$mean_S_over_delta_D_XX * ((1 - df$S_bis_XX)/(df$PS_0_D_1_XX))) * df$inner_sum_delta_1_2_XX
+            if (isFALSE(exact_match)) {
+               df[[paste0("Phi_1_",pairwise,pl,"_XX")]] <- (df$S_over_delta_D_XX - df$mean_S_over_delta_D_XX * ((1 - df$S_bis_XX)/(df$PS_0_D_1_XX))) * df$inner_sum_delta_1_2_XX
+            } else {
+               df[[paste0("Phi_1_",pairwise,pl,"_XX")]] <- (df$S_over_delta_D_XX - df$mean_S_over_delta_D_XX * ((1 - df$S_bis_XX)/(df$ES_bis_XX_D_1))) * df$inner_sum_delta_1_2_XX
+            }
 
             df[[paste0("Phi_1_",pairwise,pl,"_XX")]] <- (df[[paste0("Phi_1_",pairwise,pl,"_XX")]] - (get(paste0("delta_1_", pairwise,pl,"_XX")) * df$S_bis_XX)) / get(paste0("ES",pl,"_XX"))
 
@@ -357,7 +396,6 @@ did_continuous_pairwise <- function(
         ###################################################### WAOSS ##########
 
         if (waoss == 1) {
-            df$abs_delta_D_XX <- df$S_XX * df$delta_D_XX
             assign(paste0("E_abs_delta_D",pl,"_XX"), mean(df$abs_delta_D_XX, na.rm = TRUE))
             assign(paste0("E_abs_delta_D_",pairwise,pl,"_XX"), get(paste0("E_abs_delta_D",pl,"_XX")))
             assign(paste0("E_abs_delta_D_sum",pl,"_XX"), get(paste0("E_abs_delta_D_sum",pl,"_XX")) + get(paste0("E_abs_delta_D_",pairwise,pl,"_XX")))
@@ -390,27 +428,29 @@ did_continuous_pairwise <- function(
 
                 assign(paste0("PS_",suffix,"1",pl,"_XX"), get(paste0("nb_Switchers_",suffix,pl,"_XX"))/get(paste0("N",pl,"_XX")))
 
-                if (get(paste0("PS_",suffix,"1",pl,"_XX")) == 0) {
-                    # The regression is performed iff there is at least one switcher up/down.
-                    assign(paste0("delta_2_",suffix,"_",pairwise,pl,"_XX"), 0)
-                    df[[paste0("PS_1_",suffix,"_D_1_XX")]] <- 0
-                } else {
-                    model <- stata_logit(as.formula(paste("Ster_XX",reg_pol_XX,sep="~")), df)
-                    df <- lpredict(df,paste0("PS_1_",suffix,"_D_1_XX"),model, vars_pol_XX, prob = TRUE)
+                if (isFALSE(exact_match)) {
+                    if (get(paste0("PS_",suffix,"1",pl,"_XX")) == 0) {
+                        # The regression is performed iff there is at least one switcher up/down.
+                        assign(paste0("delta_2_",suffix,"_",pairwise,pl,"_XX"), 0)
+                        df[[paste0("PS_1_",suffix,"_D_1_XX")]] <- 0
+                    } else {
+                        model <- stata_logit(as.formula(paste("Ster_XX",reg_pol_XX,sep="~")), df)
+                        df <- lpredict(df,paste0("PS_1_",suffix,"_D_1_XX"),model, vars_pol_XX, prob = TRUE)
 
 
-                    if (estimation_method == "ps") {
-                        df[[paste0("delta_Y_P_",suffix,"_XX")]] <- df$delta_Y_XX * (df[[paste0("PS_1_",suffix,"_D_1_XX")]]/df$PS_0_D_1_XX) * (get(paste0("PS_0",pl,"_XX")) / get(paste0("PS_",suffix,"1",pl,"_XX")))
+                        if (estimation_method == "ps") {
+                            df[[paste0("delta_Y_P_",suffix,"_XX")]] <- df$delta_Y_XX * (df[[paste0("PS_1_",suffix,"_D_1_XX")]]/df$PS_0_D_1_XX) * (get(paste0("PS_0",pl,"_XX")) / get(paste0("PS_",suffix,"1",pl,"_XX")))
 
-                        assign(paste0("mean_delta_Y_P_",suffix,pl,"_XX"), 
-                        mean(df[[paste0("delta_Y_P_",suffix,"_XX")]][df$S_XX == 0], na.rm=TRUE))
-                        assign(paste0("mean_delta_Y",pl,"_XX"), mean(df$delta_Y_XX[df$Ster_XX == 1], na.rm = TRUE))
-                        assign(paste0("mean_delta_D",pl,"_XX"), mean(df$delta_D_XX[df$Ster_XX == 1], na.rm = TRUE))
-                        assign(paste0("delta_2_",suffix,"_",pairwise,pl,"_XX"), 
+                            assign(paste0("mean_delta_Y_P_",suffix,pl,"_XX"), 
+                            mean(df[[paste0("delta_Y_P_",suffix,"_XX")]][df$S_XX == 0], na.rm=TRUE))
+                            assign(paste0("mean_delta_Y",pl,"_XX"), mean(df$delta_Y_XX[df$Ster_XX == 1], na.rm = TRUE))
+                            assign(paste0("mean_delta_D",pl,"_XX"), mean(df$delta_D_XX[df$Ster_XX == 1], na.rm = TRUE))
+                            assign(paste0("delta_2_",suffix,"_",pairwise,pl,"_XX"), 
 
-                        (get(paste0("mean_delta_Y",pl,"_XX")) - get(paste0("mean_delta_Y_P_",suffix,pl,"_XX"))) / get(paste0("mean_delta_D",pl,"_XX")))
-                    }
-                }                
+                            (get(paste0("mean_delta_Y",pl,"_XX")) - get(paste0("mean_delta_Y_P_",suffix,pl,"_XX"))) / get(paste0("mean_delta_D",pl,"_XX")))
+                        }
+                    }                
+                }
             }
 
             if (estimation_method == "ra" | estimation_method == "ps") {
@@ -419,10 +459,11 @@ did_continuous_pairwise <- function(
                 assign(paste0("W_Plus_",pairwise,pl,"_XX"), get(paste0("w_Plus_",pairwise,pl,"_XX")) /
                 (get(paste0("w_Plus_",pairwise,pl,"_XX")) + get(paste0("w_Minus_",pairwise,pl,"_XX"))))
             }
-
-            df$dr_delta_Y_XX <- (df$S_XX - ((df$PS_1_Plus_D_1_XX - df$PS_1_Minus_D_1_XX)/df$PS_0_D_1_XX) * (1 - df$S_bis_XX)) * df$inner_sum_delta_1_2_XX
-            assign(paste0("denom_dr_delta_2",pl,"_XX"), sum(df$dr_delta_Y_XX, na.rm = TRUE))
-
+            
+            if (isFALSE(exact_match)) {
+                df$dr_delta_Y_XX <- (df$S_XX - ((df$PS_1_Plus_D_1_XX - df$PS_1_Minus_D_1_XX)/df$PS_0_D_1_XX) * (1 - df$S_bis_XX)) * df$inner_sum_delta_1_2_XX
+                assign(paste0("denom_dr_delta_2",pl,"_XX"), sum(df$dr_delta_Y_XX, na.rm = TRUE))
+            }
 
             if (estimation_method == "ra" | estimation_method == "ps") {
                 assign(paste0("delta_2_",pairwise,pl,"_XX"), 
@@ -434,7 +475,11 @@ did_continuous_pairwise <- function(
             }
 
             # Computing the variance
-            df[[paste0("Phi_2_",pairwise,pl,"_XX")]] <- (df$dr_delta_Y_XX - get(paste0("delta_2_", pairwise,pl,"_XX")) * df$abs_delta_D_XX) / get(paste0("E_abs_delta_D",pl,"_XX"))
+            if (isFALSE(exact_match)) {
+                df[[paste0("Phi_2_",pairwise,pl,"_XX")]] <- (df$dr_delta_Y_XX - get(paste0("delta_2_", pairwise,pl,"_XX")) * df$abs_delta_D_XX) / get(paste0("E_abs_delta_D",pl,"_XX"))
+            } else {
+                df[[paste0("Phi_2_",pairwise,pl,"_XX")]] <- ((df$S_XX - df$ES_XX_D_1 * ((1 - df$S_bis_XX)/(1 - df$ES_bis_XX_D_1))) * df$inner_sum_delta_1_2_XX - get(paste0("delta_2_", pairwise,pl,"_XX")) * df$abs_delta_D_XX) / get(paste0("E_abs_delta_D",pl,"_XX"))
+            }
 
             assign(paste0("mean_IF_2_",pairwise,pl),
                     mean(df[[paste0("Phi_2_",pairwise,pl,"_XX")]], na.rm = TRUE))
@@ -448,7 +493,6 @@ did_continuous_pairwise <- function(
 
         ##################################################### IWAOSS ##########
         if (iwaoss == 1) {
-            df$abs_delta_Z_XX <- df$SI_XX * df$delta_Z_XX
             assign(paste0("E_abs_delta_Z",pl,"_XX"), mean(df$abs_delta_Z_XX, na.rm = TRUE))
 
             df$SI_bis_XX <- (df$SI_XX != 0 & !is.na(df$SI_XX))
@@ -457,8 +501,15 @@ did_continuous_pairwise <- function(
 
             # Preliminaries: logit regression
             df$S_IV_0_XX <- 1 - df$SI_bis_XX
-            model <- stata_logit(as.formula(paste("S_IV_0_XX",IV_reg_pol_XX,sep="~")), df)
-            df <- lpredict(df,"PS_IV_0_Z_1_XX",model, IV_vars_pol_XX, prob = TRUE)
+            if (isFALSE(exact_match)) {
+                model <- stata_logit(as.formula(paste("S_IV_0_XX",IV_reg_pol_XX,sep="~")), df)
+                df <- lpredict(df,"PS_IV_0_Z_1_XX",model, IV_vars_pol_XX, prob = TRUE)
+            } else {
+                model <- lm(as.formula(paste("SI_bis_XX",IV_reg_pol_XX,sep="~")), data = df, weights = df$weight_XX)
+                df <- lpredict(df, "ES_I_bis_XX_Z_1", model, IV_vars_pol_XX)
+                model <- lm(as.formula(paste("SI_XX",IV_reg_pol_XX,sep="~")), data = df, weights = df$weight_XX)
+                df <- lpredict(df, "ES_I_XX_Z_1", model, IV_vars_pol_XX)
+            }
             assign(paste0("PS_IV_0",pl,"_XX"), mean(df$S_IV_0_XX, na.rm = TRUE))
 
             for (suffix in c("Minus", "Plus")) {
@@ -469,8 +520,10 @@ did_continuous_pairwise <- function(
                 if (get(paste0("PS_I_",suffix,"_1",pl,"_XX")) == 0) {
                     df[[paste0("PS_I_",suffix,"_1_Z_1_XX")]] <- 0
                 } else {
-                    model <- stata_logit(as.formula(paste(paste0("SI_",suffix,"_XX"),IV_reg_pol_XX,sep="~")), df)
-                    df <- lpredict(df,paste0("PS_I_",suffix,"_1_Z_1_XX"),model, IV_vars_pol_XX, prob = TRUE)
+                    if (isFALSE(exact_match)) {
+                        model <- stata_logit(as.formula(paste(paste0("SI_",suffix,"_XX"),IV_reg_pol_XX,sep="~")), df)
+                        df <- lpredict(df,paste0("PS_I_",suffix,"_1_Z_1_XX"),model, IV_vars_pol_XX, prob = TRUE)
+                    }
                 }
             }
 
@@ -531,13 +584,22 @@ did_continuous_pairwise <- function(
             model <- lm(as.formula(paste("delta_Y_XX", reg_pol_XX, sep = "~")), 
                     data = subset(df, df$SI_XX == 0) , weights = df$weights)
             df <- lpredict(df,"mean_pred_Y_IV_XX", model, vars_pol_XX)   
-            df$Phi_Y_XX <- ((df$SI_XX - (df$PS_I_Plus_1_Z_1_XX - df$PS_I_Minus_1_Z_1_XX) * (1 - df$SI_bis_XX) / df$PS_IV_0_Z_1_XX) * (df$delta_Y_XX - df$mean_pred_Y_IV_XX) - get(paste0("delta_Y",pl,"_XX")) * df$abs_delta_Z_XX) / get(paste0("E_abs_delta_Z",pl,"_XX"))
+            if (isFALSE(exact_match)) {
+                df$Phi_Y_XX <- ((df$SI_XX - (df$PS_I_Plus_1_Z_1_XX - df$PS_I_Minus_1_Z_1_XX) * (1 - df$SI_bis_XX) / df$PS_IV_0_Z_1_XX) * (df$delta_Y_XX - df$mean_pred_Y_IV_XX) - get(paste0("delta_Y",pl,"_XX")) * df$abs_delta_Z_XX) / get(paste0("E_abs_delta_Z",pl,"_XX"))
+            } else {
+                df$Phi_Y_XX <- ((df$SI_XX - (df$ES_I_XX_Z_1) * ((1 - df$SI_bis_XX) / (1- df$ES_I_bis_XX_Z_1))) * (df$delta_Y_XX - df$mean_pred_Y_IV_XX) - get(paste0("delta_Y",pl,"_XX")) * df$abs_delta_Z_XX) / get(paste0("E_abs_delta_Z",pl,"_XX"))
+            }
             
             assign(paste0("delta_D",pl,"_XX"), mean(df$inner_sum_IV_denom_XX, na.rm = TRUE)) 
             model <- lm(as.formula(paste("delta_D_XX", reg_pol_XX, sep = "~")), 
                     data = subset(df, df$SI_XX == 0) , weights = df$weights)
             df <- lpredict(df,"mean_pred_D_IV_XX", model, vars_pol_XX)   
-            df$Phi_D_XX <- ((df$SI_XX - (df$PS_I_Plus_1_Z_1_XX - df$PS_I_Minus_1_Z_1_XX) * (1 - df$SI_bis_XX) / df$PS_IV_0_Z_1_XX) * (df$delta_D_XX - df$mean_pred_D_IV_XX) - get(paste0("delta_D",pl,"_XX")) * df$abs_delta_Z_XX) / get(paste0("E_abs_delta_Z",pl,"_XX"))
+
+            if (isFALSE(exact_match)) {
+                df$Phi_D_XX <- ((df$SI_XX - (df$PS_I_Plus_1_Z_1_XX - df$PS_I_Minus_1_Z_1_XX) * (1 - df$SI_bis_XX) / df$PS_IV_0_Z_1_XX) * (df$delta_D_XX - df$mean_pred_D_IV_XX) - get(paste0("delta_D",pl,"_XX")) * df$abs_delta_Z_XX) / get(paste0("E_abs_delta_Z",pl,"_XX"))
+            } else {
+                df$Phi_D_XX <- ((df$SI_XX - (df$ES_I_XX_Z_1) * ((1 - df$SI_bis_XX) / (1- df$ES_I_bis_XX_Z_1))) * (df$delta_D_XX - df$mean_pred_D_IV_XX) - get(paste0("delta_D",pl,"_XX")) * df$abs_delta_Z_XX) / get(paste0("E_abs_delta_Z",pl,"_XX"))
+            }
 
             df[[paste0("Phi_3_",pairwise,pl,"_XX")]] <- (df$Phi_Y_XX - get(paste0("delta_3_",pairwise,pl,"_XX")) * df$Phi_D_XX) / get(paste0("delta_D",pl,"_XX"))
             mean_IF3 <- mean(df[[paste0("Phi_3_",pairwise,pl,"_XX")]] , na.rm = TRUE)

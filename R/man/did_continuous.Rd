@@ -8,7 +8,7 @@ did_continuous(
   df,
   Y,
   ID,
-  T,
+  Time,
   D,
   Z = NULL,
   estimator = NULL,
@@ -19,7 +19,9 @@ did_continuous(
   weight = NULL,
   switchers = NULL,
   disaggregate = FALSE,
-  aoss_vs_waoss = FALSE
+  aoss_vs_waoss = FALSE,
+  exact_match = FALSE,
+  cluster = NULL
 )
 }
 \arguments{
@@ -29,7 +31,7 @@ did_continuous(
 
 \item{ID}{(char) Identifier of the unit of analysis.}
 
-\item{T}{(char) Time variable. The command assumes that the time variable is evenly spaced (e.g.: the panel is at the yearly level, and no year is missing for all groups). When it is not (e.g.: the panel is at the yearly level, but three consecutive years are missing for all groups), the command can still be used. For example, if the year n is missing, the command does not comuptes the DID estimators of the pairs of years (n-1,n),(n,n+1), and (n-1,n+1).}
+\item{Time}{(char) Time variable. The command assumes that the time variable is evenly spaced (e.g.: the panel is at the yearly level, and no year is missing for all groups). When it is not (e.g.: the panel is at the yearly level, but three consecutive years are missing for all groups), the command can still be used. For example, if the year n is missing, the command does not comuptes the DID estimators of the pairs of years (n-1,n),(n,n+1), and (n-1,n+1).}
 
 \item{D}{(char) Treatment variable.}
 
@@ -52,6 +54,10 @@ did_continuous(
 \item{disaggregate}{(logical) If this potion is specified, the command displays the estimands of the effects for each two consecutive periods as well as the aggregated estimands. Otherwise, the command only outputs the aggregated results.}
 
 \item{aoss_vs_waoss}{(logical) As highlighted in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022), the aoss and the waoss are equal if and only if switchers’ slopes are uncorrelated with $|D_t - D_{t-1}|$. When this option is specified, the command performs and displays the test of the equality between the aoss and  the waoss. Note that the use of this option requires specifying in the estimator option both aoss and waoss.}
+
+\item{exact_match}{exact_match}
+
+\item{cluster}{cluster}
 }
 \description{
 Estimation of Difference-in-Difference (DID) Estimators for Treatments and Instruments Continuously Distributed at Every Period with Stayers.
@@ -118,45 +124,16 @@ repo <- "chaisemartinPackages/ApplicationData/main"
 file <- "data_gazoline.dta"
 url <- paste("https://raw.githubusercontent.com", repo, file, sep = "/")
 gazoline <-  haven::read_dta(url)
-# Example 1: Estimating the effect of gasoline taxes on gasoline consumption and prices
+# Estimating the effect of gasoline taxes on gasoline consumption and prices
 summary(did_continuous(
     df = gazoline,
     Y = "lngca",
     ID = "id",
-    T = "year",
+    Time = "year",
     D = "tau",
-    order = 2,
-    estimator = c("aoss", "waoss"),
+    order = 1,
+    estimator = "waoss",
     estimation_method = "dr",
-    aoss_vs_waoss = TRUE,
-    placebo = TRUE,
-    noextrapolation = TRUE
-))
-summary(did_continuous(
-    df = gazoline,
-    Y = "lngpinc",
-    ID = "id",
-    T = "year",
-    D = "tau",
-    order = 2,
-    estimator = c("aoss", "waoss"),
-    estimation_method = "dr",
-    aoss_vs_waoss = TRUE,
-    placebo = TRUE,
-    noextrapolation = TRUE
-))
-# Example 2: Estimating the price-elasticity of gasoline consumption, using taxes as an instrument
-summary(did_continuous(
-    df = gazoline,
-    Y = "lngca",
-    ID = "id",
-    T = "year",
-    D = "lngpinc",
-    Z = "tau",
-    order = 2,
-    estimator = "iwaoss",
-    estimation_method = "ra",
-    placebo = TRUE,
     noextrapolation = TRUE
 ))
 }
