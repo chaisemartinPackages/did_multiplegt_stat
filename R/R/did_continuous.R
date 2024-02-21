@@ -165,8 +165,7 @@ did_continuous <- function(
     stop("To compute the iwaoss you must specify the IV variable.")
   }
 
-  results <- did_continuous_main(df, Y, ID, Time, D, Z, estimator, estimation_method, order,
-  noextrapolation, placebo, weight, switchers, disaggregate, aoss_vs_waoss, exact_match)
+  results <- did_continuous_main(df = df, Y = Y, ID = ID, Time = Time, D = D, Z = Z, estimator = estimator, estimation_method = estimation_method, order = order, noextrapolation = noextrapolation, placebo = placebo, weight = weight, switchers = switchers, disaggregate = disaggregate, aoss_vs_waoss = aoss_vs_waoss, exact_match = exact_match, cluster = cluster)
 
   did_continuous <- list(args, results)
   names(did_continuous) <- c("args", "results")

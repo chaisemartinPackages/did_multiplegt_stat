@@ -18,6 +18,7 @@
 #' @param scalars scalars
 #' @param placebo placebo
 #' @param exact_match exact_match
+#' @param cluster cluster
 #' @import dplyr
 #' @importFrom magrittr %>%
 #' @importFrom rlang := 
@@ -45,7 +46,8 @@ did_continuous_pairwise <- function(
     estimation_method,
     scalars,
     placebo,
-    exact_match
+    exact_match,
+    cluster
 ) {
     # Preallocation of scalars
     IV_req_XX <- NULL
@@ -84,7 +86,6 @@ did_continuous_pairwise <- function(
     if (iwaoss == 1) {
         df$delta_Z_XX <- diff(df$Z_XX)        
     }
-
 
     if (isTRUE(placebo))  {
         df$delta_temp <- ifelse(df$T_XX == 2, df$delta_Y_XX, NA)
@@ -383,8 +384,21 @@ did_continuous_pairwise <- function(
 
             assign(paste0("mean_IF_1_",pairwise,pl),
                     mean(df[[paste0("Phi_1_",pairwise,pl,"_XX")]], na.rm = TRUE))
-            assign(paste0("sd_delta_1_",pairwise,pl,"_XX"),
-                    sd(df[[paste0("Phi_1_",pairwise,pl,"_XX")]], na.rm = TRUE)/sqrt(get(paste0("N",pl,"_XX"))))
+
+            if (!is.null(cluster)) {
+                df <- df %>% group_by(.data$cluster_XX) %>% 
+                        mutate(!!paste0("Phi_1_",pairwise,pl,"_c_XX") := sum(.data[[paste0("Phi_1_", pairwise,pl,"_XX")]], na.rm = TRUE)) %>%
+                        mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
+                df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]] <- ifelse(df$first_obs_by_clus == 1, df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]], NA)
+                nobs_c_XX <- nrow(subset(df, !is.na(df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]])))
+                assign(paste0("sd_delta_1_",pairwise,pl,"_XX"),
+                        sd(df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]], na.rm = TRUE)/sqrt(nobs_c_XX))
+                nobs_c_XX <- NULL
+                df$first_obs_by_clus <- NULL
+            } else {
+                assign(paste0("sd_delta_1_",pairwise,pl,"_XX"),
+                        sd(df[[paste0("Phi_1_",pairwise,pl,"_XX")]], na.rm = TRUE)/sqrt(get(paste0("N",pl,"_XX"))))
+            }
             assign(paste0("LB_1_",pairwise,pl,"_XX"),
             get(paste0("delta_1_",pairwise,pl,"_XX")) - 1.96 * get(paste0("sd_delta_1_", pairwise,pl,"_XX")))
             assign(paste0("UB_1_",pairwise,pl,"_XX"),
@@ -483,8 +497,21 @@ did_continuous_pairwise <- function(
 
             assign(paste0("mean_IF_2_",pairwise,pl),
                     mean(df[[paste0("Phi_2_",pairwise,pl,"_XX")]], na.rm = TRUE))
-            assign(paste0("sd_delta_2_",pairwise,pl,"_XX"),
-                    sd(df[[paste0("Phi_2_",pairwise,pl,"_XX")]], na.rm = TRUE)/sqrt(get(paste0("N",pl,"_XX"))))
+
+            if (!is.null(cluster)) {
+                df <- df %>% group_by(.data$cluster_XX) %>% 
+                        mutate(!!paste0("Phi_2_",pairwise,pl,"_c_XX") := sum(.data[[paste0("Phi_2_", pairwise,pl,"_XX")]], na.rm = TRUE)) %>%
+                        mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
+                df[[paste0("Phi_2_",pairwise,pl,"_c_XX")]] <- ifelse(df$first_obs_by_clus == 1, df[[paste0("Phi_2_",pairwise,pl,"_c_XX")]], NA)
+                nobs_c_XX <- nrow(subset(df, !is.na(df[[paste0("Phi_2_",pairwise,pl,"_c_XX")]])))
+                assign(paste0("sd_delta_2_",pairwise,pl,"_XX"),
+                        sd(df[[paste0("Phi_2_",pairwise,pl,"_c_XX")]], na.rm = TRUE)/sqrt(nobs_c_XX))
+                nobs_c_XX <- NULL
+                df$first_obs_by_clus <- NULL
+            } else {
+                assign(paste0("sd_delta_2_",pairwise,pl,"_XX"),
+                        sd(df[[paste0("Phi_2_",pairwise,pl,"_XX")]], na.rm = TRUE)/sqrt(get(paste0("N",pl,"_XX"))))
+            }
             assign(paste0("LB_2_",pairwise,pl,"_XX"), get(paste0("delta_2_",pairwise,pl,"_XX")) - 1.96 * get(paste0("sd_delta_2_", pairwise,pl,"_XX")))
             assign(paste0("UB_2_",pairwise,pl,"_XX"), get(paste0("delta_2_",pairwise,pl,"_XX")) + 1.96 * get(paste0("sd_delta_2_", pairwise,pl,"_XX")))
 
@@ -603,7 +630,22 @@ did_continuous_pairwise <- function(
 
             df[[paste0("Phi_3_",pairwise,pl,"_XX")]] <- (df$Phi_Y_XX - get(paste0("delta_3_",pairwise,pl,"_XX")) * df$Phi_D_XX) / get(paste0("delta_D",pl,"_XX"))
             mean_IF3 <- mean(df[[paste0("Phi_3_",pairwise,pl,"_XX")]] , na.rm = TRUE)
-            assign(paste0("sd_delta_3_",pairwise,pl,"_XX"), sd(df[[paste0("Phi_3_",pairwise,pl,"_XX")]] , na.rm = TRUE)/sqrt(get(paste0("N",pl,"_XX"))))
+
+            if (!is.null(cluster)) {
+                df <- df %>% group_by(.data$cluster_XX) %>% 
+                        mutate(!!paste0("Phi_3_",pairwise,pl,"_c_XX") := sum(.data[[paste0("Phi_3_", pairwise,pl,"_XX")]], na.rm = TRUE)) %>%
+                        mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
+                df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]] <- ifelse(df$first_obs_by_clus == 1, df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]], NA)
+                nobs_c_XX <- nrow(subset(df, !is.na(df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]])))
+                assign(paste0("sd_delta_3_",pairwise,pl,"_XX"),
+                        sd(df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]], na.rm = TRUE)/sqrt(nobs_c_XX))
+                nobs_c_XX <- NULL
+                df$first_obs_by_clus <- NULL
+            } else {
+                assign(paste0("sd_delta_3_",pairwise,pl,"_XX"),
+                        sd(df[[paste0("Phi_3_",pairwise,pl,"_XX")]], na.rm = TRUE)/sqrt(get(paste0("N",pl,"_XX"))))
+            }
+
             assign(paste0("LB_3_",pairwise,pl,"_XX"), get(paste0("delta_3_",pairwise,pl,"_XX")) - 1.96*get(paste0("sd_delta_3_",pairwise,pl,"_XX")))
             assign(paste0("UB_3_",pairwise,pl,"_XX"), get(paste0("delta_3_",pairwise,pl,"_XX")) + 1.96*get(paste0("sd_delta_3_",pairwise,pl,"_XX")))
 

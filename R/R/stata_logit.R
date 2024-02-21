@@ -13,10 +13,6 @@ stata_logit <- function(
     suppressWarnings({
     model <- glm(formula, data = df, weights = df$weights, family = binomial(link = 'logit'),
     maxit = 300, epsilon = 10^-8)
-    ## Detect warnings from glm ##
-    if (!model$converged) {
-        #warning("Convergence not achieved.")
-    }
     })
     return(model)
 }

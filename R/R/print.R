@@ -48,6 +48,11 @@ summary.did_continuous <- function(object, ...) {
     if (!is.null(object$args$switchers)) {
         strdisplay("Switchers", objects$args$switchers)
     }
+    if (!is.null(object$args$cluster)) {
+        if (object$args$cluster != object$args$ID) {
+            strdisplay("Cluster", object$args$cluster)
+        }
+    }
 
     cat(noquote(strrep("-", 35)));cat("\n");
 

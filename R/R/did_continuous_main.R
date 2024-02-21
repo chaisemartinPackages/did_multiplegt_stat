@@ -15,6 +15,7 @@
 #' @param disaggregate disaggregate
 #' @param aoss_vs_waoss aoss_vs_waoss
 #' @param exact_match exact_match
+#' @param cluster cluster
 #' @import dplyr
 #' @importFrom magrittr %>%
 #' @importFrom rlang := 
@@ -38,7 +39,8 @@ did_continuous_main <- function(
     switchers,
     disaggregate,
     aoss_vs_waoss,
-    exact_match
+    exact_match,
+    cluster
 ) {
 
     suppressWarnings({
@@ -53,8 +55,8 @@ did_continuous_main <- function(
     }
 
     # Layer 1: keep only variables of interest, as to speed up what follows
-    df <- df[c(Y, ID, Time, D, Z, weight)]
-    df_base <- list(Y = Y, ID = ID, T = Time, D = D, Z = Z, weight = weight)
+    df <- df[c(Y, ID, Time, D, Z, weight, cluster)]
+    df_base <- list(Y = Y, ID = ID, T = Time, D = D, Z = Z, weight = weight, cluster = cluster)
     for (i in 1:length(df_base)) {
         if (!is.null(df_base[[i]])) {
             col <- as.character(df_base[[i]])
@@ -63,6 +65,19 @@ did_continuous_main <- function(
         }
     }
     df_base <- NULL
+
+    if (!is.null(cluster)) {
+        if (cluster == ID) {
+            cluster <- NULL
+            message("The cluster option should be different from (and coarser than) the ID variable. The command will ignore the cluster option.")
+        } else {
+            df <- df %>% group_by(.data$ID_XX) %>% 
+                    mutate(cluster_sd_XX = sd(.data$cluster_XX, na.rm = TRUE))
+            if (max(df$cluster_sd_XX, na.rm = TRUE) > 0) {
+                stop("The ID variable should be nested within the clustering variable.")
+            }
+        }
+    }
 
     df$to_drop_XX <- (is.na(df$T_XX) | is.na(df$D_XX) | is.na(df$ID_XX))
     IV_req_XX <- 0
@@ -88,6 +103,12 @@ did_continuous_main <- function(
     # Further useful steps prior to the estimation
     IDs_XX <- as.data.frame(unique(factor(df$ID_XX)))
     names(IDs_XX) <- "ID_XX"
+    if (!is.null(cluster)) {
+        cluster_df <- df %>% group_by(.data$ID_XX) %>% 
+            summarise(cluster_XX = mean(.data$cluster_XX)) %>% ungroup()
+        IDs_XX <- merge(IDs_XX, cluster_df, by = "ID_XX")
+        cluster_df <- NULL
+    }
 
     max_T_XX <- max(df$T_XX, na.rm = TRUE)
     scalars <- list(
@@ -129,7 +150,7 @@ did_continuous_main <- function(
 
     for (p in 2:max_T_XX) {
 
-        est_out <- did_continuous_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = FALSE, exact_match = exact_match)
+        est_out <- did_continuous_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = FALSE, exact_match = exact_match, cluster = cluster)
 
         IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX", all = TRUE) 
         IDs_XX <- IDs_XX[order(IDs_XX$ID_XX), ]
@@ -176,7 +197,7 @@ did_continuous_main <- function(
     if (isTRUE(placebo)) {
         for (p in 3:max_T_XX) {
 
-            est_out <- did_continuous_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = TRUE, exact_match = exact_match)
+            est_out <- did_continuous_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = TRUE, exact_match = exact_match, cluster = cluster)
 
             if (!is.null(est_out$to_add)) {
                 IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX", all = TRUE) 
@@ -300,49 +321,110 @@ did_continuous_main <- function(
     }
 
     if (aoss_XX == 1) {
-        n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_1_XX)))
         scalars$mean_IF1 <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_1_XX, na.rm = TRUE))
-        scalars$sd_delta_1_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_1_XX, na.rm = TRUE)/ sqrt(n_obs))
+        if (!is.null(cluster)) {
+            IDs_XX <- IDs_XX %>% group_by(.data$cluster_XX) %>% 
+                    mutate(Phi_1_c_XX = sum(.data$Phi_1_XX, na.rm = TRUE)) %>%
+                    mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
+            IDs_XX$Phi_1_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_1_c_XX, NA)
+            n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_1_c_XX)))
+            scalars$sd_delta_1_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_1_c_XX, na.rm = TRUE)/ sqrt(n_obs))
+            df$first_obs_by_clus <- NULL
+        } else {
+            n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_1_XX)))
+            scalars$sd_delta_1_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_1_XX, na.rm = TRUE)/ sqrt(n_obs))
+        }
         scalars$LB_1_1_XX <-  scalars$delta_1_1_XX - 1.96 * scalars$sd_delta_1_1_XX
         scalars$UB_1_1_XX <-  scalars$delta_1_1_XX + 1.96 * scalars$sd_delta_1_1_XX            
 
         if (isTRUE(placebo)) {
-            n_obs_pl <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_1_pl_XX)))
             scalars$mean_IF1_pl <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_1_pl_XX, na.rm = TRUE))
-            scalars$sd_delta_1_1_pl_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_1_pl_XX, na.rm = TRUE)/ sqrt(n_obs_pl))
+            if (!is.null(cluster)) {
+                IDs_XX <- IDs_XX %>% group_by(.data$cluster_XX) %>% 
+                        mutate(Phi_1_pl_c_XX = sum(.data$Phi_1_pl_XX, na.rm = TRUE)) %>%
+                        mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
+                IDs_XX$Phi_1_pl_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_1_pl_c_XX, NA)
+                n_obs_pl <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_1_pl_c_XX)))
+                scalars$sd_delta_1_1_pl_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_1_pl_c_XX, na.rm = TRUE)/ sqrt(n_obs_pl))
+                df$first_obs_by_clus <- NULL
+            } else {
+                n_obs_pl <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_1_pl_XX)))
+                scalars$sd_delta_1_1_pl_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_1_pl_XX, na.rm = TRUE)/ sqrt(n_obs_pl))
+            }
             scalars$LB_1_1_pl_XX <-  scalars$delta_1_1_pl_XX - 1.96 * scalars$sd_delta_1_1_pl_XX
             scalars$UB_1_1_pl_XX <-  scalars$delta_1_1_pl_XX + 1.96 * scalars$sd_delta_1_1_pl_XX            
         }
     }
 
     if (waoss_XX == 1) {
-        n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_2_XX)))
         scalars$mean_IF1 <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_2_XX, na.rm = TRUE))
-        scalars$sd_delta_2_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_2_XX, na.rm = TRUE)/ sqrt(n_obs))
+        if (!is.null(cluster)) {
+            IDs_XX <- IDs_XX %>% group_by(.data$cluster_XX) %>% 
+                    mutate(Phi_2_c_XX = sum(.data$Phi_2_XX, na.rm = TRUE)) %>%
+                    mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
+            IDs_XX$Phi_2_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_2_c_XX, NA)
+            n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_2_c_XX)))
+            scalars$sd_delta_2_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_2_c_XX, na.rm = TRUE)/ sqrt(n_obs))
+            df$first_obs_by_clus <- NULL
+        } else {
+            n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_2_XX)))
+            scalars$sd_delta_2_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_2_XX, na.rm = TRUE)/ sqrt(n_obs))
+        }
         scalars$LB_2_1_XX <-  scalars$delta_2_1_XX - 1.96 * scalars$sd_delta_2_1_XX
         scalars$UB_2_1_XX <-  scalars$delta_2_1_XX + 1.96 * scalars$sd_delta_2_1_XX            
 
         if (isTRUE(placebo)) {
             n_obs_pl <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_2_pl_XX)))
             scalars$mean_IF1_pl <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_2_pl_XX, na.rm = TRUE))
-            scalars$sd_delta_2_1_pl_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_2_pl_XX, na.rm = TRUE)/ sqrt(n_obs_pl))
+            if (!is.null(cluster)) {
+                IDs_XX <- IDs_XX %>% group_by(.data$cluster_XX) %>% 
+                        mutate(Phi_2_pl_c_XX = sum(.data$Phi_2_pl_XX, na.rm = TRUE)) %>%
+                        mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
+                IDs_XX$Phi_2_pl_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_2_pl_c_XX, NA)
+                n_obs_pl <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_2_pl_c_XX)))
+                scalars$sd_delta_2_1_pl_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_2_pl_c_XX, na.rm = TRUE)/ sqrt(n_obs_pl))
+                df$first_obs_by_clus <- NULL
+            } else {
+                n_obs_pl <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_2_pl_XX)))
+                scalars$sd_delta_2_1_pl_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_2_pl_XX, na.rm = TRUE)/ sqrt(n_obs_pl))
+            }
             scalars$LB_2_1_pl_XX <-  scalars$delta_2_1_pl_XX - 1.96 * scalars$sd_delta_2_1_pl_XX
             scalars$UB_2_1_pl_XX <-  scalars$delta_2_1_pl_XX + 1.96 * scalars$sd_delta_2_1_pl_XX            
         }
     }
 
-
     if (iwaoss_XX == 1) {
-        n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_3_XX)))
         scalars$mean_IF3 <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_3_XX, na.rm = TRUE))
-        scalars$sd_delta_3_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_3_XX, na.rm = TRUE)/ sqrt(n_obs))
+        if (!is.null(cluster)) {
+            IDs_XX <- IDs_XX %>% group_by(.data$cluster_XX) %>% 
+                    mutate(Phi_3_c_XX = sum(.data$Phi_3_XX, na.rm = TRUE)) %>%
+                    mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
+            IDs_XX$Phi_3_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_3_c_XX, NA)
+            n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_3_c_XX)))
+            scalars$sd_delta_3_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_3_c_XX, na.rm = TRUE)/ sqrt(n_obs))
+            df$first_obs_by_clus <- NULL
+        } else {
+            n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_3_XX)))
+            scalars$sd_delta_3_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_3_XX, na.rm = TRUE)/ sqrt(n_obs))
+        }
         scalars$LB_3_1_XX <-  scalars$delta_3_1_XX - 1.96 * scalars$sd_delta_3_1_XX
         scalars$UB_3_1_XX <-  scalars$delta_3_1_XX + 1.96 * scalars$sd_delta_3_1_XX            
 
         if (isTRUE(placebo)) {
             n_obs_pl <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_3_pl_XX)))
             scalars$mean_IF3_pl <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_3_pl_XX, na.rm = TRUE))
-            scalars$sd_delta_3_1_pl_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_3_pl_XX, na.rm = TRUE)/ sqrt(n_obs_pl))
+            if (!is.null(cluster)) {
+                IDs_XX <- IDs_XX %>% group_by(.data$cluster_XX) %>% 
+                        mutate(Phi_3_pl_c_XX = sum(.data$Phi_3_pl_XX, na.rm = TRUE)) %>%
+                        mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
+                IDs_XX$Phi_3_pl_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_3_pl_c_XX, NA)
+                n_obs_pl <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_3_pl_c_XX)))
+                scalars$sd_delta_3_1_pl_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_3_pl_c_XX, na.rm = TRUE)/ sqrt(n_obs_pl))
+                df$first_obs_by_clus <- NULL
+            } else {
+                n_obs_pl <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_3_pl_XX)))
+                scalars$sd_delta_3_1_pl_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_3_pl_XX, na.rm = TRUE)/ sqrt(n_obs_pl))
+            }
             scalars$LB_3_1_pl_XX <-  scalars$delta_3_1_pl_XX - 1.96 * scalars$sd_delta_3_1_pl_XX
             scalars$UB_3_1_pl_XX <-  scalars$delta_3_1_pl_XX + 1.96 * scalars$sd_delta_3_1_pl_XX            
         }
@@ -353,7 +435,19 @@ did_continuous_main <- function(
     if (isTRUE(aoss_vs_waoss)) {
         diff_delta_1_2_XX <- scalars$delta_1_1_XX - scalars$delta_2_1_XX
         IDs_XX$diff_Phi_1_2_XX <- IDs_XX$Phi_1_XX - IDs_XX$Phi_2_XX
-        sd_diff_delta_1_2_XX <- sd(IDs_XX$diff_Phi_1_2_XX, na.rm = TRUE)
+        if (!is.null(cluster)) {
+            IDs_XX <- IDs_XX %>% group_by(.data$cluster_XX) %>% 
+                    mutate(diff_Phi_1_2_c_XX = sum(.data$diff_Phi_1_2_XX, na.rm = TRUE)) %>%
+                    mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
+            IDs_XX$diff_Phi_1_2_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$diff_Phi_1_2_c_XX, NA)
+            n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$diff_Phi_1_2_c_XX)))
+            sd_diff_delta_1_2_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$diff_Phi_1_2_c_XX, na.rm = TRUE)/ sqrt(n_obs))
+            df$first_obs_by_clus <- NULL
+        } else {
+            n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$diff_Phi_1_2_XX)))
+            sd_diff_delta_1_2_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$diff_Phi_1_2_XX, na.rm = TRUE)/ sqrt(n_obs))
+        }
+
         t_diff_delta_1_2_XX <- diff_delta_1_2_XX * sqrt(nrow(IDs_XX)) / sd_diff_delta_1_2_XX
         p_diff_delta_1_2_XX <- 2 * (1 - pnorm(abs(t_diff_delta_1_2_XX)))
         LB_diff_delta_1_2_XX <- diff_delta_1_2_XX - 1.96 * sd_diff_delta_1_2_XX / sqrt(nrow(IDs_XX))
