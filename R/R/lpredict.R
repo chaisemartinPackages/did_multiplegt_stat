@@ -1,10 +1,11 @@
-#' Internal function of did_continuous
+#' Internal function of did_continuous that emulates Stata predict function.
 #' @param df df
 #' @param varname varname
 #' @param model model
 #' @param varlist varlist
 #' @param const const
 #' @param prob prob
+#' @returns The same input dataframe df with an added column of predicted values.
 #' @noRd
 lpredict <- function(
     df,

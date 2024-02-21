@@ -1,4 +1,4 @@
-#' Internal function for did_continuous
+#' Internal function for estimation of pairwise DiD between consecutive time periods.
 #' @param df df
 #' @param Y Y
 #' @param ID ID
@@ -25,6 +25,7 @@
 #' @importFrom rlang .data
 #' @importFrom plm pdata.frame make.pbalanced
 #' @importFrom stats as.formula lm sd
+#' @returns A list with two elements. The first element is a sublist of scalars that are updated throughout the run of the command and across each pair of consecutive periods. The second element is a dataframe with the group-specific variables (among which, the influence function) that will be aggregated in the main program.
 #' @noRd
 did_continuous_pairwise <- function(
     df,

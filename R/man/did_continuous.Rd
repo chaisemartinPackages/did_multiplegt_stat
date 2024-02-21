@@ -59,6 +59,9 @@ did_continuous(
 
 \item{cluster}{cluster}
 }
+\value{
+A list with two sublists. The first sublist includes the arguments used in the command. The second sublist includes the results from the estimation. Regardless of the options, the output in object$results$table will be a (3 x object$results$pairs) x 6 matrix, where only the requested output (that is, the rows corresponding to the estimators requested) will be non-missing. The list is given a did_continuous class to trigger custom method dispatches by the print and summary functions.
+}
 \description{
 Estimation of Difference-in-Difference (DID) Estimators for Treatments and Instruments Continuously Distributed at Every Period with Stayers.
 }

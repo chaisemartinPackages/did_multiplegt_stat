@@ -3,6 +3,7 @@
 #' @description A customized printed display for did_continuous output
 #' @param object A did_continuous object
 #' @param ... Undocumented
+#' @returns No return, just a custom summary method for did_continuous output.
 #' @export
 summary.did_continuous <- function(object, ...) {
     estims <- list(0, 1, 2)
@@ -106,11 +107,17 @@ summary.did_continuous <- function(object, ...) {
 #' @description A customized printed display for did_continous output
 #' @param x A did_continuous object
 #' @param ... Undocumented
+#' @returns No return, just a custom summary print for did_continuous output.
 #' @export
 print.did_continuous <- function(x, ...) {
     summary(x)
 }
 
+#' Ancillary function for print/summary methods
+#' @param mat mat
+#' @param name name
+#' @returns No return, just printing output.
+#' @noRd
 mat_print <- function(mat, name) {
     if (inherits(mat,"matrix")) {
         dis <- matrix(data = 0, nrow = nrow(mat), ncol = ncol(mat))
@@ -127,6 +134,10 @@ mat_print <- function(mat, name) {
     }
 }
 
+#' Ancillary function for print/summary methods
+#' @param mat mat
+#' @returns No return, just printing output.
+#' @noRd
 tab_print <- function(mat) {
     if (inherits(mat,"matrix")) {
         dis <- matrix(data = 0, nrow = nrow(mat), ncol = ncol(mat))
@@ -137,6 +148,11 @@ tab_print <- function(mat) {
     }
 }
 
+#' Ancillary function for print/summary methods
+#' @param objs string object
+#' @param objn numeric object
+#' @returns No return, just printing output.
+#' @noRd
 strdisplay <- function(objs, objn) {
     ltot1 <- 16; ltot2 <- 16;
     out1 <- ifelse(nchar(objs) <= ltot1, paste0(objs,strrep(" ",ltot1 - nchar(objs))), substr(objs, 1, ltot1))

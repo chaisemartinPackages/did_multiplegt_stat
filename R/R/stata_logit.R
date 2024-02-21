@@ -1,11 +1,12 @@
-#' Internal function of did_continuous
-#' @noRd
+#' Internal function of did_continuous that emulates Stata logit function.
 #' @param formula formula
 #' @param df df
 #' @import dplyr
 #' @importFrom magrittr %>%
 #' @importFrom rlang .data
 #' @importFrom stats binomial glm predict
+#' @returns A glm object.
+#' @noRd
 stata_logit <- function(
     formula,
     df

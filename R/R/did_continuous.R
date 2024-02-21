@@ -81,6 +81,7 @@
 #'     estimation_method = "dr",
 #'     noextrapolation = TRUE
 #' ))
+#' @returns A list with two sublists. The first sublist includes the arguments used in the command. The second sublist includes the results from the estimation. Regardless of the options, the output in object$results$table will be a (3 x object$results$pairs) x 6 matrix, where only the requested output (that is, the rows corresponding to the estimators requested) will be non-missing. The list is given a did_continuous class to trigger custom method dispatches by the print and summary functions. 
 #' @export
 did_continuous <- function(
     df,
@@ -103,6 +104,27 @@ did_continuous <- function(
 ) {
   args <- list()
   for (v in names(formals(did_continuous))) {
+    if (!is.null(get(v))) {
+      if (v == "df" & !inherits(get(v), "data.frame")) {
+        stop(sprintf("Syntax error in %s option. Dataframe required.",v))
+      } else if (v %in% c("Y", "ID", "Time", "D", "Z", "estimation_method", "switchers", "cluster")) {
+        if (!(inherits(get(v), "character") & length(get(v)) == 1)) {
+          stop(sprintf("Syntax error in %s option. The option requires a single string.",v))
+        }
+      } else if (v == "estimator") {
+        if (!inherits(get(v), "character")) {
+          stop(sprintf("Syntax error in %s option. Character vector required.",v))
+        }
+      } else if (v %in% c("noextrapolation", "placebo", "disaggregate", "aoss_vs_waoss", "exact_match")) {
+        if (!inherits(get(v), "logical")) {
+          stop(sprintf("Syntax error in %s option. Logical required.",v))
+        }
+      } else if (v == "order") {
+          if (!(inherits(get(v), "numeric") & get(v) %% 1 == 0)) {
+          stop(sprintf("Syntax error in %s option. Integer required.",v))
+          }
+      }
+    }
     if (v != "df") {
       args[[v]] <- get(v)
     }
@@ -118,7 +140,6 @@ did_continuous <- function(
     stop("Syntax error in estimator option: only aoss, waoss and iwaoss allowed.")
   }
 
-  # General Syntax Check
   if (!is.null(switchers)) {
       if (!(switchers %in% c("up", "down"))) {
         stop("Switchers could be either NULL, up or down")          

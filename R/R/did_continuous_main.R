@@ -1,4 +1,4 @@
-#' Internal function for did_continuous
+#' Internal function of did_continuous for the computation of displayed results.
 #' @param df df
 #' @param Y Y
 #' @param ID ID
@@ -22,6 +22,7 @@
 #' @importFrom rlang .data
 #' @importFrom plm pdata.frame make.pbalanced
 #' @importFrom stats sd pnorm
+#' @returns A list with the raw output to be displayed.
 #' @noRd
 did_continuous_main <- function(
     df,

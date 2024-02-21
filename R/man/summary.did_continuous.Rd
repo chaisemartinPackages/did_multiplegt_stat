@@ -11,6 +11,9 @@
 
 \item{...}{Undocumented}
 }
+\value{
+No return, just a custom summary method for did_continuous output.
+}
 \description{
 A customized printed display for did_continuous output
 }
