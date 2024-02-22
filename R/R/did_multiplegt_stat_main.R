@@ -99,6 +99,8 @@ did_multiplegt_stat_main <- function(
 
     if (is.null(weight)) {
         df$weight_XX <- 1
+    } else {
+        df$weight_XX <- ifelse(is.na(df$weight_XX), 0, df$weight_XX)
     }
 
     # Further useful steps prior to the estimation

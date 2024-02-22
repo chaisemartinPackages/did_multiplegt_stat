@@ -12,8 +12,7 @@ stata_logit <- function(
     df
 ) {
     suppressWarnings({
-    model <- glm(formula, data = df, weights = df$weights, family = binomial(link = 'logit'),
-    maxit = 300, epsilon = 10^-8)
+    model <- glm(formula, data = df, weights = df$weight_XX, family = binomial(link = 'logit'), maxit = 300, epsilon = 10^-8)
     })
     return(model)
 }

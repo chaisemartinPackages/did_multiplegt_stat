@@ -350,28 +350,27 @@ did_multiplegt_stat_pairwise <- function(
                 model <- lm(as.formula(paste("S_XX",reg_pol_XX,sep="~")),data=df,weights= df$weight_XX)
                 df <- lpredict(df, "ES_XX_D_1", model, vars_pol_XX)
             }
-            assign(paste0("PS_0",pl,"_XX"), mean(df$S0_XX, na.rm = TRUE))
+            assign(paste0("PS_0",pl,"_XX"), Mean("S0_XX", df))
         }
 
         ####################################################### AOSS ##########
 
         if (aoss == 1) {
 	        # 0) Compute P_t = P(S_t = 1) = E(S_t) for the aggregation afterward
-            assign(paste0("P_",pairwise,pl,"_XX"), mean(df$S_bis_XX, na.rm = TRUE))
+            assign(paste0("P_",pairwise,pl,"_XX"), Mean("S_bis_XX", df))
             assign(paste0("PS_sum",pl,"_XX"), get(paste0("PS_sum",pl,"_XX")) + get(paste0("P_",pairwise,pl,"_XX")))
             assign(paste0("ES",pl,"_XX"), get(paste0("P_",pairwise,pl,"_XX")))
 
             # 1) Compute \hat{delta}_1
             df$inner_sum_delta_1_XX <- df$inner_sum_delta_1_2_XX / df$delta_D_XX
             df$inner_sum_delta_1_XX <- ifelse(df$delta_D_XX == 0, NA, df$inner_sum_delta_1_XX)
-            assign(paste0("delta_1_",pairwise,pl,"_XX"), mean(df$inner_sum_delta_1_XX, na.rm = TRUE))
+            assign(paste0("delta_1_",pairwise,pl,"_XX"), Mean("inner_sum_delta_1_XX",df))
 
             # 2) Compute the variance of \hat{delta}_1
             df$S_over_delta_D_XX <- df$S_bis_XX / df$delta_D_XX
             df$S_over_delta_D_XX <- ifelse(df$S_bis_XX == 0, 0, df$S_over_delta_D_XX)
 
-            modelvar <- lm(as.formula(paste("S_over_delta_D_XX", reg_pol_XX, sep = "~")), 
-                    data = df, weights = df$weight_XX)
+            modelvar <- lm(as.formula(paste("S_over_delta_D_XX", reg_pol_XX, sep = "~")), data = df, weights = df$weight_XX)
             df <- lpredict(df, "mean_S_over_delta_D_XX", modelvar, vars_pol_XX)
 
 		    # i. estimation of \hat{E}(S/deltaD|D1)
@@ -384,21 +383,22 @@ did_multiplegt_stat_pairwise <- function(
             df[[paste0("Phi_1_",pairwise,pl,"_XX")]] <- (df[[paste0("Phi_1_",pairwise,pl,"_XX")]] - (get(paste0("delta_1_", pairwise,pl,"_XX")) * df$S_bis_XX)) / get(paste0("ES",pl,"_XX"))
 
             assign(paste0("mean_IF_1_",pairwise,pl),
-                    mean(df[[paste0("Phi_1_",pairwise,pl,"_XX")]], na.rm = TRUE))
+                    Mean(paste0("Phi_1_",pairwise,pl,"_XX"), df))
 
             if (!is.null(cluster)) {
                 df <- df %>% group_by(.data$cluster_XX) %>% 
                         mutate(!!paste0("Phi_1_",pairwise,pl,"_c_XX") := sum(.data[[paste0("Phi_1_", pairwise,pl,"_XX")]], na.rm = TRUE)) %>%
                         mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
+                df <- df[order(df$ID_XX), ]
                 df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]] <- ifelse(df$first_obs_by_clus == 1, df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]], NA)
-                nobs_c_XX <- nrow(subset(df, !is.na(df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]])))
+                nobs_c_XX <- wSum(subset(df, !is.na(df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]])))
                 assign(paste0("sd_delta_1_",pairwise,pl,"_XX"),
-                        sd(df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]], na.rm = TRUE)/sqrt(nobs_c_XX))
+                        Sd(paste0("Phi_1_",pairwise,pl,"_c_XX"), df)/sqrt(nobs_c_XX))
                 nobs_c_XX <- NULL
                 df$first_obs_by_clus <- NULL
             } else {
                 assign(paste0("sd_delta_1_",pairwise,pl,"_XX"),
-                        sd(df[[paste0("Phi_1_",pairwise,pl,"_XX")]], na.rm = TRUE)/sqrt(get(paste0("N",pl,"_XX"))))
+                        Sd(paste0("Phi_1_",pairwise,pl,"_XX"), df)/sqrt(wSum(df)))
             }
             assign(paste0("LB_1_",pairwise,pl,"_XX"),
             get(paste0("delta_1_",pairwise,pl,"_XX")) - 1.96 * get(paste0("sd_delta_1_", pairwise,pl,"_XX")))
@@ -411,7 +411,7 @@ did_multiplegt_stat_pairwise <- function(
         ###################################################### WAOSS ##########
 
         if (waoss == 1) {
-            assign(paste0("E_abs_delta_D",pl,"_XX"), mean(df$abs_delta_D_XX, na.rm = TRUE))
+            assign(paste0("E_abs_delta_D",pl,"_XX"), Mean("abs_delta_D_XX", df))
             assign(paste0("E_abs_delta_D_",pairwise,pl,"_XX"), get(paste0("E_abs_delta_D",pl,"_XX")))
             assign(paste0("E_abs_delta_D_sum",pl,"_XX"), get(paste0("E_abs_delta_D_sum",pl,"_XX")) + get(paste0("E_abs_delta_D_",pairwise,pl,"_XX")))
 
@@ -421,9 +421,9 @@ did_multiplegt_stat_pairwise <- function(
                 
                 ## Computing the contribution weights ##
                 df$prod_sgn_delta_D_delta_D_XX <- df$S_XX * df$delta_D_XX
-                sum_prod_sgn_delta_D_delta_D_XX <- sum(df$prod_sgn_delta_D_delta_D_XX[df$Ster_XX == 1], na.rm = TRUE)
+                sum_prod_sgn_delta_D_delta_D_XX <- Sum("prod_sgn_delta_D_delta_D_XX", subset(df,df$Ster_XX == 1))
                 assign(paste0("w_",suffix,"_",pairwise,pl,"_XX"), sum_prod_sgn_delta_D_delta_D_XX/get(paste0("N",pl,"_XX")))
-                assign(paste0("denom_delta_2_",suffix,"_",pairwise,pl,"_XX"), sum(df$delta_D_XX[df$Ster_XX == 1], na.rm = TRUE))
+                assign(paste0("denom_delta_2_",suffix,"_",pairwise,pl,"_XX"), Sum("delta_D_XX", subset(df, df$Ster_XX == 1)))
 
 
                 if (estimation_method == "ra") {
@@ -432,7 +432,7 @@ did_multiplegt_stat_pairwise <- function(
                         # in case it is zero set it to 1 to avoid dividing by 0, in that case the numerator is also equal to 0	
                     }
                     assign(paste0("num_delta_2_",suffix,"_",pairwise,pl,"_XX"),
-                    sum(df$inner_sum_delta_1_2_XX[df$Ster_XX == 1], na.rm = TRUE))
+                    Sum("inner_sum_delta_1_2_XX", subset(df, df$Ster_XX == 1)))
 
                     assign(paste0("delta_2_",suffix,"_",pairwise,pl,"_XX"), 
                         get(paste0("num_delta_2_",suffix,"_",pairwise,pl,"_XX")) /
@@ -457,11 +457,10 @@ did_multiplegt_stat_pairwise <- function(
                             df[[paste0("delta_Y_P_",suffix,"_XX")]] <- df$delta_Y_XX * (df[[paste0("PS_1_",suffix,"_D_1_XX")]]/df$PS_0_D_1_XX) * (get(paste0("PS_0",pl,"_XX")) / get(paste0("PS_",suffix,"1",pl,"_XX")))
 
                             assign(paste0("mean_delta_Y_P_",suffix,pl,"_XX"), 
-                            mean(df[[paste0("delta_Y_P_",suffix,"_XX")]][df$S_XX == 0], na.rm=TRUE))
-                            assign(paste0("mean_delta_Y",pl,"_XX"), mean(df$delta_Y_XX[df$Ster_XX == 1], na.rm = TRUE))
-                            assign(paste0("mean_delta_D",pl,"_XX"), mean(df$delta_D_XX[df$Ster_XX == 1], na.rm = TRUE))
+                            Mean(paste0("delta_Y_P_",suffix,"_XX"),subset(df,df$S_XX == 0)))
+                            assign(paste0("mean_delta_Y",pl,"_XX"), Mean("delta_Y_XX", subset(df, df$Ster_XX == 1)))
+                            assign(paste0("mean_delta_D",pl,"_XX"), Mean("delta_D_XX", subset(df, df$Ster_XX == 1)))
                             assign(paste0("delta_2_",suffix,"_",pairwise,pl,"_XX"), 
-
                             (get(paste0("mean_delta_Y",pl,"_XX")) - get(paste0("mean_delta_Y_P_",suffix,pl,"_XX"))) / get(paste0("mean_delta_D",pl,"_XX")))
                         }
                     }                
@@ -477,15 +476,14 @@ did_multiplegt_stat_pairwise <- function(
             
             if (isFALSE(exact_match)) {
                 df$dr_delta_Y_XX <- (df$S_XX - ((df$PS_1_Plus_D_1_XX - df$PS_1_Minus_D_1_XX)/df$PS_0_D_1_XX) * (1 - df$S_bis_XX)) * df$inner_sum_delta_1_2_XX
-                assign(paste0("denom_dr_delta_2",pl,"_XX"), sum(df$dr_delta_Y_XX, na.rm = TRUE))
+                assign(paste0("denom_dr_delta_2",pl,"_XX"), Sum("dr_delta_Y_XX", df))
             }
 
             if (estimation_method == "ra" | estimation_method == "ps") {
                 assign(paste0("delta_2_",pairwise,pl,"_XX"), 
                 get(paste0("W_Plus_",pairwise,pl,"_XX"))*get(paste0("delta_2_Plus_",pairwise,pl,"_XX")) + (1-get(paste0("W_Plus_",pairwise,pl,"_XX")))*get(paste0("delta_2_Minus_",pairwise,pl,"_XX")))
             } else if (estimation_method == "dr") {
-
-                sum_abs_delta_D_XX <- sum(df$abs_delta_D_XX, na.rm = TRUE)
+                sum_abs_delta_D_XX <- Sum("abs_delta_D_XX",df)
                 assign(paste0("delta_2_",pairwise,pl,"_XX"), get(paste0("denom_dr_delta_2",pl,"_XX")) / sum_abs_delta_D_XX)
             }
 
@@ -497,7 +495,7 @@ did_multiplegt_stat_pairwise <- function(
             }
 
             assign(paste0("mean_IF_2_",pairwise,pl),
-                    mean(df[[paste0("Phi_2_",pairwise,pl,"_XX")]], na.rm = TRUE))
+                    Mean(paste0("Phi_2_",pairwise,pl,"_XX"), df))
 
             if (!is.null(cluster)) {
                 df <- df %>% group_by(.data$cluster_XX) %>% 
@@ -511,7 +509,7 @@ did_multiplegt_stat_pairwise <- function(
                 df$first_obs_by_clus <- NULL
             } else {
                 assign(paste0("sd_delta_2_",pairwise,pl,"_XX"),
-                        sd(df[[paste0("Phi_2_",pairwise,pl,"_XX")]], na.rm = TRUE)/sqrt(get(paste0("N",pl,"_XX"))))
+                        Sd(paste0("Phi_2_",pairwise,pl,"_XX"), df)/sqrt(wSum(df)))
             }
             assign(paste0("LB_2_",pairwise,pl,"_XX"), get(paste0("delta_2_",pairwise,pl,"_XX")) - 1.96 * get(paste0("sd_delta_2_", pairwise,pl,"_XX")))
             assign(paste0("UB_2_",pairwise,pl,"_XX"), get(paste0("delta_2_",pairwise,pl,"_XX")) + 1.96 * get(paste0("sd_delta_2_", pairwise,pl,"_XX")))
@@ -521,7 +519,7 @@ did_multiplegt_stat_pairwise <- function(
 
         ##################################################### IWAOSS ##########
         if (iwaoss == 1) {
-            assign(paste0("E_abs_delta_Z",pl,"_XX"), mean(df$abs_delta_Z_XX, na.rm = TRUE))
+            assign(paste0("E_abs_delta_Z",pl,"_XX"), Mean("abs_delta_Z_XX", df))
 
             df$SI_bis_XX <- (df$SI_XX != 0 & !is.na(df$SI_XX))
             df$SI_Plus_XX <- (df$SI_XX == 1)
@@ -538,7 +536,7 @@ did_multiplegt_stat_pairwise <- function(
                 model <- lm(as.formula(paste("SI_XX",IV_reg_pol_XX,sep="~")), data = df, weights = df$weight_XX)
                 df <- lpredict(df, "ES_I_XX_Z_1", model, IV_vars_pol_XX)
             }
-            assign(paste0("PS_IV_0",pl,"_XX"), mean(df$S_IV_0_XX, na.rm = TRUE))
+            assign(paste0("PS_IV_0",pl,"_XX"), Mean("S_IV_0_XX", df))
 
             for (suffix in c("Minus", "Plus")) {
                 assign(paste0("nb_Switchers_I_",suffix,pl,"_XX"), 
@@ -556,51 +554,51 @@ did_multiplegt_stat_pairwise <- function(
             }
 
  	        # i. Estimation of  \hat{E}(deltaY|Z1, SI=0)
+            df_temp <- subset(df, df$SI_XX == 0)
             model <- lm(as.formula(paste("delta_Y_XX",IV_reg_pol_XX, sep = "~")), 
-                    data = subset(df, df$SI_XX == 0) , weights = df$weights)
+                    data = df_temp, weights = df_temp$weight_XX)
             df <- lpredict(df,"mean_delta_Y_pred_IV_XX", model, IV_vars_pol_XX)   
             df$inner_sum_IV_num_XX <- df$delta_Y_XX - df$mean_delta_Y_pred_IV_XX
 
  	        # i. Estimation of  \hat{E}(deltaD|Z1, SI=0)
             model <- lm(as.formula(paste("delta_D_XX",IV_reg_pol_XX, sep = "~")), 
-                    data = subset(df, df$SI_XX == 0) , weights = df$weights)
+                    data = df_temp, weights = df_temp$weight_XX)
             df <- lpredict(df,"mean_delta_D_pred_IV_XX", model, IV_vars_pol_XX)   
             df$inner_sum_IV_denom_XX <- df$delta_D_XX - df$mean_delta_D_pred_IV_XX
+            df_temp <- NULL
 
             if (estimation_method == "ra") {
                 for (v in c("num","denom")) {
                     df[[paste0("inner_sum_IV_",v,"_XX")]] <- df[[paste0("inner_sum_IV_",v,"_XX")]] * df$SI_XX
                     assign(paste0(v,"_delta_IV_",pairwise,pl,"_XX"), 
-                        mean(df[[paste0("inner_sum_IV_",v,"_XX")]], na.rm = TRUE))
+                        Mean(paste0("inner_sum_IV_",v,"_XX"), df))
                 }
             }
 
             if (estimation_method == "ps") {
                 # Numerator
                 df$delta_Y_P_IV_XX <- df$delta_Y_XX * ((df$PS_I_Plus_1_Z_1_XX - df$PS_I_Minus_1_Z_1_XX)/df$PS_IV_0_Z_1_XX) * get(paste0("PS_IV_0",pl,"_XX"))
-                assign(paste0("mean_delta_Y_P_IV",pl,"_XX"), mean(df$delta_Y_P_IV_XX[df$SI_bis_XX == 0], na.rm = TRUE))
+                assign(paste0("mean_delta_Y_P_IV",pl,"_XX"), Mean("delta_Y_P_IV_XX", subset(df, df$SI_bis_XX == 0)))
                 df$prod_sgn_delta_Z_delta_Y_XX <- df$SI_XX * df$delta_Y_XX
-                assign(paste0("mean_sgn_delta_Z_delta_Y",pl,"_XX"), 
-                        mean(df$prod_sgn_delta_Z_delta_Y_XX, na.rm = TRUE))
+                assign(paste0("mean_sgn_delta_Z_delta_Y",pl,"_XX"), Mean("prod_sgn_delta_Z_delta_Y_XX", df))
                 assign(paste0("num_delta_IV_",pairwise,pl,"_XX"), 
                 get(paste0("mean_sgn_delta_Z_delta_Y",pl,"_XX")) - get(paste0("mean_delta_Y_P_IV",pl,"_XX")))
 
                 # Denominator
                 df$delta_D_P_IV_XX <- df$delta_D_XX * ((df$PS_I_Plus_1_Z_1_XX - df$PS_I_Minus_1_Z_1_XX)/df$PS_IV_0_Z_1_XX) * get(paste0("PS_IV_0",pl,"_XX"))
-                assign(paste0("mean_delta_D_P_IV",pl,"_XX"), mean(df$delta_D_P_IV_XX[df$SI_bis_XX == 0], na.rm = TRUE))
+                assign(paste0("mean_delta_D_P_IV",pl,"_XX"), Mean("delta_D_P_IV_XX", subset(df, df$SI_bis_XX == 0)))
                 df$prod_sgn_delta_Z_delta_D_XX <- df$SI_XX * df$delta_D_XX
-                assign(paste0("mean_sgn_delta_Z_delta_D",pl,"_XX"), 
-                        mean(df$prod_sgn_delta_Z_delta_D_XX, na.rm = TRUE))
+                assign(paste0("mean_sgn_delta_Z_delta_D",pl,"_XX"), Mean("prod_sgn_delta_Z_delta_D_XX", df))
                 assign(paste0("denom_delta_IV_",pairwise,pl,"_XX"), 
                 get(paste0("mean_sgn_delta_Z_delta_D",pl,"_XX")) - get(paste0("mean_delta_D_P_IV",pl,"_XX")))
             }
 
             if (estimation_method == "dr") {
                 df$dr_IV_delta_Y_XX <- (df$SI_XX - ((df$PS_I_Plus_1_Z_1_XX - df$PS_I_Minus_1_Z_1_XX) / df$PS_IV_0_Z_1_XX) * (1 - df$SI_bis_XX)) * df$inner_sum_IV_num_XX
-                assign(paste0("num_delta_IV_",pairwise,pl,"_XX"), mean(df$dr_IV_delta_Y_XX, na.rm = TRUE))
+                assign(paste0("num_delta_IV_",pairwise,pl,"_XX"), Mean("dr_IV_delta_Y_XX", df))
 
                 df$dr_IV_delta_D_XX <- (df$SI_XX - ((df$PS_I_Plus_1_Z_1_XX - df$PS_I_Minus_1_Z_1_XX) / df$PS_IV_0_Z_1_XX) * (1 - df$SI_bis_XX)) * df$inner_sum_IV_denom_XX
-                assign(paste0("denom_delta_IV_",pairwise,pl,"_XX"), mean(df$dr_IV_delta_D_XX, na.rm = TRUE))
+                assign(paste0("denom_delta_IV_",pairwise,pl,"_XX"), Mean("dr_IV_delta_D_XX", df))
             }
 
             assign(paste0("delta_3_",pairwise,pl,"_XX"), 
@@ -608,9 +606,10 @@ did_multiplegt_stat_pairwise <- function(
 
             assign(paste0("denom_delta_IV_sum",pl,"_XX"), get(paste0("denom_delta_IV_sum",pl,"_XX")) + get(paste0("denom_delta_IV_",pairwise,pl,"_XX")))
 
-            assign(paste0("delta_Y",pl,"_XX"), mean(df$inner_sum_IV_num_XX, na.rm = TRUE)) 
+            assign(paste0("delta_Y",pl,"_XX"), Mean("inner_sum_IV_num_XX", df)) 
+            df_temp <- subset(df, df$SI_XX == 0)
             model <- lm(as.formula(paste("delta_Y_XX", reg_pol_XX, sep = "~")), 
-                    data = subset(df, df$SI_XX == 0) , weights = df$weights)
+                    data = df_temp, weights = df_temp$weight_XX)
             df <- lpredict(df,"mean_pred_Y_IV_XX", model, vars_pol_XX)   
             if (isFALSE(exact_match)) {
                 df$Phi_Y_XX <- ((df$SI_XX - (df$PS_I_Plus_1_Z_1_XX - df$PS_I_Minus_1_Z_1_XX) * (1 - df$SI_bis_XX) / df$PS_IV_0_Z_1_XX) * (df$delta_Y_XX - df$mean_pred_Y_IV_XX) - get(paste0("delta_Y",pl,"_XX")) * df$abs_delta_Z_XX) / get(paste0("E_abs_delta_Z",pl,"_XX"))
@@ -618,9 +617,10 @@ did_multiplegt_stat_pairwise <- function(
                 df$Phi_Y_XX <- ((df$SI_XX - (df$ES_I_XX_Z_1) * ((1 - df$SI_bis_XX) / (1- df$ES_I_bis_XX_Z_1))) * (df$delta_Y_XX - df$mean_pred_Y_IV_XX) - get(paste0("delta_Y",pl,"_XX")) * df$abs_delta_Z_XX) / get(paste0("E_abs_delta_Z",pl,"_XX"))
             }
             
-            assign(paste0("delta_D",pl,"_XX"), mean(df$inner_sum_IV_denom_XX, na.rm = TRUE)) 
+            assign(paste0("delta_D",pl,"_XX"), Mean("inner_sum_IV_denom_XX", df)) 
+            df_temp <- subset(df, df$SI_XX == 0)
             model <- lm(as.formula(paste("delta_D_XX", reg_pol_XX, sep = "~")), 
-                    data = subset(df, df$SI_XX == 0) , weights = df$weights)
+                    data = df_temp, weights = df_temp$weight_XX)
             df <- lpredict(df,"mean_pred_D_IV_XX", model, vars_pol_XX)   
 
             if (isFALSE(exact_match)) {
@@ -630,7 +630,7 @@ did_multiplegt_stat_pairwise <- function(
             }
 
             df[[paste0("Phi_3_",pairwise,pl,"_XX")]] <- (df$Phi_Y_XX - get(paste0("delta_3_",pairwise,pl,"_XX")) * df$Phi_D_XX) / get(paste0("delta_D",pl,"_XX"))
-            mean_IF3 <- mean(df[[paste0("Phi_3_",pairwise,pl,"_XX")]] , na.rm = TRUE)
+            mean_IF3 <- Mean(paste0("Phi_3_",pairwise,pl,"_XX"), df)
 
             if (!is.null(cluster)) {
                 df <- df %>% group_by(.data$cluster_XX) %>% 
@@ -644,7 +644,7 @@ did_multiplegt_stat_pairwise <- function(
                 df$first_obs_by_clus <- NULL
             } else {
                 assign(paste0("sd_delta_3_",pairwise,pl,"_XX"),
-                        sd(df[[paste0("Phi_3_",pairwise,pl,"_XX")]], na.rm = TRUE)/sqrt(get(paste0("N",pl,"_XX"))))
+                        Sd(paste0("Phi_3_",pairwise,pl,"_XX"), df)/sqrt(wSum(df)))
             }
 
             assign(paste0("LB_3_",pairwise,pl,"_XX"), get(paste0("delta_3_",pairwise,pl,"_XX")) - 1.96*get(paste0("sd_delta_3_",pairwise,pl,"_XX")))
