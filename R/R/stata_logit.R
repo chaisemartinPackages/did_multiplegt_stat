@@ -1,11 +1,12 @@
-#' Internal function of did_continuous
-#' @noRd
+#' Internal function of did_multiplegt_stat that emulates Stata logit function.
 #' @param formula formula
 #' @param df df
 #' @import dplyr
 #' @importFrom magrittr %>%
 #' @importFrom rlang .data
 #' @importFrom stats binomial glm predict
+#' @returns A glm object.
+#' @noRd
 stata_logit <- function(
     formula,
     df
@@ -13,10 +14,6 @@ stata_logit <- function(
     suppressWarnings({
     model <- glm(formula, data = df, weights = df$weights, family = binomial(link = 'logit'),
     maxit = 300, epsilon = 10^-8)
-    ## Detect warnings from glm ##
-    if (!model$converged) {
-        #warning("Convergence not achieved.")
-    }
     })
     return(model)
 }
