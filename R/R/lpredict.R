@@ -1,4 +1,4 @@
-#' Internal function of did_continuous that emulates Stata predict function.
+#' Internal function of did_multiplegt_stat that emulates Stata predict function.
 #' @param df df
 #' @param varname varname
 #' @param model model

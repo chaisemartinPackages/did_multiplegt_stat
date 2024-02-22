@@ -1,4 +1,4 @@
-#' Internal function of did_continuous that emulates Stata logit function.
+#' Internal function of did_multiplegt_stat that emulates Stata logit function.
 #' @param formula formula
 #' @param df df
 #' @import dplyr

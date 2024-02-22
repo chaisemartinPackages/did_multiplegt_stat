@@ -1,4 +1,4 @@
-#' Main interface for did_continuous
+#' Main interface for did_multiplegt_stat
 #' @importFrom haven read_dta
 #' @md
 #' @description Estimation of Difference-in-Difference (DID) Estimators for Treatments and Instruments Continuously Distributed at Every Period with Stayers.
@@ -20,13 +20,13 @@
 #' @param exact_match exact_match
 #' @param cluster cluster
 #' @section Overview:
-#' did_continuous estimates difference-in-differences estimators for continuous treatments with heterogeneous effects, assuming that between consecutive periods, the treatment of some units, the switchers, changes, while the treatment of other units does not change. It computes the three estimators (including an IV-related estimator) introduced in [de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022)](https://ssrn.com/abstract=4011782). The estimators computed by the command assume static effects and rely on a parallel trends assumptions.
+#' did_multiplegt_stat estimates difference-in-differences estimators for continuous treatments with heterogeneous effects, assuming that between consecutive periods, the treatment of some units, the switchers, changes, while the treatment of other units does not change. It computes the three estimators (including an IV-related estimator) introduced in [de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022)](https://ssrn.com/abstract=4011782). The estimators computed by the command assume static effects and rely on a parallel trends assumptions.
 #' 
 #' The command can be used with more than two periods. If the number of periods is greater than two, the command estimates, for each pair of two successive periods, the requested DID estimators (aoss, waoss or iwaoss) as well as their aggregated versions defined as a weighted average of the estimators of the different pairs of periods. The command can also be used when the panel data is unbalaced or presents gaps.
 #' 
-#' The command also computes, when the number of periods is larger than two, the placebos versions of the different estimators  for each two successive time periods, and the aggregated versions. Thus, allowing to test for parallel trends assumptions under which the proposed estimators computed by did_continuous are unbiased.
+#' The command also computes, when the number of periods is larger than two, the placebos versions of the different estimators  for each two successive time periods, and the aggregated versions. Thus, allowing to test for parallel trends assumptions under which the proposed estimators computed by did_multiplegt_stat are unbiased.
 #' 
-#' This command can also be used when the treatment is discrete. In particular, when the treatment is discrete and takes a large number of values and the number of periods is equal to two, did_continuous can be used as an alternative to the did_multiplegt_dyn command, which may not be applicable in such a design since it requires finding switchers and controls with the same period-one treatment. When the number of periods is larger than two, the two commands estimate two different models (static effects for did_continuous, and dynamic effects for did_multiplegt_dyn).
+#' This command can also be used when the treatment is discrete. In particular, when the treatment is discrete and takes a large number of values and the number of periods is equal to two, did_multiplegt_stat can be used as an alternative to the did_multiplegt_dyn command, which may not be applicable in such a design since it requires finding switchers and controls with the same period-one treatment. When the number of periods is larger than two, the two commands estimate two different models (static effects for did_multiplegt_stat, and dynamic effects for did_multiplegt_dyn).
 #' @section FAQ:
 #' TBD
 #' @section Comparison with Stata command:
@@ -70,7 +70,7 @@
 #' gazoline <-  haven::read_dta(url)
 
 #' # Estimating the effect of gasoline taxes on gasoline consumption and prices
-#' summary(did_continuous(
+#' summary(did_multiplegt_stat(
 #'     df = gazoline,
 #'     Y = "lngca",
 #'     ID = "id",
@@ -81,9 +81,9 @@
 #'     estimation_method = "dr",
 #'     noextrapolation = TRUE
 #' ))
-#' @returns A list with two sublists. The first sublist includes the arguments used in the command. The second sublist includes the results from the estimation. Regardless of the options, the output in object$results$table will be a (3 x object$results$pairs) x 6 matrix, where only the requested output (that is, the rows corresponding to the estimators requested) will be non-missing. The list is given a did_continuous class to trigger custom method dispatches by the print and summary functions. 
+#' @returns A list with two sublists. The first sublist includes the arguments used in the command. The second sublist includes the results from the estimation. Regardless of the options, the output in object$results$table will be a (3 x object$results$pairs) x 6 matrix, where only the requested output (that is, the rows corresponding to the estimators requested) will be non-missing. The list is given a did_multiplegt_stat class to trigger custom method dispatches by the print and summary functions. 
 #' @export
-did_continuous <- function(
+did_multiplegt_stat <- function(
     df,
     Y,
     ID,
@@ -103,7 +103,7 @@ did_continuous <- function(
     cluster = NULL
 ) {
   args <- list()
-  for (v in names(formals(did_continuous))) {
+  for (v in names(formals(did_multiplegt_stat))) {
     if (!is.null(get(v))) {
       if (v == "df" & !inherits(get(v), "data.frame")) {
         stop(sprintf("Syntax error in %s option. Dataframe required.",v))
@@ -186,10 +186,10 @@ did_continuous <- function(
     stop("To compute the iwaoss you must specify the IV variable.")
   }
 
-  results <- did_continuous_main(df = df, Y = Y, ID = ID, Time = Time, D = D, Z = Z, estimator = estimator, estimation_method = estimation_method, order = order, noextrapolation = noextrapolation, placebo = placebo, weight = weight, switchers = switchers, disaggregate = disaggregate, aoss_vs_waoss = aoss_vs_waoss, exact_match = exact_match, cluster = cluster)
+  results <- did_multiplegt_stat_main(df = df, Y = Y, ID = ID, Time = Time, D = D, Z = Z, estimator = estimator, estimation_method = estimation_method, order = order, noextrapolation = noextrapolation, placebo = placebo, weight = weight, switchers = switchers, disaggregate = disaggregate, aoss_vs_waoss = aoss_vs_waoss, exact_match = exact_match, cluster = cluster)
 
-  did_continuous <- list(args, results)
-  names(did_continuous) <- c("args", "results")
-  class(did_continuous) <- c(class(did_continuous), "did_continuous")
-  return(did_continuous)
+  did_multiplegt_stat <- list(args, results)
+  names(did_multiplegt_stat) <- c("args", "results")
+  class(did_multiplegt_stat) <- c(class(did_multiplegt_stat), "did_multiplegt_stat")
+  return(did_multiplegt_stat)
 }

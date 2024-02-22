@@ -1,11 +1,11 @@
-#' @title summary method for did_continuous
-#' @name summary.did_continuous
-#' @description A customized printed display for did_continuous output
-#' @param object A did_continuous object
+#' @title summary method for did_multiplegt_stat
+#' @name summary.did_multiplegt_stat
+#' @description A customized printed display for did_multiplegt_stat output
+#' @param object A did_multiplegt_stat object
 #' @param ... Undocumented
-#' @returns No return, just a custom summary method for did_continuous output.
+#' @returns No return, just a custom summary method for did_multiplegt_stat output.
 #' @export
-summary.did_continuous <- function(object, ...) {
+summary.did_multiplegt_stat <- function(object, ...) {
     estims <- list(0, 1, 2)
     names(estims) <- c("aoss", "waoss", "iwaoss") 
 
@@ -102,14 +102,14 @@ summary.did_continuous <- function(object, ...) {
     }
 }
 
-#' @title print method for did_continuous
-#' @name print.did_continuous
+#' @title print method for did_multiplegt_stat
+#' @name print.did_multiplegt_stat
 #' @description A customized printed display for did_continous output
-#' @param x A did_continuous object
+#' @param x A did_multiplegt_stat object
 #' @param ... Undocumented
-#' @returns No return, just a custom summary print for did_continuous output.
+#' @returns No return, just a custom summary print for did_multiplegt_stat output.
 #' @export
-print.did_continuous <- function(x, ...) {
+print.did_multiplegt_stat <- function(x, ...) {
     summary(x)
 }
 

@@ -1,4 +1,4 @@
-#' Internal function of did_continuous for the computation of displayed results.
+#' Internal function of did_multiplegt_stat for the computation of displayed results.
 #' @param df df
 #' @param Y Y
 #' @param ID ID
@@ -24,7 +24,7 @@
 #' @importFrom stats sd pnorm
 #' @returns A list with the raw output to be displayed.
 #' @noRd
-did_continuous_main <- function(
+did_multiplegt_stat_main <- function(
     df,
     Y,
     ID,
@@ -151,7 +151,7 @@ did_continuous_main <- function(
 
     for (p in 2:max_T_XX) {
 
-        est_out <- did_continuous_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = FALSE, exact_match = exact_match, cluster = cluster)
+        est_out <- did_multiplegt_stat_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = FALSE, exact_match = exact_match, cluster = cluster)
 
         IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX", all = TRUE) 
         IDs_XX <- IDs_XX[order(IDs_XX$ID_XX), ]
@@ -198,7 +198,7 @@ did_continuous_main <- function(
     if (isTRUE(placebo)) {
         for (p in 3:max_T_XX) {
 
-            est_out <- did_continuous_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = TRUE, exact_match = exact_match, cluster = cluster)
+            est_out <- did_multiplegt_stat_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = TRUE, exact_match = exact_match, cluster = cluster)
 
             if (!is.null(est_out$to_add)) {
                 IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX", all = TRUE) 
