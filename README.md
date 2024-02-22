@@ -34,7 +34,7 @@ NOEXTRApolation placebo weight(varlist numeric) switchers(string) DISAGgregate a
 
 ### R 
 ```r
-did_multiplegt_stat(df, Y, ID, T, D, Z = NULL, estimator = NULL, estimation_method = NULL, order = 1, 
+did_multiplegt_stat(df, Y, ID, Time, D, Z = NULL, estimator = NULL, estimation_method = NULL, order = 1, 
 noextrapolation = FALSE, placebo = NULL,  weight = NULL, switchers = NULL, 
 disaggregate = FALSE, aoss_vs_waoss = FALSE)
 ```
@@ -44,7 +44,7 @@ disaggregate = FALSE, aoss_vs_waoss = FALSE)
 - **df**: (R only) A dataframe object.
 - **Y**: Outcome variable.
 - **ID**: Identifier of the unit of analysis.
-- **T**: Time variable. The command assumes that the time variable is evenly spaced (e.g.: the panel is at the yearly level, and no year is missing for all groups). When it is not (e.g.: the panel is at the yearly level, but three consecutive years are missing for all groups), the command can still be used. For example, if the year n is missing, the command does not comuptes the DID estimators of the pairs of years (n-1,n),(n,n+1), and (n-1,n+1).
+- **Time**: Time variable. The command assumes that the time variable is evenly spaced (e.g.: the panel is at the yearly level, and no year is missing for all groups). When it is not (e.g.: the panel is at the yearly level, but three consecutive years are missing for all groups), the command can still be used. For example, if the year n is missing, the command does not comuptes the DID estimators of the pairs of years (n-1,n),(n,n+1), and (n-1,n+1).
 - **D**: Treatment variable.
 - **Z**: Instrumental variable. This option is only required when the IV-related estimator (the so-called iwaoss) is requested.
 - **estimator**: Estimator(s) to be computed. The allowed arguments are: (1) "aoss", i.e the Average Of Switchers’ Slopes which is the average, across switchers, of the effect on their period-(t) outcome of moving their treatment from its period-(t-1) to its period-(t) value, scaled by the difference between these two values. (2) "waoss" which corresponds to a weighted version of "aoss" where slopes receive a weight proportional to switchers’ absolute treatment change from period-(t-1) to period-(t). (3) "iwaoss" which generalizes "waoss" to the instrumental-variable case, and is equal to the reduced-form "waoss" effect of the instrument on the outcome, divided by the first-stage "waoss" effect of the instrument on the treatment. If this option is not specified: by default, the command estimates both "aoss" and "waoss" if the instrumental-variable Z is not specified, or only iwaoss otherwise. 
