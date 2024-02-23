@@ -252,19 +252,17 @@ did_multiplegt_stat_pairwise <- function(
     if (isTRUE(exact_match)) {
         if (aoss == 1 | waoss == 1) {
             df <- df %>% group_by(.data$D1_XX) %>% 
-                    mutate(has_match_temp_XX = min(.data$abs_delta_D_XX, na.rm = TRUE)) %>% ungroup()
-            df$has_match_XX <- as.numeric(df$has_match_temp_XX == 0)
-            df$has_match_XX <- ifelse(df$S_XX == 0, NA, df$has_match_XX)
-            df$has_match_temp_XX <- NULL
+                    mutate(has_match_min_XX = min(.data$abs_delta_D_XX, na.rm = TRUE)) %>%
+                    mutate(has_match_max_XX = max(.data$abs_delta_D_XX, na.rm = TRUE)) %>% ungroup()
         } else if (iwaoss == 1) {
             df <- df %>% group_by(.data$Z1_XX) %>% 
-                    mutate(has_match_temp_XX = min(.data$abs_delta_Z_XX, na.rm = TRUE)) %>% ungroup()
-            df$has_match_XX <- as.numeric(df$has_match_temp_XX == 0)
-            df$has_match_XX <- ifelse(df$SI_XX == 0, NA, df$has_match_XX)
-            df$has_match_temp_XX <- NULL
+                    mutate(has_match_min_XX = min(.data$abs_delta_Z_XX, na.rm = TRUE)) %>%
+                    mutate(has_match_max_XX = max(.data$abs_delta_Z_XX, na.rm = TRUE)) %>% ungroup()
         }
+        df$has_match_XX <- as.numeric(df$has_match_min_XX == 0 & df$has_match_max_XX != 0)
+        df$has_match_min_XX <- df$has_match_max_XX <- NULL
         assign(paste0("N_drop_",pairwise,pl,"_XX"), nrow(subset(df, df$has_match_XX == 0)))
-        df <- subset(df, (!is.na(df$has_match_XX) & df$has_match_XX != 0) | is.na(df$has_match_XX))
+        df <- subset(df, df$has_match_XX != 0)
         if (get(paste0("N_drop_",pairwise,pl,"_XX")) > 0 & gap_XX == 0) {
             N_drop_total_XX <- N_drop_total_XX + get(paste0("N_drop_",pairwise,pl,"_XX")) 
         }
