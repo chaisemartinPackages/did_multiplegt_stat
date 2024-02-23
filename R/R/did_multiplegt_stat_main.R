@@ -76,6 +76,8 @@ did_multiplegt_stat_main <- function(
                     mutate(cluster_sd_XX = sd(.data$cluster_XX, na.rm = TRUE))
             if (max(df$cluster_sd_XX, na.rm = TRUE) > 0) {
                 stop("The ID variable should be nested within the clustering variable.")
+            } else {
+                n_clus_XX <- length(unique(df$cluster_XX))
             }
         }
     }
@@ -99,8 +101,13 @@ did_multiplegt_stat_main <- function(
 
     if (is.null(weight)) {
         df$weight_XX <- 1
+        df$weight_c_XX <- 1
     } else {
         df$weight_XX <- ifelse(is.na(df$weight_XX), 0, df$weight_XX)
+    }
+    if (!is.null(cluster)) {
+        df <- df %>% group_by(.data$cluster_XX, .data$T_XX) %>%
+            mutate(weight_c_XX = sum(.data$weight_XX, na.rm = TRUE))
     }
 
     # Further useful steps prior to the estimation
@@ -537,6 +544,10 @@ did_multiplegt_stat_main <- function(
     if (isTRUE(aoss_vs_waoss)) {
         out <- c(out, list(t_mat))
         names(out)[length(out)] <- "aoss_vs_waoss"
+    }
+    if (!is.null(cluster)) {
+        out <- c(out, list(n_clus_XX))
+        names(out)[length(out)] <- "n_clusters"
     }
     })
     return(out)

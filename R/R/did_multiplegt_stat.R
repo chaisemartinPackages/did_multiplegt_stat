@@ -102,6 +102,10 @@ did_multiplegt_stat <- function(
     exact_match = FALSE,
     cluster = NULL
 ) {
+
+  ## For now, the weight and cluster options will be shut down until further theoretical results about the appropriate way to perform weighting and clustering while aggregating the IFs
+  weight <- cluster <- NULL
+
   args <- list()
   for (v in names(formals(did_multiplegt_stat))) {
     if (!is.null(get(v))) {

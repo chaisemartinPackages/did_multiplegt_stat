@@ -389,13 +389,11 @@ did_multiplegt_stat_pairwise <- function(
                 df <- df %>% group_by(.data$cluster_XX) %>% 
                         mutate(!!paste0("Phi_1_",pairwise,pl,"_c_XX") := sum(.data[[paste0("Phi_1_", pairwise,pl,"_XX")]], na.rm = TRUE)) %>%
                         mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
-                df <- df[order(df$ID_XX), ]
                 df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]] <- ifelse(df$first_obs_by_clus == 1, df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]], NA)
-                nobs_c_XX <- wSum(subset(df, !is.na(df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]])))
+                nobs_c_XX <- wSum(subset(df, !is.na(df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]])), w = "weight_c_XX")
                 assign(paste0("sd_delta_1_",pairwise,pl,"_XX"),
-                        Sd(paste0("Phi_1_",pairwise,pl,"_c_XX"), df)/sqrt(nobs_c_XX))
-                nobs_c_XX <- NULL
-                df$first_obs_by_clus <- NULL
+                        Sd(paste0("Phi_1_",pairwise,pl,"_c_XX"), df, w = "weight_c_XX")/sqrt(nobs_c_XX))
+                nobs_c_XX <- df$first_obs_by_clus <- NULL
             } else {
                 assign(paste0("sd_delta_1_",pairwise,pl,"_XX"),
                         Sd(paste0("Phi_1_",pairwise,pl,"_XX"), df)/sqrt(wSum(df)))
@@ -502,11 +500,10 @@ did_multiplegt_stat_pairwise <- function(
                         mutate(!!paste0("Phi_2_",pairwise,pl,"_c_XX") := sum(.data[[paste0("Phi_2_", pairwise,pl,"_XX")]], na.rm = TRUE)) %>%
                         mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
                 df[[paste0("Phi_2_",pairwise,pl,"_c_XX")]] <- ifelse(df$first_obs_by_clus == 1, df[[paste0("Phi_2_",pairwise,pl,"_c_XX")]], NA)
-                nobs_c_XX <- nrow(subset(df, !is.na(df[[paste0("Phi_2_",pairwise,pl,"_c_XX")]])))
+                nobs_c_XX <- wSum(subset(df, !is.na(df[[paste0("Phi_2_",pairwise,pl,"_c_XX")]])), w = "weight_c_XX")
                 assign(paste0("sd_delta_2_",pairwise,pl,"_XX"),
-                        sd(df[[paste0("Phi_2_",pairwise,pl,"_c_XX")]], na.rm = TRUE)/sqrt(nobs_c_XX))
-                nobs_c_XX <- NULL
-                df$first_obs_by_clus <- NULL
+                        Sd(paste0("Phi_2_",pairwise,pl,"_c_XX"), df, w = "weight_c_XX")/sqrt(nobs_c_XX))
+                nobs_c_XX <- df$first_obs_by_clus <- NULL
             } else {
                 assign(paste0("sd_delta_2_",pairwise,pl,"_XX"),
                         Sd(paste0("Phi_2_",pairwise,pl,"_XX"), df)/sqrt(wSum(df)))
@@ -637,9 +634,9 @@ did_multiplegt_stat_pairwise <- function(
                         mutate(!!paste0("Phi_3_",pairwise,pl,"_c_XX") := sum(.data[[paste0("Phi_3_", pairwise,pl,"_XX")]], na.rm = TRUE)) %>%
                         mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
                 df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]] <- ifelse(df$first_obs_by_clus == 1, df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]], NA)
-                nobs_c_XX <- nrow(subset(df, !is.na(df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]])))
+                nobs_c_XX <- wSum(subset(df, !is.na(df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]])), w = "weight_c_XX")
                 assign(paste0("sd_delta_3_",pairwise,pl,"_XX"),
-                        sd(df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]], na.rm = TRUE)/sqrt(nobs_c_XX))
+                        Sd(paste0("Phi_3_",pairwise,pl,"_c_XX"), df, w = "weight_c_XX")/sqrt(nobs_c_XX))
                 nobs_c_XX <- NULL
                 df$first_obs_by_clus <- NULL
             } else {

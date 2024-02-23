@@ -49,13 +49,14 @@ summary.did_multiplegt_stat <- function(object, ...) {
     if (!is.null(object$args$switchers)) {
         strdisplay("Switchers", objects$args$switchers)
     }
+    cat(noquote(strrep("-", 35)));cat("\n");
     if (!is.null(object$args$cluster)) {
         if (object$args$cluster != object$args$ID) {
-            strdisplay("Cluster", object$args$cluster)
+            cat(sprintf("(Std. errors adjusted for %.0f clusters in %s)\n", 
+                    object$results$n_clusters[[1]], object$args$cluster))
         }
     }
 
-    cat(noquote(strrep("-", 35)));cat("\n");
 
 
     for (t in names(estims)){
