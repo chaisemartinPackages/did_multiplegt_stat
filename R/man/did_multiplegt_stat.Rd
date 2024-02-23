@@ -16,12 +16,10 @@ did_multiplegt_stat(
   order = 1,
   noextrapolation = FALSE,
   placebo = NULL,
-  weight = NULL,
   switchers = NULL,
   disaggregate = FALSE,
   aoss_vs_waoss = FALSE,
-  exact_match = FALSE,
-  cluster = NULL
+  exact_match = FALSE
 )
 }
 \arguments{
@@ -47,8 +45,6 @@ did_multiplegt_stat(
 
 \item{placebo}{(logical) This option allows to estimate the placebos versions of the estimators requested in the estimator option. If this option is combined with the option disaggregate, the command also displays the placebo version of each two consecutive time-periods.}
 
-\item{weight}{(char) TBD.}
-
 \item{switchers}{(char) The allowed inputs for this option are "up" and "down". If the argument "up" is specified, the command estimates the effects on switchers-up, i.e, units whose treatments (or instruments) increase from period t-1 to period t. If the argument "down" is given, the command estimates the effects on switchers-down, i.e., units whose treaments (or instruments) decrease from period t-1 to period t.}
 
 \item{disaggregate}{(logical) If this potion is specified, the command displays the estimands of the effects for each two consecutive periods as well as the aggregated estimands. Otherwise, the command only outputs the aggregated results.}
@@ -56,8 +52,6 @@ did_multiplegt_stat(
 \item{aoss_vs_waoss}{(logical) As highlighted in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022), the aoss and the waoss are equal if and only if switchers’ slopes are uncorrelated with $|D_t - D_{t-1}|$. When this option is specified, the command performs and displays the test of the equality between the aoss and  the waoss. Note that the use of this option requires specifying in the estimator option both aoss and waoss.}
 
 \item{exact_match}{exact_match}
-
-\item{cluster}{cluster}
 }
 \value{
 A list with two sublists. The first sublist includes the arguments used in the command. The second sublist includes the results from the estimation. Regardless of the options, the output in object$results$table will be a (3 x object$results$pairs) x 6 matrix, where only the requested output (that is, the rows corresponding to the estimators requested) will be non-missing. The list is given a did_multiplegt_stat class to trigger custom method dispatches by the print and summary functions.

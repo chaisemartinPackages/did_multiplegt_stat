@@ -10,11 +10,11 @@
 #' @param order order
 #' @param noextrapolation noextrapolation
 #' @param placebo placebo
-#' @param weight weight
 #' @param switchers switchers
 #' @param disaggregate disaggregate
 #' @param aoss_vs_waoss aoss_vs_waoss
 #' @param exact_match exact_match
+#' @param weight weight
 #' @param cluster cluster
 #' @import dplyr
 #' @importFrom magrittr %>%
@@ -36,11 +36,11 @@ did_multiplegt_stat_main <- function(
     order,
     noextrapolation,
     placebo,
-    weight,
     switchers,
     disaggregate,
     aoss_vs_waoss,
     exact_match,
+    weight,
     cluster
 ) {
 
