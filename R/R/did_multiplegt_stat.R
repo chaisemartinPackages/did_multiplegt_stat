@@ -202,28 +202,52 @@ did_multiplegt_stat <- function(
       } else {
         df[[by]] <- factor(df[[by]])
         by_levels <- levels(df[[by]])
-        did_multiplegt_stat <- append(did_multiplegt_stat, list(by_levels))
-        names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "by_levels"
       }
-    } else if (inherits(by, "numeric")) {
-       by_levels <- "_no_by"
+    } else if (inherits(by, "numeric") & by %% 1 == 0) {
+      if (100 %% by != 0) {
+        stop("Syntax error in by option. When the by option is specified with an integer, the argument must be divisible by 100 to allow for an integer subsetting of the quantiles.")
+      }
+       q_levels <- c(0) 
+       while (q_levels[length(q_levels)] < 1 - by/100) {
+        q_levels <- c(q_levels, q_levels[length(q_levels)] + by/100)
+       }
+       by_set <- did_multiplegt_stat_quantiles(df = df, ID = ID, Time = Time, D = D, Z = Z, quantiles = q_levels)
+       df <- by_set$df
+       val_quantiles <- by_set$val_quantiles
+       by_set <- NULL
+       by_levels <- levels(factor(subset(df, df$partition_XX != 0)$partition_XX))
+    }
+    did_multiplegt_stat <- append(did_multiplegt_stat, list(by_levels))
+    names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "by_levels"
+    if (!is.null(val_quantiles)) {
+      did_multiplegt_stat <- append(did_multiplegt_stat, list(val_quantiles))
+      names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "val_quantiles"      
     }
   } else {
     by_levels <- "_no_by"
   } 
 
-
   df_main <- df
   obj_name <- "results"
   for (by_lev in 1:length(by_levels)) {
-    if (by_levels[by_lev] != "_no_by") {
+    if (by_levels[by_lev] != "_no_by" & inherits(by, "character")) {
       df_main <- subset(df, df[[by]] == by_levels[by_lev])
       obj_name <- paste0("results_by_", by_lev)
       message(sprintf("Running did_multiplegt_stat with %s = %s", by, by_levels[by_lev]))
+    } else if (by_levels[by_lev] != "_no_by" & inherits(by, "numeric")) {
+      df_main <- subset(df, df$partition_XX == by_lev | df$partition_XX == 0)
+      obj_name <- paste0("results_by_", by_lev)
+      diff_var <- ifelse("iwaoss" %in% estimator, "Z", "D")
+      message(sprintf("Running did_multiplegt_stat with switchers s.t. \U0394%s \U2208 [%.3f,%.3f] (%.0f%%-%.0f%% quantiles).", diff_var, val_quantiles[by_lev], val_quantiles[by_lev + 1], (by_lev-1)*by, by_lev*by))
     }
     results <- did_multiplegt_stat_main(df = df_main, Y = Y, ID = ID, Time = Time, D = D, Z = Z, estimator = estimator, estimation_method = estimation_method, order = order, noextrapolation = noextrapolation, placebo = placebo, weight = weight, switchers = switchers, disaggregate = disaggregate, aoss_vs_waoss = aoss_vs_waoss, exact_match = exact_match, cluster = cluster)
     did_multiplegt_stat <- append(did_multiplegt_stat, list(results))
     names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- obj_name
+  }
+
+  if (!is.null(did_multiplegt_stat$val_quantiles)) {
+    did_multiplegt_stat <- append(did_multiplegt_stat, list(by_graph(obj = did_multiplegt_stat)))
+    names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "by_graph"
   }
 
   class(did_multiplegt_stat) <- c(class(did_multiplegt_stat), "did_multiplegt_stat")

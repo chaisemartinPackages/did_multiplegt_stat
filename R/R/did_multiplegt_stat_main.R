@@ -43,7 +43,6 @@ did_multiplegt_stat_main <- function(
     weight,
     cluster
 ) {
-
     suppressWarnings({
     # Preallocation of scalars
     aoss_XX <- NULL
@@ -156,7 +155,6 @@ did_multiplegt_stat_main <- function(
         N_drop_total_IV_XX = 0,
         denom_delta_IV_sum_pl_XX = 0)
     }
-
 
     for (p in 2:max_T_XX) {
 

@@ -27,9 +27,17 @@ summary.did_multiplegt_stat <- function(object, ...) {
             by_obj <- c(by_obj, paste0("results_by_", res))
         }
 
+        if (inherits(object$args$by, "numeric")) {
+            by_name <- "quantiles"
+            by_totl <- 100 / object$args$by
+        } else {
+            by_name <- object$args$by
+            by_totl <- length(by_levs)
+        }
+
         cat("\n");
         cat(noquote(strrep("#", 70)));cat("\n");
-        cat(sprintf("## did_multipegt_stat by %s (%.0f levels)", object$args$by, length(by_levs)));cat("\n");
+        cat(sprintf("## did_multipegt_stat by %s (%.0f levels)", by_name, by_totl));cat("\n");
         cat(noquote(strrep("#", 70)));cat("\n");
     }
 
