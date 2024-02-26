@@ -54,3 +54,22 @@ Sum <- function(
     df_nm <- subset(df, !(is.na(df[[object]] | is.na(df[[w]]))))
     return(as.numeric(t(df_nm[[object]]) %*% df_nm[[w]]))
 }
+
+#' By option consistency check 
+#' @param df df
+#' @param ID ID
+#' @param by by 
+#' @import dplyr
+#' @importFrom magrittr %>%
+#' @importFrom rlang .data
+#' @returns A logical.
+#' @noRd
+by_check <- function(
+    df,
+    ID,
+    by
+    ) {
+    df$temp_G <- as.numeric(factor(df[[by]]))
+    df <- df %>% group_by(.data[[ID]]) %>% mutate(sd_ID = sd(.data$temp_G, na.rm = TRUE))
+    return(mean(df$sd_ID) == 0)
+}

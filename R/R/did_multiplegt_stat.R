@@ -17,6 +17,7 @@
 #' @param noextrapolation (logical) This option forces the command to use only switchers whose period-(t-1) treatments (or instruments) are between the minimum and the maximum values of the period-(t-1) treatments (or instruments) of the stayers. This a less restrictive common support assumption.
 #' @param aoss_vs_waoss (logical) As highlighted in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022), the aoss and the waoss are equal if and only if switchers’ slopes are uncorrelated with $|D_t - D_{t-1}|$. When this option is specified, the command performs and displays the test of the equality between the aoss and  the waoss. Note that the use of this option requires specifying in the estimator option both aoss and waoss.
 #' @param exact_match exact_match
+#' @param by by
 #' @section Overview:
 #' did_multiplegt_stat estimates difference-in-differences estimators for continuous treatments with heterogeneous effects, assuming that between consecutive periods, the treatment of some units, the switchers, changes, while the treatment of other units does not change. It computes the three estimators (including an IV-related estimator) introduced in [de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022)](https://ssrn.com/abstract=4011782). The estimators computed by the command assume static effects and rely on a parallel trends assumptions.
 #' 
@@ -96,7 +97,8 @@ did_multiplegt_stat <- function(
     switchers = NULL,
     disaggregate = FALSE,
     aoss_vs_waoss = FALSE,
-    exact_match = FALSE
+    exact_match = FALSE,
+    by = NULL
 ) {
 
   ## For now, the weight and cluster options will be shut down until further theoretical results about the appropriate way to perform weighting and clustering while aggregating the IFs
@@ -123,6 +125,10 @@ did_multiplegt_stat <- function(
           if (!(inherits(get(v), "numeric") & get(v) %% 1 == 0)) {
           stop(sprintf("Syntax error in %s option. Integer required.",v))
           }
+      } else if (v == "by") {
+        if (!((inherits(get(v), "character") | inherits(get(v), "numeric")) & length(get(v)) == 1)) {
+          stop(sprintf("Syntax error in %s option. Integer or character required.",v))
+        }
       }
     }
     if (v != "df") {
@@ -186,10 +192,40 @@ did_multiplegt_stat <- function(
     stop("To compute the iwaoss you must specify the IV variable.")
   }
 
-  results <- did_multiplegt_stat_main(df = df, Y = Y, ID = ID, Time = Time, D = D, Z = Z, estimator = estimator, estimation_method = estimation_method, order = order, noextrapolation = noextrapolation, placebo = placebo, weight = weight, switchers = switchers, disaggregate = disaggregate, aoss_vs_waoss = aoss_vs_waoss, exact_match = exact_match, cluster = cluster)
+  did_multiplegt_stat <- list(args)
+  names(did_multiplegt_stat) <- c("args")
 
-  did_multiplegt_stat <- list(args, results)
-  names(did_multiplegt_stat) <- c("args", "results")
+  if (!is.null(by)) {
+    if (inherits(by, "character")) {
+      if (!by_check(df, ID, by)) {
+        stop("The ID variable should be nested within the by variable.")
+      } else {
+        df[[by]] <- factor(df[[by]])
+        by_levels <- levels(df[[by]])
+        did_multiplegt_stat <- append(did_multiplegt_stat, list(by_levels))
+        names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "by_levels"
+      }
+    } else if (inherits(by, "numeric")) {
+       by_levels <- "_no_by"
+    }
+  } else {
+    by_levels <- "_no_by"
+  } 
+
+
+  df_main <- df
+  obj_name <- "results"
+  for (by_lev in 1:length(by_levels)) {
+    if (by_levels[by_lev] != "_no_by") {
+      df_main <- subset(df, df[[by]] == by_levels[by_lev])
+      obj_name <- paste0("results_by_", by_lev)
+      message(sprintf("Running did_multiplegt_stat with %s = %s", by, by_levels[by_lev]))
+    }
+    results <- did_multiplegt_stat_main(df = df_main, Y = Y, ID = ID, Time = Time, D = D, Z = Z, estimator = estimator, estimation_method = estimation_method, order = order, noextrapolation = noextrapolation, placebo = placebo, weight = weight, switchers = switchers, disaggregate = disaggregate, aoss_vs_waoss = aoss_vs_waoss, exact_match = exact_match, cluster = cluster)
+    did_multiplegt_stat <- append(did_multiplegt_stat, list(results))
+    names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- obj_name
+  }
+
   class(did_multiplegt_stat) <- c(class(did_multiplegt_stat), "did_multiplegt_stat")
   return(did_multiplegt_stat)
 }

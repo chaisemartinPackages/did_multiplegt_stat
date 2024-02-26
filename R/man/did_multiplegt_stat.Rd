@@ -19,7 +19,8 @@ did_multiplegt_stat(
   switchers = NULL,
   disaggregate = FALSE,
   aoss_vs_waoss = FALSE,
-  exact_match = FALSE
+  exact_match = FALSE,
+  by = NULL
 )
 }
 \arguments{
@@ -52,6 +53,8 @@ did_multiplegt_stat(
 \item{aoss_vs_waoss}{(logical) As highlighted in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022), the aoss and the waoss are equal if and only if switchers’ slopes are uncorrelated with $|D_t - D_{t-1}|$. When this option is specified, the command performs and displays the test of the equality between the aoss and  the waoss. Note that the use of this option requires specifying in the estimator option both aoss and waoss.}
 
 \item{exact_match}{exact_match}
+
+\item{by}{by}
 }
 \value{
 A list with two sublists. The first sublist includes the arguments used in the command. The second sublist includes the results from the estimation. Regardless of the options, the output in object$results$table will be a (3 x object$results$pairs) x 6 matrix, where only the requested output (that is, the rows corresponding to the estimators requested) will be non-missing. The list is given a did_multiplegt_stat class to trigger custom method dispatches by the print and summary functions.

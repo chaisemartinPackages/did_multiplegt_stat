@@ -17,89 +17,111 @@ summary.did_multiplegt_stat <- function(object, ...) {
         estim_list <- object$args$estimator
     }
 
-    cat("\n");
-    cat(noquote(strrep("-", 35)));cat("\n");
-    if ("iwaoss" %in% estim_list) {
-        strdisplay("N",object$results$table[2*object$results$pairs+1,5] + object$results$table[2*object$results$pairs+1,6])
+    if (is.null(object$args$by)) {
+        by_levs <- c("_no_by")
+        by_obj <- c("results")
     } else {
-        if ("waoss" %in% estim_list) {
-            strdisplay("N",object$results$table[object$results$pairs+1,5] + object$results$table[object$results$pairs+1,6])
+        by_levs <- object$by_levels
+        by_obj <- c()
+        for (res in 1:length(by_levs)) {
+            by_obj <- c(by_obj, paste0("results_by_", res))
+        }
+
+        cat("\n");
+        cat(noquote(strrep("#", 70)));cat("\n");
+        cat(sprintf("## did_multipegt_stat by %s (%.0f levels)", object$args$by, length(by_levs)));cat("\n");
+        cat(noquote(strrep("#", 70)));cat("\n");
+    }
+
+    for (temp in 1:length(by_obj)) {
+        print_obj <- object[[by_obj[temp]]]
+
+        if (by_levs[temp] != "_no_by") {
+            msg <- paste0(" By level: ", by_levs[temp])
+            cat(noquote(strrep("#", 70 - nchar(msg))));cat(msg);cat("\n");
+        }
+
+        cat("\n");
+        cat(noquote(strrep("-", 35)));cat("\n");
+        if ("iwaoss" %in% estim_list) {
+            strdisplay("N",print_obj$table[2*print_obj$pairs+1,5] + print_obj$table[2*print_obj$pairs+1,6])
         } else {
-            strdisplay("N",object$results$table[1,5] + object$results$table[1,6])
-        }
-    }
-    methods <- list(ra = "Reg. Adjustment", dr = "Doubly Robust", ps = "Propensity Score")
-    method <- ifelse(is.null(object$args$estimation_method), "ra", object$args$estimation_method)
-    for (m in c("waoss", "iwaoss")) {
-        if (m %in% estim_list) { 
-            strdisplay(paste0(toupper(m), " Method"), methods[[method]])            
-        }
-    }
-    if (isFALSE(object$args$exact_match)) {
-        strdisplay("Polynomial Order",object$args$order)
-    }
-    support <- c("Exact Matching", "No Extrapolation")
-    index <- 1
-    for (m in c("exact_match", "noextrapolation")) {
-        if (isTRUE(object$args[[m]])) {
-            strdisplay("Common Support",support[index])
-        }
-        index <- index + 1
-    }
-    if (!is.null(object$args$switchers)) {
-        strdisplay("Switchers", objects$args$switchers)
-    }
-    cat(noquote(strrep("-", 35)));cat("\n");
-    if (!is.null(object$args$cluster)) {
-        if (object$args$cluster != object$args$ID) {
-            cat(sprintf("(Std. errors adjusted for %.0f clusters in %s)\n", 
-                    object$results$n_clusters[[1]], object$args$cluster))
-        }
-    }
-
-
-
-    for (t in names(estims)){
-        if (t %in% estim_list) {
-
-            cat("\n");
-            cat(noquote(strrep("-", 70)));cat("\n");
-            cat(strrep(" ", 20));cat(sprintf("Estimation of %s(s)", toupper(t)));cat("\n");
-            cat(noquote(strrep("-", 70)));cat("\n");
-
-            l_bound <- 1 + estims[[t]] * object$results$pairs 
-            u_bound <- l_bound + isTRUE(object$args$disaggregate) * (object$results$pairs - 1)
-            mat_sel <- object$results$table[l_bound:u_bound, ]
-            mat_print(mat_sel, t)
-            cat("\n");
-
-            if (isTRUE(object$args$placebo)) {
-
-                cat("\n");
-                cat(noquote(strrep("-", 70)));cat("\n");
-                cat(strrep(" ", 15));cat(sprintf("Estimation of %s(s) - Placebo", toupper(t)));cat("\n");
-                cat(noquote(strrep("-", 70)));cat("\n");
-
-                l_bound <- 1 + estims[[t]] * object$results$pairs 
-                u_bound <- l_bound + isTRUE(object$args$disaggregate) * (object$results$pairs - 1)
-                mat_sel_placebo <- object$results$table_placebo[l_bound:u_bound, ]
-
-                mat_print(mat_sel_placebo, t)
-                cat("\n");
+            if ("waoss" %in% estim_list) {
+                strdisplay("N",print_obj$table[print_obj$pairs+1,5] + print_obj$table[print_obj$pairs+1,6])
+            } else {
+                strdisplay("N",print_obj$table[1,5] + print_obj$table[1,6])
             }
         }
-    }
+        methods <- list(ra = "Reg. Adjustment", dr = "Doubly Robust", ps = "Propensity Score")
+        method <- ifelse(is.null(object$args$estimation_method), "ra", object$args$estimation_method)
+        for (m in c("waoss", "iwaoss")) {
+            if (m %in% estim_list) { 
+                strdisplay(paste0(toupper(m), " Method"), methods[[method]])            
+            }
+        }
+        if (isFALSE(object$args$exact_match)) {
+            strdisplay("Polynomial Order",object$args$order)
+        }
+        support <- c("Exact Matching", "No Extrapolation")
+        index <- 1
+        for (m in c("exact_match", "noextrapolation")) {
+            if (isTRUE(object$args[[m]])) {
+                strdisplay("Common Support",support[index])
+            }
+            index <- index + 1
+        }
+        if (!is.null(object$args$switchers)) {
+            strdisplay("Switchers", objects$args$switchers)
+        }
+        cat(noquote(strrep("-", 35)));cat("\n");
+        if (!is.null(object$args$cluster)) {
+            if (object$args$cluster != object$args$ID) {
+                cat(sprintf("(Std. errors adjusted for %.0f clusters in %s)\n", 
+                        print_obj$n_clusters[[1]], object$args$cluster))
+            }
+        }
 
+        for (t in names(estims)){
+            if (t %in% estim_list) {
 
-    if (isTRUE(object$args$aoss_vs_waoss)) {
+                cat("\n");
+                cat(noquote(strrep("-", 70)));cat("\n");
+                cat(strrep(" ", 20));cat(sprintf("Estimation of %s(s)", toupper(t)));cat("\n");
+                cat(noquote(strrep("-", 70)));cat("\n");
 
-            cat("\n");
-            cat(noquote(strrep("-", 70)));cat("\n");
-            cat(strrep(" ", 15));cat("Difference test: AOSS and WAOSS");cat("\n");
-            cat(noquote(strrep("-", 70)));cat("\n");
-            cat("H0: AOSS = WAOSS\n");
-      
-            tab_print(object$results$aoss_vs_waoss)
+                l_bound <- 1 + estims[[t]] * print_obj$pairs 
+                u_bound <- l_bound + isTRUE(object$args$disaggregate) * (print_obj$pairs - 1)
+                mat_sel <- print_obj$table[l_bound:u_bound, ]
+                mat_print(mat_sel, t)
+                cat("\n");
+
+                if (isTRUE(object$args$placebo)) {
+
+                    cat("\n");
+                    cat(noquote(strrep("-", 70)));cat("\n");
+                    cat(strrep(" ", 15));cat(sprintf("Estimation of %s(s) - Placebo", toupper(t)));cat("\n");
+                    cat(noquote(strrep("-", 70)));cat("\n");
+
+                    l_bound <- 1 + estims[[t]] * print_obj$pairs 
+                    u_bound <- l_bound + isTRUE(object$args$disaggregate) * (print_obj$pairs - 1)
+                    mat_sel_placebo <- print_obj$table_placebo[l_bound:u_bound, ]
+
+                    mat_print(mat_sel_placebo, t)
+                    cat("\n");
+                }
+            }
+        }
+
+        if (isTRUE(object$args$aoss_vs_waoss)) {
+
+                cat("\n");
+                cat(noquote(strrep("-", 70)));cat("\n");
+                cat(strrep(" ", 15));cat("Difference test: AOSS and WAOSS");cat("\n");
+                cat(noquote(strrep("-", 70)));cat("\n");
+                cat("H0: AOSS = WAOSS\n");
+        
+                tab_print(print_obj$aoss_vs_waoss)
+        }
     }
 }
 
