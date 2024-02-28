@@ -18,6 +18,7 @@
 #' @param aoss_vs_waoss (logical) As highlighted in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022), the aoss and the waoss are equal if and only if switchers’ slopes are uncorrelated with $|D_t - D_{t-1}|$. When this option is specified, the command performs and displays the test of the equality between the aoss and  the waoss. Note that the use of this option requires specifying in the estimator option both aoss and waoss.
 #' @param exact_match exact_match
 #' @param by by
+#' @param by_fd by_fd
 #' @section Overview:
 #' did_multiplegt_stat estimates difference-in-differences estimators for continuous treatments with heterogeneous effects, assuming that between consecutive periods, the treatment of some units, the switchers, changes, while the treatment of other units does not change. It computes the three estimators (including an IV-related estimator) introduced in [de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022)](https://ssrn.com/abstract=4011782). The estimators computed by the command assume static effects and rely on a parallel trends assumptions.
 #' 
@@ -98,7 +99,8 @@ did_multiplegt_stat <- function(
     disaggregate = FALSE,
     aoss_vs_waoss = FALSE,
     exact_match = FALSE,
-    by = NULL
+    by = NULL,
+    by_fd = NULL
 ) {
 
   ## For now, the weight and cluster options will be shut down until further theoretical results about the appropriate way to perform weighting and clustering while aggregating the IFs
@@ -121,12 +123,12 @@ did_multiplegt_stat <- function(
         if (!inherits(get(v), "logical")) {
           stop(sprintf("Syntax error in %s option. Logical required.",v))
         }
-      } else if (v == "order") {
+      } else if (v %in% c("order", "by_fd")) {
           if (!(inherits(get(v), "numeric") & get(v) %% 1 == 0)) {
           stop(sprintf("Syntax error in %s option. Integer required.",v))
           }
       } else if (v == "by") {
-        if (!((inherits(get(v), "character") | inherits(get(v), "numeric")) & length(get(v)) == 1)) {
+        if (!(inherits(get(v), "character") & length(get(v)) == 1)) {
           stop(sprintf("Syntax error in %s option. Integer or character required.",v))
         }
       }
@@ -195,60 +197,67 @@ did_multiplegt_stat <- function(
   did_multiplegt_stat <- list(args)
   names(did_multiplegt_stat) <- c("args")
 
-  if (!is.null(by)) {
-    if (inherits(by, "character")) {
+  if (!is.null(by) | !is.null(by_fd)) {
+    if (!is.null(by)) {
       if (!by_check(df, ID, by)) {
         stop("The ID variable should be nested within the by variable.")
       } else {
         df[[by]] <- factor(df[[by]])
         by_levels <- levels(df[[by]])
       }
-    } else if (inherits(by, "numeric") & by %% 1 == 0) {
-      if (100 %% by != 0) {
+    } else if (!is.null(by_fd)) {
+      if (100 %% by_fd != 0) {
         stop("Syntax error in by option. When the by option is specified with an integer, the argument must be divisible by 100 to allow for an integer subsetting of the quantiles.")
       }
        q_levels <- c(0) 
-       while (q_levels[length(q_levels)] < 1 - by/100) {
-        q_levels <- c(q_levels, q_levels[length(q_levels)] + by/100)
+       for (k in 1:by_fd) {
+        q_levels <- c(q_levels, q_levels[length(q_levels)] + 1/by_fd)
        }
-       by_set <- did_multiplegt_stat_quantiles(df = df, ID = ID, Time = Time, D = D, Z = Z, quantiles = q_levels)
+       by_set <- did_multiplegt_stat_quantiles(df = df, ID = ID, Time = Time, D = D, Z = Z,by_opt = by_fd, quantiles = q_levels)
        df <- by_set$df
        val_quantiles <- by_set$val_quantiles
+       quantiles <- by_set$quantiles
        by_set <- NULL
-       by_levels <- levels(factor(subset(df, df$partition_XX != 0)$partition_XX))
+       by_levels <- levels(factor(1:(length(val_quantiles) -1)))
+       quantiles_mat <- as.matrix(rbind(quantiles, val_quantiles))
+       did_multiplegt_stat <- append(did_multiplegt_stat, list(quantiles_mat))
+       names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "quantiles"      
+       quantiles_mat <- NULL
     }
     did_multiplegt_stat <- append(did_multiplegt_stat, list(by_levels))
     names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "by_levels"
-    if (!is.null(val_quantiles)) {
-      did_multiplegt_stat <- append(did_multiplegt_stat, list(val_quantiles))
-      names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "val_quantiles"      
-    }
   } else {
     by_levels <- "_no_by"
   } 
+  did_multiplegt_stat$args$estimator <- estimator
 
   df_main <- df
   obj_name <- "results"
+  by_fd_opt <- NULL
   for (by_lev in 1:length(by_levels)) {
-    if (by_levels[by_lev] != "_no_by" & inherits(by, "character")) {
+    if (by_levels[by_lev] != "_no_by" & !is.null(by)) {
       df_main <- subset(df, df[[by]] == by_levels[by_lev])
       obj_name <- paste0("results_by_", by_lev)
       message(sprintf("Running did_multiplegt_stat with %s = %s", by, by_levels[by_lev]))
-    } else if (by_levels[by_lev] != "_no_by" & inherits(by, "numeric")) {
-      df_main <- subset(df, df$partition_XX == by_lev | df$partition_XX == 0)
+    } else if (by_levels[by_lev] != "_no_by" & !is.null(by_fd)) {
       obj_name <- paste0("results_by_", by_lev)
       diff_var <- ifelse("iwaoss" %in% estimator, "Z", "D")
-      message(sprintf("Running did_multiplegt_stat with switchers s.t. \U0394%s \U2208 [%.3f,%.3f] (%.0f%%-%.0f%% quantiles).", diff_var, val_quantiles[by_lev], val_quantiles[by_lev + 1], (by_lev-1)*by, by_lev*by))
+      message(sprintf("Running did_multiplegt_stat with switchers s.t. \U0394%s \U2208 [%.3f,%.3f] (%.0f%%-%.0f%% quantiles).", diff_var, val_quantiles[by_lev], val_quantiles[by_lev + 1], quantiles[by_lev] * 100, quantiles[by_lev+1]*100))
+      if (val_quantiles[by_lev] == val_quantiles[by_lev + 1])  {
+        warning(sprintf("(%.0f%%, %0.f%%) quantile bin dropped: upper and lower bounds are equal.", quantiles[by_lev] * 100, quantiles[by_lev+1]*100))
+      }
+      by_fd_opt <- by_lev
     }
-    results <- did_multiplegt_stat_main(df = df_main, Y = Y, ID = ID, Time = Time, D = D, Z = Z, estimator = estimator, estimation_method = estimation_method, order = order, noextrapolation = noextrapolation, placebo = placebo, weight = weight, switchers = switchers, disaggregate = disaggregate, aoss_vs_waoss = aoss_vs_waoss, exact_match = exact_match, cluster = cluster)
+    results <- did_multiplegt_stat_main(df = df_main, Y = Y, ID = ID, Time = Time, D = D, Z = Z, estimator = estimator, estimation_method = estimation_method, order = order, noextrapolation = noextrapolation, placebo = placebo, weight = weight, switchers = switchers, disaggregate = disaggregate, aoss_vs_waoss = aoss_vs_waoss, exact_match = exact_match, cluster = cluster, by_fd_opt = by_fd_opt)
     did_multiplegt_stat <- append(did_multiplegt_stat, list(results))
     names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- obj_name
   }
 
-  if (!is.null(did_multiplegt_stat$val_quantiles)) {
+  if (!is.null(did_multiplegt_stat$quantiles)) {
     did_multiplegt_stat <- append(did_multiplegt_stat, list(by_graph(obj = did_multiplegt_stat)))
     names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "by_graph"
   }
+
 
   class(did_multiplegt_stat) <- c(class(did_multiplegt_stat), "did_multiplegt_stat")
   return(did_multiplegt_stat)

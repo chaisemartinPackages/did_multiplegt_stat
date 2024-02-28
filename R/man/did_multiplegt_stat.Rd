@@ -20,7 +20,8 @@ did_multiplegt_stat(
   disaggregate = FALSE,
   aoss_vs_waoss = FALSE,
   exact_match = FALSE,
-  by = NULL
+  by = NULL,
+  by_fd = NULL
 )
 }
 \arguments{
@@ -55,6 +56,8 @@ did_multiplegt_stat(
 \item{exact_match}{exact_match}
 
 \item{by}{by}
+
+\item{by_fd}{by_fd}
 }
 \value{
 A list with two sublists. The first sublist includes the arguments used in the command. The second sublist includes the results from the estimation. Regardless of the options, the output in object$results$table will be a (3 x object$results$pairs) x 6 matrix, where only the requested output (that is, the rows corresponding to the estimators requested) will be non-missing. The list is given a did_multiplegt_stat class to trigger custom method dispatches by the print and summary functions.

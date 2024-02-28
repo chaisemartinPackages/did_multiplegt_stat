@@ -19,6 +19,7 @@
 #' @param placebo placebo
 #' @param exact_match exact_match
 #' @param cluster cluster
+#' @param by_fd_opt by_fd_opt
 #' @import dplyr
 #' @importFrom magrittr %>%
 #' @importFrom rlang := 
@@ -48,7 +49,8 @@ did_multiplegt_stat_pairwise <- function(
     scalars,
     placebo,
     exact_match,
-    cluster
+    cluster,
+    by_fd_opt
 ) {
     # Preallocation of scalars
     IV_req_XX <- NULL
@@ -81,11 +83,16 @@ did_multiplegt_stat_pairwise <- function(
     df$ID_XX <- as.numeric(as.character(df$ID_XX))
     df$T_XX <- as.numeric(as.character(df$T_XX))
     df <- df[order(df$ID_XX, df$T_XX), ]
+
     df$delta_Y_XX <- diff(df$Y_XX)
     df$delta_D_XX <- diff(df$D_XX)
-
     if (iwaoss == 1) {
         df$delta_Z_XX <- diff(df$Z_XX)        
+    }
+
+    if (!is.null(df$partition_XX)) {
+        df$partition_lead_XX <- lead(df$partition_XX)
+        df$partition_XX <- NULL
     }
 
     if (isTRUE(placebo))  {
@@ -200,7 +207,6 @@ did_multiplegt_stat_pairwise <- function(
     } else {
         df <- subset(df, df[[paste0("used_in_", pairwise, "_XX")]] == 1)
     }
-
     # Generate Switcher : S = 1 if switcher-up, -1 if switcher-down, 0 if stayer
     df$S_XX <- (df$delta_D_XX > 0) - (df$delta_D_XX < 0)
 
@@ -219,6 +225,9 @@ did_multiplegt_stat_pairwise <- function(
 
     # We have all the variable we need at the first year so we can drop the 'second' year line
     df <- subset(df, df$T_XX != max(df$T_XX, na.rm = TRUE))
+    if (!is.null(by_fd_opt)) {
+        df <- subset(df, df$partition_lead_XX == 0 | df$partition_lead_XX == by_fd_opt)
+    }
 
     df$D1_XX <- df$D_XX; df$D_XX <- NULL;
     if (isTRUE(noextrapolation)) {
@@ -328,7 +337,7 @@ did_multiplegt_stat_pairwise <- function(
             df0 <- subset(df, df$S_XX == 0)
             # \hat{E}(deltaY|D1, S=0)
             model <- lm(as.formula(paste("delta_Y_XX", reg_pol_XX, sep = "~")), 
-                    data = df0, weights = df0$weight_XX)
+                    data = df0, weights = df0$weight_XX, na.rm = TRUE)
             df <- lpredict(df, "mean_pred_XX", model, vars_pol_XX)
 
             df$inner_sum_delta_1_2_XX <- df$delta_Y_XX -  df$mean_pred_XX

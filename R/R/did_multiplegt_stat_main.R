@@ -16,6 +16,7 @@
 #' @param exact_match exact_match
 #' @param weight weight
 #' @param cluster cluster
+#' @param by_fd_opt by_fd_opt
 #' @import dplyr
 #' @importFrom magrittr %>%
 #' @importFrom rlang := 
@@ -41,7 +42,8 @@ did_multiplegt_stat_main <- function(
     aoss_vs_waoss,
     exact_match,
     weight,
-    cluster
+    cluster,
+    by_fd_opt
 ) {
     suppressWarnings({
     # Preallocation of scalars
@@ -55,13 +57,23 @@ did_multiplegt_stat_main <- function(
     }
 
     # Layer 1: keep only variables of interest, as to speed up what follows
-    df <- df[c(Y, ID, Time, D, Z, weight, cluster)]
+    varlist <- c()
+    for (v in c(Y, ID, Time, D, Z, weight, cluster)) {
+        if (!is.null(v)) {
+            if (!(v %in% varlist)) {
+                varlist <- c(varlist, v)
+            }
+        }
+    }
+    if (!is.null(df$partition_XX)) {
+        varlist <- c(varlist, "partition_XX")
+    }
+    df <- df[varlist]
     df_base <- list(Y = Y, ID = ID, T = Time, D = D, Z = Z, weight = weight, cluster = cluster)
     for (i in 1:length(df_base)) {
         if (!is.null(df_base[[i]])) {
             col <- as.character(df_base[[i]])
             df[[paste0(names(df_base)[i],"_XX")]] <- df[[col]]
-            df[[col]] <- NULL
         }
     }
     df_base <- NULL
@@ -158,7 +170,7 @@ did_multiplegt_stat_main <- function(
 
     for (p in 2:max_T_XX) {
 
-        est_out <- did_multiplegt_stat_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = FALSE, exact_match = exact_match, cluster = cluster)
+        est_out <- did_multiplegt_stat_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = FALSE, exact_match = exact_match, cluster = cluster, by_fd_opt = by_fd_opt)
 
         IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX", all = TRUE) 
         IDs_XX <- IDs_XX[order(IDs_XX$ID_XX), ]
@@ -205,7 +217,7 @@ did_multiplegt_stat_main <- function(
     if (isTRUE(placebo)) {
         for (p in 3:max_T_XX) {
 
-            est_out <- did_multiplegt_stat_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = TRUE, exact_match = exact_match, cluster = cluster)
+            est_out <- did_multiplegt_stat_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = TRUE, exact_match = exact_match, cluster = cluster, by_fd_opt = by_fd_opt)
 
             if (!is.null(est_out$to_add)) {
                 IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX", all = TRUE) 
@@ -477,8 +489,10 @@ did_multiplegt_stat_main <- function(
 
     ## Message for quasi stayers ##
     if (aoss_XX == 1 & waoss_XX == 1) {
-        if (scalars$delta_1_1_XX / scalars$delta_2_1_XX > 10) {
-            message("You might have quasi-stayers in your data. The aoss estimand is likely to be biased.")
+        if (!is.na(scalars$delta_1_1_XX) & !is.na(scalars$delta_2_1_XX)) {
+            if (scalars$delta_1_1_XX / scalars$delta_2_1_XX > 10) {
+                message("You might have quasi-stayers in your data. The aoss estimand is likely to be biased.")
+            }
         }
     }
 
