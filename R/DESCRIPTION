@@ -14,5 +14,5 @@ Author: Diego Ciccia [aut, cre],
 	Doulo Sow [aut],
   	Clément de Chaisemartin [aut]
 Encoding: UTF-8
-Imports: haven, dplyr, magrittr, plm, rlang, Hmisc, ggplot2, gtools
+Imports: haven, dplyr, magrittr, plm, rlang, Hmisc, ggplot2
 RoxygenNote: 7.2.3

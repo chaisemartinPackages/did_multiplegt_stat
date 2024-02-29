@@ -15,7 +15,7 @@ did_multiplegt_stat(
   estimation_method = NULL,
   order = 1,
   noextrapolation = FALSE,
-  placebo = NULL,
+  placebo = FALSE,
   switchers = NULL,
   disaggregate = FALSE,
   aoss_vs_waoss = FALSE,
@@ -35,11 +35,11 @@ did_multiplegt_stat(
 
 \item{D}{(char) Treatment variable.}
 
-\item{Z}{(char) Instrumental variable. This option is only required when the IV-related estimator (the so-called iwaoss) is requested.}
+\item{Z}{(char) Instrumental variable. This option is only required when the IV-related estimator (the so-called ivwaoss) is requested.}
 
-\item{estimator}{(char vector) Estimator(s) to be computed. The allowed arguments are: (1) "aoss", i.e the Average Of Switchers’ Slopes which is the average, across switchers, of the effect on their period-(t) outcome of moving their treatment from its period-(t-1) to its period-(t) value, scaled by the difference between these two values. (2) "waoss" which corresponds to a weighted version of "aoss" where slopes receive a weight proportional to switchers’ absolute treatment change from period-(t-1) to period-(t). (3) "iwaoss" which generalizes "waoss" to the instrumental-variable case, and is equal to the reduced-form "waoss" effect of the instrument on the outcome, divided by the first-stage "waoss" effect of the instrument on the treatment. If this option is not specified: by default, the command estimates both "aoss" and "waoss" if the instrumental-variable Z is not specified, or only iwaoss otherwise.}
+\item{estimator}{(char vector) Estimator(s) to be computed. The allowed arguments are: (1) "aoss", i.e the Average Of Switchers’ Slopes which is the average, across switchers, of the effect on their period-(t) outcome of moving their treatment from its period-(t-1) to its period-(t) value, scaled by the difference between these two values. (2) "waoss" which corresponds to a weighted version of "aoss" where slopes receive a weight proportional to switchers’ absolute treatment change from period-(t-1) to period-(t). (3) "ivwaoss" which generalizes "waoss" to the instrumental-variable case, and is equal to the reduced-form "waoss" effect of the instrument on the outcome, divided by the first-stage "waoss" effect of the instrument on the treatment. If this option is not specified: by default, the command estimates both "aoss" and "waoss" if the instrumental-variable Z is not specified, or only ivwaoss otherwise.}
 
-\item{estimation_method}{(char) This option allows to specify which estimation method to use when estimating the waoss or the iwaoss, as described in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022). It takes as argument "ra" (regression adjustment-based approach), or "ps" (propensity-based approach), or "dr" (double robust-based approach).}
+\item{estimation_method}{(char) This option allows to specify which estimation method to use when estimating the waoss or the ivwaoss, as described in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022). It takes as argument "ra" (regression adjustment-based approach), or "ps" (propensity-based approach), or "dr" (double robust-based approach).}
 
 \item{order}{(int) This option takes as argument the order of the polynomial series used to estimate the counterfactual of the variation of the outcome from period t-1 to period t  for the switchers, namely $E(Y_t - Y_t-1 |D_{t-1}, S_t = 0)$ or $E(Y_t - Y_t-1 |Z_{t-1}, SI_t = 0)$.}
 
@@ -69,7 +69,7 @@ Estimation of Difference-in-Difference (DID) Estimators for Treatments and Instr
 
 did_multiplegt_stat estimates difference-in-differences estimators for continuous treatments with heterogeneous effects, assuming that between consecutive periods, the treatment of some units, the switchers, changes, while the treatment of other units does not change. It computes the three estimators (including an IV-related estimator) introduced in \href{https://ssrn.com/abstract=4011782}{de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022)}. The estimators computed by the command assume static effects and rely on a parallel trends assumptions.
 
-The command can be used with more than two periods. If the number of periods is greater than two, the command estimates, for each pair of two successive periods, the requested DID estimators (aoss, waoss or iwaoss) as well as their aggregated versions defined as a weighted average of the estimators of the different pairs of periods. The command can also be used when the panel data is unbalaced or presents gaps.
+The command can be used with more than two periods. If the number of periods is greater than two, the command estimates, for each pair of two successive periods, the requested DID estimators (aoss, waoss or ivwaoss) as well as their aggregated versions defined as a weighted average of the estimators of the different pairs of periods. The command can also be used when the panel data is unbalaced or presents gaps.
 
 The command also computes, when the number of periods is larger than two, the placebos versions of the different estimators  for each two successive time periods, and the aggregated versions. Thus, allowing to test for parallel trends assumptions under which the proposed estimators computed by did_multiplegt_stat are unbiased.
 
