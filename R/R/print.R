@@ -7,12 +7,12 @@
 #' @export
 summary.did_multiplegt_stat <- function(object, ...) {
     estims <- list(0, 1, 2)
-    names(estims) <- c("aoss", "waoss", "iwaoss") 
+    names(estims) <- c("aoss", "waoss", "ivwaoss") 
 
     if (is.null(object$args$estimator) & is.null(object$args$Z)) {
         estim_list <- c("aoss","waoss")
     } else if (is.null(object$args$estimator) & !is.null(object$args$Z)) {
-        estim_list <- "iwaoss"
+        estim_list <- "ivwaoss"
     } else {
         estim_list <- object$args$estimator
     }
@@ -51,7 +51,7 @@ summary.did_multiplegt_stat <- function(object, ...) {
 
         cat("\n");
         cat(noquote(strrep("-", 35)));cat("\n");
-        if ("iwaoss" %in% estim_list) {
+        if ("ivwaoss" %in% estim_list) {
             strdisplay("N",print_obj$table[2*print_obj$pairs+1,5] + print_obj$table[2*print_obj$pairs+1,6])
         } else {
             if ("waoss" %in% estim_list) {
@@ -61,8 +61,9 @@ summary.did_multiplegt_stat <- function(object, ...) {
             }
         }
         methods <- list(ra = "Reg. Adjustment", dr = "Doubly Robust", ps = "Propensity Score")
-        method <- ifelse(is.null(object$args$estimation_method), "ra", object$args$estimation_method)
-        for (m in c("waoss", "iwaoss")) {
+        method <- ifelse(is.null(object$args$estimation_method), "dr", object$args$estimation_method)
+        method <- ifelse(isTRUE(object$args$exact_match), "ra", method)
+        for (m in c("waoss", "ivwaoss")) {
             if (m %in% estim_list) { 
                 strdisplay(paste0(toupper(m), " Method"), methods[[method]])            
             }
@@ -79,7 +80,7 @@ summary.did_multiplegt_stat <- function(object, ...) {
             index <- index + 1
         }
         if (!is.null(object$args$switchers)) {
-            strdisplay("Switchers", objects$args$switchers)
+            strdisplay("Switchers", object$args$switchers)
         }
         cat(noquote(strrep("-", 35)));cat("\n");
         if (!is.null(object$args$cluster)) {

@@ -7,9 +7,9 @@
 #' @param ID (char) Identifier of the unit of analysis.
 #' @param Time (char) Time variable. The command assumes that the time variable is evenly spaced (e.g.: the panel is at the yearly level, and no year is missing for all groups). When it is not (e.g.: the panel is at the yearly level, but three consecutive years are missing for all groups), the command can still be used. For example, if the year n is missing, the command does not comuptes the DID estimators of the pairs of years (n-1,n),(n,n+1), and (n-1,n+1).
 #' @param D (char) Treatment variable.
-#' @param Z (char) Instrumental variable. This option is only required when the IV-related estimator (the so-called iwaoss) is requested.
-#' @param estimator (char vector) Estimator(s) to be computed. The allowed arguments are: (1) "aoss", i.e the Average Of Switchers’ Slopes which is the average, across switchers, of the effect on their period-(t) outcome of moving their treatment from its period-(t-1) to its period-(t) value, scaled by the difference between these two values. (2) "waoss" which corresponds to a weighted version of "aoss" where slopes receive a weight proportional to switchers’ absolute treatment change from period-(t-1) to period-(t). (3) "iwaoss" which generalizes "waoss" to the instrumental-variable case, and is equal to the reduced-form "waoss" effect of the instrument on the outcome, divided by the first-stage "waoss" effect of the instrument on the treatment. If this option is not specified: by default, the command estimates both "aoss" and "waoss" if the instrumental-variable Z is not specified, or only iwaoss otherwise. 
-#' @param estimation_method (char) This option allows to specify which estimation method to use when estimating the waoss or the iwaoss, as described in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022). It takes as argument "ra" (regression adjustment-based approach), or "ps" (propensity-based approach), or "dr" (double robust-based approach).
+#' @param Z (char) Instrumental variable. This option is only required when the IV-related estimator (the so-called ivwaoss) is requested.
+#' @param estimator (char vector) Estimator(s) to be computed. The allowed arguments are: (1) "aoss", i.e the Average Of Switchers’ Slopes which is the average, across switchers, of the effect on their period-(t) outcome of moving their treatment from its period-(t-1) to its period-(t) value, scaled by the difference between these two values. (2) "waoss" which corresponds to a weighted version of "aoss" where slopes receive a weight proportional to switchers’ absolute treatment change from period-(t-1) to period-(t). (3) "ivwaoss" which generalizes "waoss" to the instrumental-variable case, and is equal to the reduced-form "waoss" effect of the instrument on the outcome, divided by the first-stage "waoss" effect of the instrument on the treatment. If this option is not specified: by default, the command estimates both "aoss" and "waoss" if the instrumental-variable Z is not specified, or only ivwaoss otherwise. 
+#' @param estimation_method (char) This option allows to specify which estimation method to use when estimating the waoss or the ivwaoss, as described in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022). It takes as argument "ra" (regression adjustment-based approach), or "ps" (propensity-based approach), or "dr" (double robust-based approach).
 #' @param order (int) This option takes as argument the order of the polynomial series used to estimate the counterfactual of the variation of the outcome from period t-1 to period t  for the switchers, namely $E(Y_t - Y_t-1 |D_{t-1}, S_t = 0)$ or $E(Y_t - Y_t-1 |Z_{t-1}, SI_t = 0)$. 
 #' @param switchers (char) The allowed inputs for this option are "up" and "down". If the argument "up" is specified, the command estimates the effects on switchers-up, i.e, units whose treatments (or instruments) increase from period t-1 to period t. If the argument "down" is given, the command estimates the effects on switchers-down, i.e., units whose treaments (or instruments) decrease from period t-1 to period t.
 #' @param disaggregate (logical) If this potion is specified, the command displays the estimands of the effects for each two consecutive periods as well as the aggregated estimands. Otherwise, the command only outputs the aggregated results.
@@ -22,7 +22,7 @@
 #' @section Overview:
 #' did_multiplegt_stat estimates difference-in-differences estimators for continuous treatments with heterogeneous effects, assuming that between consecutive periods, the treatment of some units, the switchers, changes, while the treatment of other units does not change. It computes the three estimators (including an IV-related estimator) introduced in [de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022)](https://ssrn.com/abstract=4011782). The estimators computed by the command assume static effects and rely on a parallel trends assumptions.
 #' 
-#' The command can be used with more than two periods. If the number of periods is greater than two, the command estimates, for each pair of two successive periods, the requested DID estimators (aoss, waoss or iwaoss) as well as their aggregated versions defined as a weighted average of the estimators of the different pairs of periods. The command can also be used when the panel data is unbalaced or presents gaps.
+#' The command can be used with more than two periods. If the number of periods is greater than two, the command estimates, for each pair of two successive periods, the requested DID estimators (aoss, waoss or ivwaoss) as well as their aggregated versions defined as a weighted average of the estimators of the different pairs of periods. The command can also be used when the panel data is unbalaced or presents gaps.
 #' 
 #' The command also computes, when the number of periods is larger than two, the placebos versions of the different estimators  for each two successive time periods, and the aggregated versions. Thus, allowing to test for parallel trends assumptions under which the proposed estimators computed by did_multiplegt_stat are unbiased.
 #' 
@@ -94,7 +94,7 @@ did_multiplegt_stat <- function(
     estimation_method = NULL,
     order = 1,
     noextrapolation = FALSE,
-    placebo = NULL,
+    placebo = FALSE,
     switchers = NULL,
     disaggregate = FALSE,
     aoss_vs_waoss = FALSE,
@@ -103,8 +103,9 @@ did_multiplegt_stat <- function(
     by_fd = NULL
 ) {
 
-  ## For now, the weight and cluster options will be shut down until further theoretical results about the appropriate way to perform weighting and clustering while aggregating the IFs
+  ## For now, the weight, cluster and by_fd options will be shut down until further theoretical results about the appropriate way to perform weighting and clustering while aggregating the IFs
   weight <- cluster <- NULL
+  #by_fd <- NULL
 
   args <- list()
   for (v in names(formals(did_multiplegt_stat))) {
@@ -128,8 +129,8 @@ did_multiplegt_stat <- function(
           stop(sprintf("Syntax error in %s option. Integer required.",v))
           }
       } else if (v == "by") {
-        if (!(inherits(get(v), "character") & length(get(v)) == 1)) {
-          stop(sprintf("Syntax error in %s option. Integer or character required.",v))
+        if (!(inherits(get(v), "character"))) {
+          stop(sprintf("Syntax error in %s option. Character array required.",v))
         }
       }
     }
@@ -141,11 +142,11 @@ did_multiplegt_stat <- function(
   if (is.null(estimator) & is.null(Z)) {
       estimator <-  c("aoss", "waoss")
   } else if (is.null(estimator) & !is.null(Z) ) {
-      estimator <- "iwaoss"
+      estimator <- "ivwaoss"
   }
 
-  if (!is.null(estimator) & length(intersect(estimator, c("aoss","waoss","iwaoss"))) != length(estimator)) {
-    stop("Syntax error in estimator option: only aoss, waoss and iwaoss allowed.")
+  if (!is.null(estimator) & length(intersect(estimator, c("aoss","waoss","ivwaoss"))) != length(estimator)) {
+    stop("Syntax error in estimator option: only aoss, waoss and ivwaoss allowed.")
   }
 
   if (!is.null(switchers)) {
@@ -155,7 +156,11 @@ did_multiplegt_stat <- function(
   }
 
   if (is.null(estimation_method)) {
-    estimation_method <- "ra"
+    if (isFALSE(exact_match)) {
+      estimation_method <- "dr"
+    } else {
+      estimation_method <- "ra"
+    }
   }
 
   if (isTRUE(exact_match)) {
@@ -178,11 +183,11 @@ did_multiplegt_stat <- function(
   }
   if (length(estimator) == 1) {
     if (estimation_method %in% c("dr","ps")  & estimator == "aoss") {
-      stop("The propensity score-based approach is only available for the waoss and the iwaoss.")
+      stop("The propensity score-based approach is only available for the waoss and the ivwaoss.")
     }
   }
 
-  if ("iwaoss" %in% estimator & sum(c("aoss", "waoss") %in% estimator)) {
+  if ("ivwaoss" %in% estimator & sum(c("aoss", "waoss") %in% estimator)) {
     stop("The estimation of AOSS or WAOSS cannot be combined with the estimation of IV-WAOSS (see helpfile).")
   }
 
@@ -190,8 +195,8 @@ did_multiplegt_stat <- function(
 	  stop("To test the equility between AOSS and WAOSS you must specify aoss and waoss in the estimator option.")
   }
 
-  if ("iwaoss" %in% estimator & is.null(Z)) {
-    stop("To compute the iwaoss you must specify the IV variable.")
+  if ("ivwaoss" %in% estimator & is.null(Z)) {
+    stop("To compute the ivwaoss you must specify the IV variable.")
   }
 
   did_multiplegt_stat <- list(args)
@@ -199,11 +204,25 @@ did_multiplegt_stat <- function(
 
   if (!is.null(by) | !is.null(by_fd)) {
     if (!is.null(by)) {
-      if (!by_check(df, ID, by)) {
-        stop("The ID variable should be nested within the by variable.")
-      } else {
-        df[[by]] <- factor(df[[by]])
-        by_levels <- levels(df[[by]])
+      df$by_total <- ""
+      iter <- 1
+      for (v in by) {
+        if (!by_check(df, ID, v)) {
+          stop("The ID variable should be nested within the by variable.")
+        } 
+        if (iter == 1) {
+          df$by_total <- sprintf("%s", df[[v]])
+        } else {
+          df$by_total <- sprintf("%s,%s", df$by_total, df[[v]])
+        }
+        iter <- iter + 1
+      }
+      by_levels <- levels(factor(df$by_total))
+      by_str <- by[1]
+      if (length(by) > 1) {
+        for (j in 2:length(by)) {
+          by_str <- paste0(by_str,",", by[j])
+        }      
       }
     } else if (!is.null(by_fd)) {
       if (100 %% by_fd != 0) {
@@ -236,12 +255,12 @@ did_multiplegt_stat <- function(
   by_fd_opt <- NULL
   for (by_lev in 1:length(by_levels)) {
     if (by_levels[by_lev] != "_no_by" & !is.null(by)) {
-      df_main <- subset(df, df[[by]] == by_levels[by_lev])
+      df_main <- subset(df, df$by_total == by_levels[by_lev])
       obj_name <- paste0("results_by_", by_lev)
-      message(sprintf("Running did_multiplegt_stat with %s = %s", by, by_levels[by_lev]))
+      message(sprintf("Running did_multiplegt_stat with %s = %s", by_str, by_levels[by_lev]))
     } else if (by_levels[by_lev] != "_no_by" & !is.null(by_fd)) {
       obj_name <- paste0("results_by_", by_lev)
-      diff_var <- ifelse("iwaoss" %in% estimator, "Z", "D")
+      diff_var <- ifelse("ivwaoss" %in% estimator, "Z", "D")
       message(sprintf("Running did_multiplegt_stat with switchers s.t. \U0394%s \U2208 [%.3f,%.3f] (%.0f%%-%.0f%% quantiles).", diff_var, val_quantiles[by_lev], val_quantiles[by_lev + 1], quantiles[by_lev] * 100, quantiles[by_lev+1]*100))
       if (val_quantiles[by_lev] == val_quantiles[by_lev + 1])  {
         warning(sprintf("(%.0f%%, %0.f%%) quantile bin dropped: upper and lower bounds are equal.", quantiles[by_lev] * 100, quantiles[by_lev+1]*100))
@@ -253,9 +272,14 @@ did_multiplegt_stat <- function(
     names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- obj_name
   }
 
-  if (!is.null(did_multiplegt_stat$quantiles)) {
+  if (!is.null(did_multiplegt_stat$args$by)) {
     did_multiplegt_stat <- append(did_multiplegt_stat, list(by_graph(obj = did_multiplegt_stat)))
     names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "by_graph"
+  }
+
+  if (!is.null(did_multiplegt_stat$quantiles)) {
+    did_multiplegt_stat <- append(did_multiplegt_stat, list(by_fd_graph(obj = did_multiplegt_stat)))
+    names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "by_fd_graph"
   }
 
 

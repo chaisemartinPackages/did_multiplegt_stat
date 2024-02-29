@@ -49,10 +49,10 @@ did_multiplegt_stat_main <- function(
     # Preallocation of scalars
     aoss_XX <- NULL
     waoss_XX <- NULL
-    iwaoss_XX <- NULL
+    ivwaoss_XX <- NULL
 
     # Patching the estimator option
-    for (v in c("aoss", "waoss", "iwaoss")) {
+    for (v in c("aoss", "waoss", "ivwaoss")) {
         assign(paste0(v,"_XX"), as.numeric(v %in% estimator))
     }
 
@@ -95,7 +95,7 @@ did_multiplegt_stat_main <- function(
 
     df$to_drop_XX <- (is.na(df$T_XX) | is.na(df$D_XX) | is.na(df$ID_XX))
     IV_req_XX <- 0
-    if (iwaoss_XX == 1) {
+    if (ivwaoss_XX == 1) {
         df$to_drop_XX <- (is.na(df$Z_XX) | df$to_drop_XX)
         IV_req_XX <- 1
     }
@@ -148,6 +148,7 @@ did_multiplegt_stat_main <- function(
         N_Stayers_3_1_XX = 0,
         denom_delta_IV_sum_XX = 0,
         N_drop_total_XX = 0,
+        N_drop_total_C_XX = 0,
         IV_req_XX = IV_req_XX
     )
     if (isTRUE(placebo)) {
@@ -164,13 +165,12 @@ did_multiplegt_stat_main <- function(
         N_Stayers_2_1_pl_XX = 0,
         N_Switchers_3_1_pl_XX = 0,
         N_Stayers_3_1_pl_XX = 0,
-        N_drop_total_IV_XX = 0,
         denom_delta_IV_sum_pl_XX = 0)
     }
 
     for (p in 2:max_T_XX) {
 
-        est_out <- did_multiplegt_stat_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = FALSE, exact_match = exact_match, cluster = cluster, by_fd_opt = by_fd_opt)
+        est_out <- did_multiplegt_stat_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, ivwaoss = ivwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = FALSE, exact_match = exact_match, cluster = cluster, by_fd_opt = by_fd_opt)
 
         IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX", all = TRUE) 
         IDs_XX <- IDs_XX[order(IDs_XX$ID_XX), ]
@@ -201,7 +201,7 @@ did_multiplegt_stat_main <- function(
             }
         }
 
-        if (iwaoss_XX == 1) {
+        if (ivwaoss_XX == 1) {
             scalars$delta_3_1_XX <- scalars$delta_3_1_XX + 
                     scalars[[paste0("denom_delta_IV_",p,"_XX")]] * scalars[[paste0("delta_3_",p,"_XX")]]
             
@@ -217,7 +217,7 @@ did_multiplegt_stat_main <- function(
     if (isTRUE(placebo)) {
         for (p in 3:max_T_XX) {
 
-            est_out <- did_multiplegt_stat_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, iwaoss = iwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = TRUE, exact_match = exact_match, cluster = cluster, by_fd_opt = by_fd_opt)
+            est_out <- did_multiplegt_stat_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, ivwaoss = ivwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = TRUE, exact_match = exact_match, cluster = cluster, by_fd_opt = by_fd_opt)
 
             if (!is.null(est_out$to_add)) {
                 IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX", all = TRUE) 
@@ -252,7 +252,7 @@ did_multiplegt_stat_main <- function(
                 }
             }
 
-            if (iwaoss_XX == 1) {
+            if (ivwaoss_XX == 1) {
                 scalars$delta_3_1_pl_XX <- scalars$delta_3_1_pl_XX + 
                         scalars[[paste0("denom_delta_IV_",p,"_pl_XX")]] * scalars[[paste0("delta_3_",p,"_pl_XX")]]
                 
@@ -280,7 +280,7 @@ did_multiplegt_stat_main <- function(
         }
     }
 
-    if (iwaoss_XX == 1) {
+    if (ivwaoss_XX == 1) {
         scalars$delta_3_1_XX <- scalars$delta_3_1_XX / scalars$denom_delta_IV_sum_XX
         if (isTRUE(placebo)) {
             scalars$delta_3_1_pl_XX <- scalars$delta_3_1_pl_XX / scalars$denom_delta_IV_sum_pl_XX
@@ -323,7 +323,7 @@ did_multiplegt_stat_main <- function(
             }
         }
 
-        if (iwaoss_XX == 1 & scalars[[paste0("non_missing_",p,"_XX")]] == 1) {
+        if (ivwaoss_XX == 1 & scalars[[paste0("non_missing_",p,"_XX")]] == 1) {
             IDs_XX[[paste0("Phi_3_",p,"_XX")]] <- ((scalars[[paste0("denom_delta_IV_",p,"_XX")]] * IDs_XX[[paste0("Phi_3_",p,"_XX")]]) + (scalars[[paste0("delta_3_",p,"_XX")]] - scalars$delta_3_1_XX) * (IDs_XX[[paste0("inner_sum_IV_denom_",p,"_XX")]] - scalars[[paste0("denom_delta_IV_",p,"_XX")]])) / scalars$denom_delta_IV_sum_XX
 
             IDs_XX$Phi_3_XX <- ifelse(is.na(IDs_XX[[paste0("Phi_3_",p,"_XX")]]), IDs_XX$Phi_3_XX, IDs_XX$Phi_3_XX + IDs_XX[[paste0("Phi_3_",p,"_XX")]])
@@ -413,7 +413,7 @@ did_multiplegt_stat_main <- function(
         }
     }
 
-    if (iwaoss_XX == 1) {
+    if (ivwaoss_XX == 1) {
         scalars$mean_IF3 <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_3_XX, na.rm = TRUE))
         if (!is.null(cluster)) {
             IDs_XX <- IDs_XX %>% group_by(.data$cluster_XX) %>% 
@@ -460,12 +460,10 @@ did_multiplegt_stat_main <- function(
                     mutate(diff_Phi_1_2_c_XX = sum(.data$diff_Phi_1_2_XX, na.rm = TRUE)) %>%
                     mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
             IDs_XX$diff_Phi_1_2_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$diff_Phi_1_2_c_XX, NA)
-            n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$diff_Phi_1_2_c_XX)))
-            sd_diff_delta_1_2_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$diff_Phi_1_2_c_XX, na.rm = TRUE)/ sqrt(n_obs))
+            sd_diff_delta_1_2_XX <- sd(IDs_XX$diff_Phi_1_2_c_XX, na.rm = TRUE)
             df$first_obs_by_clus <- NULL
         } else {
-            n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$diff_Phi_1_2_XX)))
-            sd_diff_delta_1_2_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$diff_Phi_1_2_XX, na.rm = TRUE)/ sqrt(n_obs))
+            sd_diff_delta_1_2_XX <- sd(IDs_XX$diff_Phi_1_2_XX, na.rm = TRUE)
         }
 
         t_diff_delta_1_2_XX <- diff_delta_1_2_XX * sqrt(nrow(IDs_XX)) / sd_diff_delta_1_2_XX
@@ -500,10 +498,13 @@ did_multiplegt_stat_main <- function(
         if (scalars$N_drop_total_XX > 0) {
             message(sprintf("%.0f switchers are dropped out of the estimation because their baseline treatments do not belong to the support of stayers' baseline treatments.", scalars$N_drop_total_XX))
         }
+        if (isTRUE(exact_match) & scalars$N_drop_total_C_XX > 0) {
+            message(sprintf("%.0f stayers are dropped out of the estimation because their baseline treatments do not belong to the support of switchers' baseline treatments.", scalars$N_drop_total_C_XX))
+        }
     }
 
     IDs_XX <- NULL
-    estims <- c("aoss", "waoss", "iwaoss")
+    estims <- c("aoss", "waoss", "ivwaoss")
 
     ret_mat_XX <- matrix(NA, nrow = 3*max_T_XX, ncol = 6)
     if (isTRUE(placebo)) {
