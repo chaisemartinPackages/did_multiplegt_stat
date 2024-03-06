@@ -163,6 +163,12 @@ did_multiplegt_stat <- function(
     }
   }
 
+  if (length(estimator) == 1) {
+    if (estimator == "aoss") {
+      estimation_method <- "ra"
+    }
+  }
+
   if (isTRUE(exact_match)) {
     if (estimation_method != "ra") {
       stop("The exact_match option is only compatible with regression adjustment estimation method")
@@ -236,12 +242,15 @@ did_multiplegt_stat <- function(
        df <- by_set$df
        val_quantiles <- by_set$val_quantiles
        quantiles <- by_set$quantiles
+       switch_df <- by_set$switch_df
        by_set <- NULL
        by_levels <- levels(factor(1:(length(val_quantiles) -1)))
        quantiles_mat <- as.matrix(rbind(quantiles, val_quantiles))
        did_multiplegt_stat <- append(did_multiplegt_stat, list(quantiles_mat))
        names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "quantiles"      
-       quantiles_mat <- NULL
+       did_multiplegt_stat <- append(did_multiplegt_stat, list(switch_df))
+       names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "switchers_df"             
+       quantiles_mat <- switch_df <- NULL
     }
     did_multiplegt_stat <- append(did_multiplegt_stat, list(by_levels))
     names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "by_levels"
@@ -261,7 +270,8 @@ did_multiplegt_stat <- function(
     } else if (by_levels[by_lev] != "_no_by" & !is.null(by_fd)) {
       obj_name <- paste0("results_by_", by_lev)
       diff_var <- ifelse("ivwaoss" %in% estimator, "Z", "D")
-      message(sprintf("Running did_multiplegt_stat with switchers s.t. \U0394%s \U2208 [%.3f,%.3f] (%.0f%%-%.0f%% quantiles).", diff_var, val_quantiles[by_lev], val_quantiles[by_lev + 1], quantiles[by_lev] * 100, quantiles[by_lev+1]*100))
+      sep <- ifelse(by_lev == length(by_levels), "]", ")")
+      message(sprintf("Running did_multiplegt_stat with switchers s.t. \U0394%s \U2208 [%.3f,%.3f%s <%.0f%%-%.0f%% quantiles>.", diff_var, val_quantiles[by_lev], val_quantiles[by_lev + 1],sep, quantiles[by_lev] * 100, quantiles[by_lev+1]*100))
       if (val_quantiles[by_lev] == val_quantiles[by_lev + 1])  {
         warning(sprintf("(%.0f%%, %0.f%%) quantile bin dropped: upper and lower bounds are equal.", quantiles[by_lev] * 100, quantiles[by_lev+1]*100))
       }

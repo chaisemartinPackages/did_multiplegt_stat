@@ -32,9 +32,9 @@ did_multiplegt_stat_quantiles <- function(
     df <- make.pbalanced(df, balance.type = "fill")
 
     if (is.null(Z)) {
-        df$delta_pre_XX <- diff(df[[D]])
+        df$delta_pre_XX <- abs(diff(df[[D]]))
     } else {
-        df$delta_pre_XX <- diff(df[[Z]])
+        df$delta_pre_XX <- abs(diff(df[[Z]]))
     }
 
     df_switch <- subset(df, !is.na(df$delta_pre_XX) & df$delta_pre_XX != 0)
@@ -67,9 +67,13 @@ did_multiplegt_stat_quantiles <- function(
         df$partition_XX <- ifelse(df$switchers_XX & (df$delta_pre_XX >= cut_off[p-1] & df$delta_pre_XX < cut_off[p]), p-1, df$partition_XX)
     }
     df$partition_XX <- as.numeric(df$partition_XX)
-    df$delta_pre_XX <- df$switchers_XX <-  NULL     
     names(cut_off) <- c()
     class(df) <- "data.frame"
-    ret <- list(df = df, val_quantiles = cut_off, quantiles = quantiles)
+    df$it_XX <- 1
+    switch_df <- df %>% filter(.data$partition_XX != 0) %>% 
+            group_by(.data$partition_XX) %>%
+            summarise(N_partition_XX = sum(.data$it_XX, na.rm = TRUE), Med_delta_pre_XX = median(.data$delta_pre_XX, na.rm = TRUE)) %>% ungroup()
+    ret <- list(df = df, val_quantiles = cut_off, quantiles = quantiles, switch_df = switch_df)
+    df$delta_pre_XX <- df$switchers_XX <-  NULL     
     return(ret)
 }
