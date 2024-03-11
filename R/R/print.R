@@ -27,13 +27,12 @@ summary.did_multiplegt_stat <- function(object, ...) {
             by_obj <- c(by_obj, paste0("results_by_", res))
         }
 
-        if (inherits(object$args$by, "numeric")) {
+        if (!is.null(object$args$by_fd)) {
             by_name <- "quantiles"
-            by_totl <- 100 / object$args$by
-        } else {
+        } else if (!is.null(object$args[["by"]])) {
             by_name <- object$args$by
-            by_totl <- length(by_levs)
         }
+        by_totl <- length(by_levs)
 
         cat("\n");
         cat(noquote(strrep("#", 70)));cat("\n");

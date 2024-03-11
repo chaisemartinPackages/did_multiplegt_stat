@@ -243,16 +243,23 @@ did_multiplegt_stat <- function(
        val_quantiles <- by_set$val_quantiles
        quantiles <- by_set$quantiles
        switch_df <- by_set$switch_df
+       quantiles_plot <- by_set$quantiles_plot
        by_set <- NULL
-       by_levels <- levels(factor(1:(length(val_quantiles) -1)))
+       by_levels <- levels(factor(subset(df, df$partition_XX != 0)$partition_XX))
        quantiles_mat <- as.matrix(rbind(quantiles, val_quantiles))
        did_multiplegt_stat <- append(did_multiplegt_stat, list(quantiles_mat))
        names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "quantiles"      
        did_multiplegt_stat <- append(did_multiplegt_stat, list(switch_df))
        names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "switchers_df"             
+       did_multiplegt_stat <- append(did_multiplegt_stat, list(quantiles_plot))
+       names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "quantiles_plot"             
        quantiles_mat <- switch_df <- NULL
+
+       if (length(by_levels) != by_fd) {
+        message(sprintf("Point mass > %.0f%% detected. %.0f bin(s) collapsed.", 100/by_fd, by_fd - length(by_levels)))
+       }
     }
-    did_multiplegt_stat <- append(did_multiplegt_stat, list(by_levels))
+    did_multiplegt_stat <- append(did_multiplegt_stat, list(levels(factor(subset(df, df$partition_XX != 0)$partition_XX))))
     names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "by_levels"
   } else {
     by_levels <- "_no_by"
@@ -275,18 +282,17 @@ did_multiplegt_stat <- function(
       if (val_quantiles[by_lev] == val_quantiles[by_lev + 1])  {
         warning(sprintf("(%.0f%%, %0.f%%) quantile bin dropped: upper and lower bounds are equal.", quantiles[by_lev] * 100, quantiles[by_lev+1]*100))
       }
-      by_fd_opt <- by_lev
+      by_fd_opt <- by_levels[by_lev]
     }
     results <- did_multiplegt_stat_main(df = df_main, Y = Y, ID = ID, Time = Time, D = D, Z = Z, estimator = estimator, estimation_method = estimation_method, order = order, noextrapolation = noextrapolation, placebo = placebo, weight = weight, switchers = switchers, disaggregate = disaggregate, aoss_vs_waoss = aoss_vs_waoss, exact_match = exact_match, cluster = cluster, by_fd_opt = by_fd_opt)
     did_multiplegt_stat <- append(did_multiplegt_stat, list(results))
     names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- obj_name
   }
 
-  if (!is.null(did_multiplegt_stat$args$by)) {
+  if (!is.null(did_multiplegt_stat$args[["by"]])) {
     did_multiplegt_stat <- append(did_multiplegt_stat, list(by_graph(obj = did_multiplegt_stat)))
     names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "by_graph"
   }
-
   if (!is.null(did_multiplegt_stat$quantiles)) {
     did_multiplegt_stat <- append(did_multiplegt_stat, list(by_fd_graph(obj = did_multiplegt_stat)))
     names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "by_fd_graph"

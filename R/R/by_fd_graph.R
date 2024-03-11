@@ -6,20 +6,21 @@
 #' @noRd
 by_fd_graph <- function(obj) {
     suppressWarnings({
-    pe_set <- as.data.frame(matrix(NA, ncol = 5, nrow = 0))
+    pe_set <- as.data.frame(matrix(NA, ncol = 6, nrow = 0))
     names(pe_set) <- c("model", "pe", "lb", "ub", "nswitchers")
     models <- c("aoss", "waoss", "ivwaoss")
     for (i in 1:3) {
         if (models[i] %in% obj$args$estimator) {
-            pe_set_temp <- as.data.frame(matrix(NA, ncol = 5, nrow = length(obj$by_levels)))
+            pe_set_temp <- as.data.frame(matrix(NA, ncol = 6, nrow = length(obj$by_levels)))
             for (j in 1:length(obj$by_levels)) {
                 subobj <- obj[[paste0("results_by_",j)]]
                 pe_set_temp[j,2] <- subobj$table[subobj$pairs * (i-1) + 1, 1]
                 pe_set_temp[j,3] <- subobj$table[subobj$pairs * (i-1) + 1, 3]
                 pe_set_temp[j,4] <- subobj$table[subobj$pairs * (i-1) + 1, 4]
                 pe_set_temp[j,5] <- obj$switchers_df$N_partition_XX[j]
+                pe_set_temp[j,6] <- obj$switchers_df$Med_delta_pre_XX[j]
             }
-            names(pe_set_temp) <- c("model", "pe", "lb", "ub", "nswitchers")
+            names(pe_set_temp) <- c("model", "pe", "lb", "ub", "nswitchers", "median")
             pe_set_temp$model <- models[i]
             pe_set_temp$lbin <- obj$quantiles[2, 1:ncol(obj$quantiles) - 1]
             pe_set_temp$ubin <- obj$quantiles[2, 2:ncol(obj$quantiles)]
@@ -27,7 +28,6 @@ by_fd_graph <- function(obj) {
             pe_set_temp$ubin_cdf <- obj$quantiles[1, 2:ncol(obj$quantiles)] * 100
             pe_set_temp$id <- 1:length(obj$by_levels)
             pe_set_temp$include <- ifelse(pe_set_temp$id == length(obj$by_levels), "]", ")")
-            pe_set_temp$colname <- sprintf("(%.0f%%-%.0f%%)\n[%.2f,%.2f%s\nN=%.0f", pe_set_temp$lbin_cdf, pe_set_temp$ubin_cdf,pe_set_temp$lbin, pe_set_temp$ubin,  pe_set_temp$include, pe_set_temp$nswitchers)
             
             pe_set <- rbind(pe_set, pe_set_temp)
         }
@@ -46,6 +46,7 @@ by_fd_graph <- function(obj) {
     offset <- 0.005 * max(pe_set$x_pos, na.rm = TRUE)
     pe_set$width <- 2 * pe_set$width - offset
     var_gr <- ifelse("ivwaoss" %in% pe_set$model, "Z", "D")
+    pe_set$colname <- sprintf("\n(%.0f%%-%.0f%%)\n[%.2f,%.2f%s\nMed(\U0394%s)=%.2f\n%.0f switchers\n", pe_set$lbin_cdf, pe_set$ubin_cdf,pe_set_temp$lbin, pe_set_temp$ubin, pe_set_temp$include, var_gr, pe_set$median, pe_set$nswitchers)
 
     ticks <- c(0)
     labels <- c("")
@@ -62,11 +63,12 @@ by_fd_graph <- function(obj) {
     by_graph_tot <- NULL
     by_graph_1 <- NULL
     by_graph_2 <- NULL
+    font <- 18/length(obj$args$estimator)
     tot_lim <- c(0,0)
     tot_cols <- c("#F8766D", "#7CAE00")
     for (j in 1:length(obj$args$estimator))  {
         pe_set_temp <- subset(pe_set, pe_set$model == obj$args$estimator[j])
-        by_graph <- ggplot(data = pe_set_temp, aes(x = .data$x_pos, y = .data$pe)) + geom_point() + geom_col(width = pe_set_temp$width, position = position_dodge2(padding = 0, preserve = "single"), fill = tot_cols[j], color = "black") + geom_errorbar(aes(ymin = .data$lb, ymax = .data$ub, fill = .data$model), width = min(pe_set_temp$width*0.8,1, na.rm = TRUE)) + xlab(sprintf("Quantile bins of \U0394%s", var_gr)) + ylab("") + ggtitle(sprintf("%s", toupper(obj$args$estimator[j]))) +  scale_x_continuous(breaks= ticks, labels = labels) +  theme(plot.title = element_text(hjust = 0.5), axis.ticks.x = element_line(size = ticks_size), axis.ticks.length = unit(ticks_len, "mm"), axis.line.x = element_line(color="black", size = 0.5), axis.ticks.y = element_blank(), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), panel.grid.minor.y = element_blank(), panel.grid.major.y = element_line(color = "black", size = 0.2), axis.text.x = element_text(size = 12/length(obj$args$estimator))) + geom_hline(yintercept = 0, color = "black", size = 0.2)
+        by_graph <- ggplot(data = pe_set_temp, aes(x = .data$x_pos, y = .data$pe)) + geom_point() + geom_col(width = pe_set_temp$width, position = position_dodge2(padding = 0, preserve = "single"), fill = tot_cols[j], color = "black") + geom_errorbar(aes(ymin = .data$lb, ymax = .data$ub, fill = .data$model), width = min(pe_set_temp$width*0.8,1, na.rm = TRUE)) + xlab(sprintf("Quantile bins of \U0394%s", var_gr)) + ylab("") + ggtitle(sprintf("%s", toupper(obj$args$estimator[j]))) +  scale_x_continuous(breaks= ticks, labels = labels) +  theme(plot.title = element_text(hjust = 0.5, size = 2*font), axis.ticks.x = element_line(size = ticks_size), axis.ticks.length = unit(ticks_len, "mm"), axis.line.x = element_line(color="black", size = 0.5), axis.ticks.y = element_blank(), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), panel.grid.minor.y = element_blank(), panel.grid.major.y = element_line(color = "black", size = 0.2), axis.text = element_text(size = font), axis.title = element_text(size = font)) + geom_hline(yintercept = 0, color = "black", size = 0.2)
         tot_lim[1] <- ifelse(layer_scales(by_graph)$y$range$range[1] > tot_lim[1], tot_lim[1], layer_scales(by_graph)$y$range$range[1])
         tot_lim[2] <- ifelse(layer_scales(by_graph)$y$range$range[2] > tot_lim[2], layer_scales(by_graph)$y$range$range[2], tot_lim[2])
         assign(paste0("by_graph_",j,"_XX"), by_graph)
