@@ -61,8 +61,8 @@ by_fd_graph <- function(obj) {
     }
 
     by_graph_tot <- NULL
-    by_graph_1 <- NULL
-    by_graph_2 <- NULL
+    by_graph_1_XX <- NULL
+    by_graph_2_XX <- NULL
     font <- 18/length(obj$args$estimator)
     tot_lim <- c(0,0)
     tot_cols <- c("#F8766D", "#7CAE00")

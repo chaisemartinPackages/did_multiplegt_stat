@@ -252,7 +252,7 @@ did_multiplegt_stat <- function(
        did_multiplegt_stat <- append(did_multiplegt_stat, list(switch_df))
        names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "switchers_df"             
        did_multiplegt_stat <- append(did_multiplegt_stat, list(quantiles_plot))
-       names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "quantiles_plot"             
+       names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "cdf_plot"             
        quantiles_mat <- switch_df <- NULL
 
        if (length(by_levels) != by_fd) {
