@@ -4,16 +4,10 @@
 \alias{rnames.did_multiplegt_stat}
 \title{rnames method for did_multiplegt_stat}
 \usage{
-rnames.did_multiplegt_stat(
-  object,
-  ignore = c("by_fd_graph", "by_graph", "args"),
-  ...
-)
+\method{rnames}{did_multiplegt_stat}(obj, ...)
 }
 \arguments{
-\item{object}{A did_multiplegt_stat object}
-
-\item{ignore}{Ignored sublists}
+\item{obj}{A did_multiplegt_stat object}
 
 \item{...}{Undocumented}
 }
