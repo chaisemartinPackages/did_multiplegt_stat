@@ -299,6 +299,7 @@ did_multiplegt_stat <- function(
   }
 
 
+
   class(did_multiplegt_stat) <- "did_multiplegt_stat"
   return(did_multiplegt_stat)
 }
