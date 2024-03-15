@@ -20,6 +20,7 @@
 #' @param exact_match exact_match
 #' @param cluster cluster
 #' @param by_fd_opt by_fd_opt
+#' @param other_treatments other_treatments
 #' @import dplyr
 #' @importFrom magrittr %>%
 #' @importFrom rlang := 
@@ -50,7 +51,8 @@ did_multiplegt_stat_pairwise <- function(
     placebo,
     exact_match,
     cluster,
-    by_fd_opt
+    by_fd_opt,
+    other_treatments
 ) {
     # Preallocation of scalars
     IV_req_XX <- NULL
@@ -89,6 +91,20 @@ did_multiplegt_stat_pairwise <- function(
     if (ivwaoss == 1) {
         df$delta_Z_XX <- diff(df$Z_XX)        
     }
+    other_treatments_OG <- other_treatments
+    if (!is.null(other_treatments)) {
+        for (v in other_treatments) {
+            if (length(levels(factor(df[[v]]))) > 1) {
+                df[[paste0("fd_",v,"_temp_XX")]] <- diff(df[[v]])
+                df <- df %>% group_by(.data$ID_XX) %>% 
+                    mutate(!!paste0("fd_",v,"_XX") := sum(.data[[paste0("fd_",v,"_temp_XX")]], na.rm = TRUE))
+                df <- subset(df, df[[paste0("fd_",v,"_XX")]] == 0)
+                df[[paste0("fd_",v,"_temp_XX")]] <- df[[paste0("fd_",v,"_XX")]] <- NULL
+            } else {
+                other_treatments <- other_treatments[other_treatments != v]
+            }
+        }
+    }
 
     if (!is.null(df$partition_XX)) {
         df$partition_lead_XX <- lead(df$partition_XX)
@@ -122,7 +138,6 @@ did_multiplegt_stat_pairwise <- function(
         # We need the DeltaD_t only and we will take the mean after to keep the same value for all the dates
         df$delta_D_XX <- ifelse(df$T_XX != 3, NA,  df$delta_D_XX)
     } 
-
 
     if (isTRUE(placebo) & ivwaoss == 1) {
         df$inSamplePlacebo_IV_temp_XX <- (df$delta_Z_XX == 0 & df$T_XX == 2)  
@@ -319,6 +334,20 @@ did_multiplegt_stat_pairwise <- function(
         }
         reg_pol_XX <- paste0(reg_pol_XX,paste0("D1_",level,"_XX"))
     } 
+    if (!is.null(other_treatments)) {
+        df$D1_1_XXFACT <- as.factor(df$D1_1_XX) 
+        for (v in other_treatments) {
+            df[[paste0(v,"FACT")]] <- as.factor(df[[v]])
+            other_treatments[other_treatments == v] <- paste0(v,"FACT")
+        }
+        interact <- "D1_1_XXFACT"
+        for (v in other_treatments) {
+            interact <- paste0(interact," * ",v)
+        }
+        reg_pol_XX <- paste0(reg_pol_XX," + ", interact)
+        saturated_reg <- power_set(c("D1_1_XXFACT", other_treatments))
+        vars_pol_XX <- union(vars_pol_XX, saturated_reg)
+    }
 
     if (ivwaoss == 1) {
         IV_vars_pol_XX <- c()
@@ -333,6 +362,13 @@ did_multiplegt_stat_pairwise <- function(
             }
             IV_reg_pol_XX <- paste0(IV_reg_pol_XX,paste0("Z1_",level,"_XX"))
         } 
+        if (!is.null(other_treatments)) {
+            interact <- "Z1_1_XX"
+            for (v in other_treatments) {
+                interact <- paste0(interact," * ",v)
+            }
+            IV_reg_pol_XX <- gsub("Z1_1_XX", interact, IV_reg_pol_XX)
+        }
     }
 
     df$S_bis_XX <- df$S_XX != 0 & !is.na(df$S_XX)
@@ -345,6 +381,8 @@ did_multiplegt_stat_pairwise <- function(
         feasible_est <- (gap_XX == 0 & get(paste0("N_Switchers_IV",pl,"_XX")) > 0 & get(paste0("N_Stayers_IV",pl,"_XX")) > 1)
     }
 
+    fact_reg <- !is.null(other_treatments)
+
     # Start of feasible estimation
     if (feasible_est) {       
 
@@ -352,9 +390,8 @@ did_multiplegt_stat_pairwise <- function(
 
             df0 <- subset(df, df$S_XX == 0)
             # \hat{E}(deltaY|D1, S=0)
-            model <- lm(as.formula(paste("delta_Y_XX", reg_pol_XX, sep = "~")), 
-                    data = df0, weights = df0$weight_XX, na.rm = TRUE)
-            df <- lpredict(df, "mean_pred_XX", model, vars_pol_XX)
+            model <- lm(as.formula(paste("delta_Y_XX", adj_fact(reg_pol_XX, df0, fact_reg), sep = "~")), data = df0, weights = df0$weight_XX, na.rm = TRUE)
+            df <- lpredict(df, "mean_pred_XX", model, vars_pol_XX, factor = fact_reg)
 
             df$inner_sum_delta_1_2_XX <- df$delta_Y_XX -  df$mean_pred_XX
 
@@ -362,16 +399,16 @@ did_multiplegt_stat_pairwise <- function(
 
             if (isFALSE(exact_match)) {
                 ## 1. Estimation of P(S = 0|D_1) 
-                model <- stata_logit(as.formula(paste("S0_XX",reg_pol_XX,sep="~")), df)
-                df <- lpredict(df,"PS_0_D_1_XX", model, vars_pol_XX, prob = TRUE)
+                model <- stata_logit(as.formula(paste("S0_XX",adj_fact(reg_pol_XX,df,fact_reg),sep="~")), df)
+                df <- lpredict(df,"PS_0_D_1_XX", model, vars_pol_XX, prob = TRUE, factor = fact_reg)
             } else {
 		        ## Estimation of 1-E(S|D1) = P(S = 0|D_1) in exact_match case
-                model <- lm(as.formula(paste("S_bis_XX",reg_pol_XX,sep="~")),data=df,weights= df$weight_XX)
-                df <- lpredict(df, "ES_bis_XX_D_1", model, vars_pol_XX)
+                model <- lm(as.formula(paste("S_bis_XX",adj_fact(reg_pol_XX,df,fact_reg),sep="~")),data=df,weights= df$weight_XX)
+                df <- lpredict(df, "ES_bis_XX_D_1", model, vars_pol_XX, factor = fact_reg)
 
 		        ## Estimation of \hat{E}(S+-S-|D1) for both \Phi_2:
-                model <- lm(as.formula(paste("S_XX",reg_pol_XX,sep="~")),data=df,weights= df$weight_XX)
-                df <- lpredict(df, "ES_XX_D_1", model, vars_pol_XX)
+                model <- lm(as.formula(paste("S_XX",adj_fact(reg_pol_XX,df,fact_reg),sep="~")),data=df,weights= df$weight_XX)
+                df <- lpredict(df, "ES_XX_D_1", model, vars_pol_XX, factor = fact_reg)
             }
             assign(paste0("PS_0",pl,"_XX"), Mean("S0_XX", df))
         }
@@ -393,8 +430,8 @@ did_multiplegt_stat_pairwise <- function(
             df$S_over_delta_D_XX <- df$S_bis_XX / df$delta_D_XX
             df$S_over_delta_D_XX <- ifelse(df$S_bis_XX == 0, 0, df$S_over_delta_D_XX)
 
-            modelvar <- lm(as.formula(paste("S_over_delta_D_XX", reg_pol_XX, sep = "~")), data = df, weights = df$weight_XX)
-            df <- lpredict(df, "mean_S_over_delta_D_XX", modelvar, vars_pol_XX)
+            modelvar <- lm(as.formula(paste("S_over_delta_D_XX",adj_fact(reg_pol_XX,df,fact_reg), sep = "~")), data = df, weights = df$weight_XX)
+            df <- lpredict(df, "mean_S_over_delta_D_XX", modelvar, vars_pol_XX, factor = fact_reg)
 
 		    # i. estimation of \hat{E}(S/deltaD|D1)
             if (isFALSE(exact_match)) {
@@ -471,7 +508,7 @@ did_multiplegt_stat_pairwise <- function(
                         df[[paste0("PS_1_",suffix,"_D_1_XX")]] <- 0
                     } else {
                         model <- stata_logit(as.formula(paste("Ster_XX",reg_pol_XX,sep="~")), df)
-                        df <- lpredict(df,paste0("PS_1_",suffix,"_D_1_XX"),model, vars_pol_XX, prob = TRUE)
+                        df <- lpredict(df,paste0("PS_1_",suffix,"_D_1_XX"),model, vars_pol_XX, prob = TRUE, factor = fact_reg)
 
 
                         if (estimation_method == "ps") {
@@ -549,12 +586,12 @@ did_multiplegt_stat_pairwise <- function(
             df$S_IV_0_XX <- 1 - df$SI_bis_XX
             if (isFALSE(exact_match)) {
                 model <- stata_logit(as.formula(paste("S_IV_0_XX",IV_reg_pol_XX,sep="~")), df)
-                df <- lpredict(df,"PS_IV_0_Z_1_XX",model, IV_vars_pol_XX, prob = TRUE)
+                df <- lpredict(df,"PS_IV_0_Z_1_XX",model, IV_vars_pol_XX, prob = TRUE, factor = fact_reg)
             } else {
                 model <- lm(as.formula(paste("SI_bis_XX",IV_reg_pol_XX,sep="~")), data = df, weights = df$weight_XX)
-                df <- lpredict(df, "ES_I_bis_XX_Z_1", model, IV_vars_pol_XX)
+                df <- lpredict(df, "ES_I_bis_XX_Z_1", model, IV_vars_pol_XX, factor = fact_reg)
                 model <- lm(as.formula(paste("SI_XX",IV_reg_pol_XX,sep="~")), data = df, weights = df$weight_XX)
-                df <- lpredict(df, "ES_I_XX_Z_1", model, IV_vars_pol_XX)
+                df <- lpredict(df, "ES_I_XX_Z_1", model, IV_vars_pol_XX, factor = fact_reg)
             }
             assign(paste0("PS_IV_0",pl,"_XX"), Mean("S_IV_0_XX", df))
 
@@ -568,7 +605,7 @@ did_multiplegt_stat_pairwise <- function(
                 } else {
                     if (isFALSE(exact_match)) {
                         model <- stata_logit(as.formula(paste(paste0("SI_",suffix,"_XX"),IV_reg_pol_XX,sep="~")), df)
-                        df <- lpredict(df,paste0("PS_I_",suffix,"_1_Z_1_XX"),model, IV_vars_pol_XX, prob = TRUE)
+                        df <- lpredict(df,paste0("PS_I_",suffix,"_1_Z_1_XX"),model, IV_vars_pol_XX, prob = TRUE, factor = fact_reg)
                     }
                 }
             }
@@ -577,13 +614,13 @@ did_multiplegt_stat_pairwise <- function(
             df_temp <- subset(df, df$SI_XX == 0)
             model <- lm(as.formula(paste("delta_Y_XX",IV_reg_pol_XX, sep = "~")), 
                     data = df_temp, weights = df_temp$weight_XX)
-            df <- lpredict(df,"mean_delta_Y_pred_IV_XX", model, IV_vars_pol_XX)   
+            df <- lpredict(df,"mean_delta_Y_pred_IV_XX", model, IV_vars_pol_XX, factor = fact_reg)   
             df$inner_sum_IV_num_XX <- df$delta_Y_XX - df$mean_delta_Y_pred_IV_XX
 
  	        # i. Estimation of  \hat{E}(deltaD|Z1, SI=0)
             model <- lm(as.formula(paste("delta_D_XX",IV_reg_pol_XX, sep = "~")), 
                     data = df_temp, weights = df_temp$weight_XX)
-            df <- lpredict(df,"mean_delta_D_pred_IV_XX", model, IV_vars_pol_XX)   
+            df <- lpredict(df,"mean_delta_D_pred_IV_XX", model, IV_vars_pol_XX, factor = fact_reg)   
             df$inner_sum_IV_denom_XX <- df$delta_D_XX - df$mean_delta_D_pred_IV_XX
             df_temp <- NULL
 
@@ -630,7 +667,7 @@ did_multiplegt_stat_pairwise <- function(
             df_temp <- subset(df, df$SI_XX == 0)
             model <- lm(as.formula(paste("delta_Y_XX", reg_pol_XX, sep = "~")), 
                     data = df_temp, weights = df_temp$weight_XX)
-            df <- lpredict(df,"mean_pred_Y_IV_XX", model, vars_pol_XX)   
+            df <- lpredict(df,"mean_pred_Y_IV_XX", model, vars_pol_XX, factor = fact_reg)   
             if (isFALSE(exact_match)) {
                 df$Phi_Y_XX <- ((df$SI_XX - (df$PS_I_Plus_1_Z_1_XX - df$PS_I_Minus_1_Z_1_XX) * (1 - df$SI_bis_XX) / df$PS_IV_0_Z_1_XX) * (df$delta_Y_XX - df$mean_pred_Y_IV_XX) - get(paste0("delta_Y",pl,"_XX")) * df$abs_delta_Z_XX) / get(paste0("E_abs_delta_Z",pl,"_XX"))
             } else {
@@ -641,7 +678,7 @@ did_multiplegt_stat_pairwise <- function(
             df_temp <- subset(df, df$SI_XX == 0)
             model <- lm(as.formula(paste("delta_D_XX", reg_pol_XX, sep = "~")), 
                     data = df_temp, weights = df_temp$weight_XX)
-            df <- lpredict(df,"mean_pred_D_IV_XX", model, vars_pol_XX)   
+            df <- lpredict(df,"mean_pred_D_IV_XX", model, vars_pol_XX, factor = fact_reg)   
 
             if (isFALSE(exact_match)) {
                 df$Phi_D_XX <- ((df$SI_XX - (df$PS_I_Plus_1_Z_1_XX - df$PS_I_Minus_1_Z_1_XX) * (1 - df$SI_bis_XX) / df$PS_IV_0_Z_1_XX) * (df$delta_D_XX - df$mean_pred_D_IV_XX) - get(paste0("delta_D",pl,"_XX")) * df$abs_delta_Z_XX) / get(paste0("E_abs_delta_Z",pl,"_XX"))
@@ -722,6 +759,9 @@ did_multiplegt_stat_pairwise <- function(
     df <- df %>% select(dplyr::any_of(to_keep))
 
     ## End of the program
+
+    other_treatments <- other_treatments_OG
+    other_treatments_OG <- NULL
 
     for (v in names(scalars)) {
         scalars[[v]] <- get(v)

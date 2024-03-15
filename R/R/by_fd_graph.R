@@ -35,16 +35,6 @@ by_fd_graph <- function(obj) {
     for (c in 1:ncol(pe_set)) {
         pe_set[,c] <- ifelse(is.nan(pe_set[,c]), NA, pe_set[,c])
     }
-    pe_set$width <- 0
-
-    pe_set$d_w <- 0
-    for (j in 2:nrow(pe_set)) {
-        pe_set$d_w[j] <- ifelse(pe_set$model[j] == pe_set$model[j-1] & pe_set$lbin[j] == pe_set$ubin[j-1], pe_set$width[j-1], 0)
-    }
-    pe_set$x_var <- pe_set$width + pe_set$d_w
-    pe_set <- pe_set %>% group_by(.data$model) %>% mutate(x_pos = cumsum(.data$x_var))
-    offset <- 0.005 * max(pe_set$x_pos, na.rm = TRUE)
-    pe_set$width <- 2 * pe_set$width - offset
     var_gr <- ifelse("ivwaoss" %in% pe_set$model, "Z", "D")
     pe_set$colname <- sprintf("%.2f\n(%.0f%%-%.0f%%)\n[%.2f,%.2f%s\nN=%.0f\n", pe_set$median, pe_set$lbin_cdf, pe_set$ubin_cdf,pe_set_temp$lbin, pe_set_temp$ubin, pe_set_temp$include, pe_set$nswitchers)
 
@@ -68,12 +58,11 @@ by_fd_graph <- function(obj) {
         pe_set_temp <- subset(pe_set, pe_set$model == obj$args$estimator[j])
 
         by_graph <- ggplot(data = pe_set_temp, aes(x = .data$median, y = .data$pe)) + 
-        geom_point() + geom_line() +
-        geom_errorbar(aes(ymin = .data$lb, ymax = .data$ub, fill = .data$model), width = min(pe_set_temp$width*0.8,1, na.rm = TRUE)) +
-        xlab(sprintf("|\U0394%s|", var_gr)) + ylab("") +
-        ggtitle(sprintf("%s", toupper(obj$args$estimator[j]))) +
+        geom_point(size = 4) + geom_line(size = 0.2, linetype = "dashed") +
+        geom_errorbar(aes(ymin = .data$lb, ymax = .data$ub, fill = .data$model), width = 0) +
+        xlab(sprintf("|\U0394%s| - %s", var_gr, toupper(obj$args$estimator[j]))) + ylab("") +
         scale_x_continuous(breaks= ticks, labels = labels) +
-        theme(plot.title = element_text(hjust = 0.5, size = 2*font), axis.ticks.x = element_line(), axis.line.x = element_line(color="black", size = 0.5), axis.ticks.y = element_blank(), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), panel.grid.minor.y = element_blank(), panel.grid.major.y = element_line(color = "black", size = 0.2), axis.text = element_text(size = font), axis.title = element_text(size = font)) + geom_hline(yintercept = 0, color = "black", size = 0.2)
+        theme(plot.title = element_text(hjust = 0.5, size = 2*font), axis.ticks.x = element_line(), axis.line.x = element_line(color="black", size = 0.5), axis.ticks.y = element_blank(), panel.grid.major.x = element_blank(), panel.grid.minor.x = element_blank(), panel.grid.minor.y = element_blank(), panel.grid.major.y = element_line(color = "black", size = 0.2), axis.text = element_text(size = font), axis.title = element_text(size = font)) + geom_hline(yintercept = 0, color = "black", size = 0.5)
 
         tot_lim[1] <- ifelse(layer_scales(by_graph)$y$range$range[1] > tot_lim[1], tot_lim[1], layer_scales(by_graph)$y$range$range[1])
         tot_lim[2] <- ifelse(layer_scales(by_graph)$y$range$range[2] > tot_lim[2], layer_scales(by_graph)$y$range$range[2], tot_lim[2])
@@ -84,7 +73,7 @@ by_fd_graph <- function(obj) {
         assign(paste0("by_graph_",j,"_XX"), get(paste0("by_graph_",j,"_XX")) + ylim(tot_lim))
     }
     if (length(obj$args$estimator) == 1) {
-        by_graph_tot <- plot_grid(by_graph_1_XX, nrow = 1)
+        by_graph_tot <- by_graph_1_XX
     } else {
         by_graph_tot <- plot_grid(by_graph_1_XX, by_graph_2_XX, nrow = 1)
     }

@@ -71,7 +71,7 @@ did_multiplegt_stat_quantiles <- function(
     }
     cut_off <- c(cut_off, max(df_switch$delta_pre_XX, na.rm = TRUE))
 
-    quantiles_plot <- ggplot(data = df_switch, aes(x = .data$delta_pre_XX, y = .data$cdf)) + geom_line(size = 0.5) + geom_hline(yintercept = quantiles, color = "red", size = 0.1) + scale_x_continuous(breaks= cut_off, labels = sprintf("%.2f", cut_off)) + theme(plot.title = element_text(hjust = 0.5), panel.grid.minor = element_blank()) + ylab("CDF") + xlab(gr_title) + ggtitle(sprintf("Empirical distribution of %s", gr_title)) + labs(caption = sprintf("N = %.0f. Quantiles bins cutoffs reported as x axis ticks.", N_switchers_plot))
+    quantiles_plot <- ggplot(data = df_switch, aes(x = .data$delta_pre_XX, y = .data$cdf)) + geom_line(size = 0.5) + scale_x_continuous(breaks= cut_off, labels = sprintf("%.2f", cut_off)) + theme(plot.title = element_text(hjust = 0.5), panel.grid.minor = element_blank()) + ylab("CDF") + xlab(gr_title) + ggtitle(sprintf("Empirical distribution of %s", gr_title)) + labs(caption = sprintf("N = %.0f. Quantiles bins cutoffs reported as x axis ticks.", N_switchers_plot))
     quantiles <- quantiles_temp
     df_switch <- quantiles_temp <- NULL
 

@@ -17,6 +17,7 @@
 #' @param weight weight
 #' @param cluster cluster
 #' @param by_fd_opt by_fd_opt
+#' @param other_treatments other_treatments
 #' @import dplyr
 #' @importFrom magrittr %>%
 #' @importFrom rlang := 
@@ -43,7 +44,8 @@ did_multiplegt_stat_main <- function(
     exact_match,
     weight,
     cluster,
-    by_fd_opt
+    by_fd_opt,
+    other_treatments
 ) {
     suppressWarnings({
     # Preallocation of scalars
@@ -58,7 +60,7 @@ did_multiplegt_stat_main <- function(
 
     # Layer 1: keep only variables of interest, as to speed up what follows
     varlist <- c()
-    for (v in c(Y, ID, Time, D, Z, weight, cluster)) {
+    for (v in c(Y, ID, Time, D, Z, weight, cluster, other_treatments)) {
         if (!is.null(v)) {
             if (!(v %in% varlist)) {
                 varlist <- c(varlist, v)
@@ -93,7 +95,7 @@ did_multiplegt_stat_main <- function(
         }
     }
 
-    df$to_drop_XX <- (is.na(df$T_XX) | is.na(df$D_XX) | is.na(df$ID_XX) | is.na(df$Y_XX))
+    df$to_drop_XX <- (is.na(df$T_XX) | is.na(df$D_XX) | is.na(df$ID_XX))
     IV_req_XX <- 0
     if (ivwaoss_XX == 1) {
         df$to_drop_XX <- (is.na(df$Z_XX) | df$to_drop_XX)
@@ -173,21 +175,25 @@ did_multiplegt_stat_main <- function(
 
     for (p in 2:max_T_XX) {
 
-        est_out <- did_multiplegt_stat_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, ivwaoss = ivwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = FALSE, exact_match = exact_match, cluster = cluster, by_fd_opt = by_fd_opt)
+        est_out <- did_multiplegt_stat_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, ivwaoss = ivwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = FALSE, exact_match = exact_match, cluster = cluster, by_fd_opt = by_fd_opt, other_treatments = other_treatments)
 
         IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX", all = TRUE) 
         IDs_XX <- IDs_XX[order(IDs_XX$ID_XX), ]
         scalars <- est_out$scalars;
         est_out <- NULL;
 
-        ## Adjustments for imbalanced panels
+        ## Adjustments for unbalanced panels
         # P(S_t = 1) -> P(S_t = 1 & H_t = 1)
         # E(|Delta_t|) -> E(|Delta_T| * H_t)
         IDs_XX <- merge(IDs_XX, balanced_df[c("ID_XX", paste0("H_",p))], by = "ID_XX")
-        scalars[[paste0("P_",p,"_XX")]] <- mean(IDs_XX[[paste0("S_",p,"_XX")]] * IDs_XX[[paste0("H_",p)]], na.rm = TRUE)
-        scalars[[paste0("P_",p,"_XX")]] <- ifelse(is.nan(scalars[[paste0("P_",p,"_XX")]]), 0, scalars[[paste0("P_",p,"_XX")]])
-        scalars[[paste0("E_abs_delta_D_",p,"_XX")]] <- mean(IDs_XX[[paste0("abs_delta_D_",p,"_XX")]] * IDs_XX[[paste0("H_",p)]], na.rm = TRUE)
-        scalars[[paste0("E_abs_delta_D_",p,"_XX")]] <- ifelse(is.nan(scalars[[paste0("E_abs_delta_D_",p,"_XX")]]), 0, scalars[[paste0("E_abs_delta_D_",p,"_XX")]])        
+        if ("aoss" %in% estimator) {
+            scalars[[paste0("P_",p,"_XX")]] <- mean(IDs_XX[[paste0("S_",p,"_XX")]] * IDs_XX[[paste0("H_",p)]], na.rm = TRUE)
+            scalars[[paste0("P_",p,"_XX")]] <- ifelse(is.nan(scalars[[paste0("P_",p,"_XX")]]), 0, scalars[[paste0("P_",p,"_XX")]])
+        }
+        if ("waoss" %in% estimator) {
+            scalars[[paste0("E_abs_delta_D_",p,"_XX")]] <- mean(IDs_XX[[paste0("abs_delta_D_",p,"_XX")]] * IDs_XX[[paste0("H_",p)]], na.rm = TRUE)
+            scalars[[paste0("E_abs_delta_D_",p,"_XX")]] <- ifelse(is.nan(scalars[[paste0("E_abs_delta_D_",p,"_XX")]]), 0, scalars[[paste0("E_abs_delta_D_",p,"_XX")]])        
+        }
 
         if (aoss_XX == 1) {
             scalars$delta_1_1_XX <- scalars$delta_1_1_XX + 
@@ -229,7 +235,7 @@ did_multiplegt_stat_main <- function(
     if (isTRUE(placebo)) {
         for (p in 3:max_T_XX) {
 
-            est_out <- did_multiplegt_stat_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, ivwaoss = ivwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = TRUE, exact_match = exact_match, cluster = cluster, by_fd_opt = by_fd_opt)
+            est_out <- did_multiplegt_stat_pairwise(df = df, Y = "Y_ID", ID = "ID_XX", Time = "T_XX", D = "D_XX", Z = "Z_XX", estimator = estimator, order = order, noextrapolation = noextrapolation, weight = "weight_XX", switchers = switchers, pairwise = p, aoss = aoss_XX, waoss = waoss_XX, ivwaoss = ivwaoss_XX, estimation_method = estimation_method, scalars = scalars, placebo = TRUE, exact_match = exact_match, cluster = cluster, by_fd_opt = by_fd_opt, other_treatments = other_treatments)
 
             if (!is.null(est_out$to_add)) {
                 IDs_XX <- merge(IDs_XX, est_out$to_add, by = "ID_XX", all = TRUE) 
@@ -307,11 +313,16 @@ did_multiplegt_stat_main <- function(
     }
     counter_XX <- 0
 
-    ## Adjustments for imbalanced panels
-    IDs_XX[[paste0("S_",p,"_XX")]] <- IDs_XX[[paste0("S_",p,"_XX")]] * IDs_XX[[paste0("H_",p)]]
-    IDs_XX[[paste0("abs_delta_D_",p,"_XX")]] <- IDs_XX[[paste0("abs_delta_D_",p,"_XX")]] * IDs_XX[[paste0("H_",p)]]    
-    for (j in 1:2) {
-        IDs_XX[[paste0("Phi_",j,"_",p,"_XX")]] <- IDs_XX[[paste0("Phi_",j,"_",p,"_XX")]] / mean(IDs_XX[[paste0("H_",p)]], na.rm = TRUE)
+    ## Adjustments for unbalanced panels
+    if ("aoss" %in% estimator) {
+        IDs_XX[[paste0("S_",p,"_XX")]] <- IDs_XX[[paste0("S_",p,"_XX")]] * IDs_XX[[paste0("H_",p)]]
+        IDs_XX[[paste0("Phi_1_",p,"_XX")]] <- ifelse(IDs_XX[[paste0("H_",p)]] != 1, 0, IDs_XX[[paste0("Phi_1_",p,"_XX")]])
+        IDs_XX[[paste0("Phi_1_",p,"_XX")]] <- IDs_XX[[paste0("Phi_1_",p,"_XX")]] / mean(IDs_XX[[paste0("H_",p)]], na.rm = TRUE)
+    }
+    if ("waoss" %in% estimator) {
+        IDs_XX[[paste0("Phi_2_",p,"_XX")]] <- ifelse(IDs_XX[[paste0("H_",p)]] != 1, 0, IDs_XX[[paste0("Phi_2_",p,"_XX")]])
+        IDs_XX[[paste0("Phi_2_",p,"_XX")]] <- IDs_XX[[paste0("Phi_2_",p,"_XX")]] / mean(IDs_XX[[paste0("H_",p)]], na.rm = TRUE)
+        IDs_XX[[paste0("abs_delta_D_",p,"_XX")]] <- IDs_XX[[paste0("abs_delta_D_",p,"_XX")]] * IDs_XX[[paste0("H_",p)]]    
     }
 
     for (p in 2:max_T_XX) {

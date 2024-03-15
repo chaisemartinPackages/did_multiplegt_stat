@@ -19,6 +19,7 @@
 #' @param exact_match exact_match
 #' @param by by
 #' @param by_fd by_fd
+#' @param other_treatments other_treatments
 #' @section Overview:
 #' did_multiplegt_stat estimates difference-in-differences estimators for continuous treatments with heterogeneous effects, assuming that between consecutive periods, the treatment of some units, the switchers, changes, while the treatment of other units does not change. It computes the three estimators (including an IV-related estimator) introduced in [de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022)](https://ssrn.com/abstract=4011782). The estimators computed by the command assume static effects and rely on a parallel trends assumptions.
 #' 
@@ -100,7 +101,8 @@ did_multiplegt_stat <- function(
     aoss_vs_waoss = FALSE,
     exact_match = FALSE,
     by = NULL,
-    by_fd = NULL
+    by_fd = NULL,
+    other_treatments = NULL
 ) {
 
   ## For now, the weight, cluster and by_fd options will be shut down until further theoretical results about the appropriate way to perform weighting and clustering while aggregating the IFs
@@ -284,7 +286,7 @@ did_multiplegt_stat <- function(
       }
       by_fd_opt <- by_levels[by_lev]
     }
-    results <- did_multiplegt_stat_main(df = df_main, Y = Y, ID = ID, Time = Time, D = D, Z = Z, estimator = estimator, estimation_method = estimation_method, order = order, noextrapolation = noextrapolation, placebo = placebo, weight = weight, switchers = switchers, disaggregate = disaggregate, aoss_vs_waoss = aoss_vs_waoss, exact_match = exact_match, cluster = cluster, by_fd_opt = by_fd_opt)
+    results <- did_multiplegt_stat_main(df = df_main, Y = Y, ID = ID, Time = Time, D = D, Z = Z, estimator = estimator, estimation_method = estimation_method, order = order, noextrapolation = noextrapolation, placebo = placebo, weight = weight, switchers = switchers, disaggregate = disaggregate, aoss_vs_waoss = aoss_vs_waoss, exact_match = exact_match, cluster = cluster, by_fd_opt = by_fd_opt, other_treatments = other_treatments)
     did_multiplegt_stat <- append(did_multiplegt_stat, list(results))
     names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- obj_name
   }

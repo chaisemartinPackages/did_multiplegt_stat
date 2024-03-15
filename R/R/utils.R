@@ -73,3 +73,29 @@ by_check <- function(
     df <- df %>% group_by(.data[[ID]]) %>% mutate(sd_ID = sd(.data$temp_G, na.rm = TRUE))
     return(mean(df$sd_ID) == 0)
 }
+
+adj_fact <- function(str, df, check) {
+    if (isTRUE(check)) {
+        base <- substr(str, 1, find_last(str,"+") + 1)
+        str <- substr(str, find_last(str,"+")+2, nchar(str))
+        vars <- strsplit(str, " * ", fixed = TRUE)[[1]]
+        str_temp <- ""
+        for (v in vars) {
+            if (length(levels(factor(df[[v]]))) > 1) {
+                str_temp <- paste0(str_temp,v," * ")                
+            }
+        }
+        str <- paste0(base, substr(str_temp, 1, nchar(str_temp)-3))
+    }
+    return(str)
+}
+
+find_last <- function(str, char) {
+    pos <- 0
+    for (n in 1:nchar(str)) {
+        if (substr(str,n,n) == char) {
+            pos <- n
+        }
+    }
+    return(pos)
+}
