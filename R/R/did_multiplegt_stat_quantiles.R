@@ -77,9 +77,9 @@ did_multiplegt_stat_quantiles <- function(
 
 
     df$switchers_XX <- df$delta_pre_XX != 0 & !is.na(df$delta_pre_XX) & df$in_aggregation_XX == 1
-    df$partition_XX <- ifelse(df$switchers_XX, by_opt, 0)
-    for (p in 2:(length(cut_off)-1)) {
-        df$partition_XX <- ifelse(df$switchers_XX & (df$delta_pre_XX >= cut_off[p-1] & df$delta_pre_XX < cut_off[p]), p-1, df$partition_XX)
+    df$partition_XX <- ifelse(df$switchers_XX, 1, 0)
+    for (p in 2:length(cut_off)) {
+        df$partition_XX <- ifelse(df$switchers_XX & (df$delta_pre_XX > cut_off[p-1] & df$delta_pre_XX <= cut_off[p]), p-1, df$partition_XX)
     }
     df$partition_XX <- as.numeric(df$partition_XX)
     df$partition_XX <- ifelse(df$in_aggregation_XX, df$partition_XX, NA)

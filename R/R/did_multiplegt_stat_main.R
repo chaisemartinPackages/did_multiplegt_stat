@@ -182,19 +182,6 @@ did_multiplegt_stat_main <- function(
         scalars <- est_out$scalars;
         est_out <- NULL;
 
-        ## Adjustments for unbalanced panels
-        # P(S_t = 1) -> P(S_t = 1 & H_t = 1)
-        # E(|Delta_t|) -> E(|Delta_T| * H_t)
-        IDs_XX <- merge(IDs_XX, balanced_df[c("ID_XX", paste0("H_",p))], by = "ID_XX")
-        if ("aoss" %in% estimator) {
-            scalars[[paste0("P_",p,"_XX")]] <- mean(IDs_XX[[paste0("S_",p,"_XX")]] * IDs_XX[[paste0("H_",p)]], na.rm = TRUE)
-            scalars[[paste0("P_",p,"_XX")]] <- ifelse(is.nan(scalars[[paste0("P_",p,"_XX")]]), 0, scalars[[paste0("P_",p,"_XX")]])
-        }
-        if ("waoss" %in% estimator) {
-            scalars[[paste0("E_abs_delta_D_",p,"_XX")]] <- mean(IDs_XX[[paste0("abs_delta_D_",p,"_XX")]] * IDs_XX[[paste0("H_",p)]], na.rm = TRUE)
-            scalars[[paste0("E_abs_delta_D_",p,"_XX")]] <- ifelse(is.nan(scalars[[paste0("E_abs_delta_D_",p,"_XX")]]), 0, scalars[[paste0("E_abs_delta_D_",p,"_XX")]])        
-        }
-
         if (aoss_XX == 1) {
             scalars$delta_1_1_XX <- scalars$delta_1_1_XX + 
                     scalars[[paste0("P_",p,"_XX")]] * scalars[[paste0("delta_1_",p,"_XX")]]
@@ -290,6 +277,7 @@ did_multiplegt_stat_main <- function(
             scalars$delta_1_1_pl_XX <- scalars$delta_1_1_pl_XX / scalars$PS_sum_pl_XX
         }
     }
+
     if (waoss_XX == 1) {
         scalars$delta_2_1_XX <- scalars$delta_2_1_XX / scalars$E_abs_delta_D_sum_XX
         if (isTRUE(placebo)) {
@@ -304,7 +292,6 @@ did_multiplegt_stat_main <- function(
         }
     }
 
-
 	# Compute the influence functions
     for (i in 1:3) {
         for (pl in c("","_pl")) {
@@ -313,18 +300,7 @@ did_multiplegt_stat_main <- function(
     }
     counter_XX <- 0
 
-    ## Adjustments for unbalanced panels
-    if ("aoss" %in% estimator) {
-        IDs_XX[[paste0("S_",p,"_XX")]] <- IDs_XX[[paste0("S_",p,"_XX")]] * IDs_XX[[paste0("H_",p)]]
-        IDs_XX[[paste0("Phi_1_",p,"_XX")]] <- ifelse(IDs_XX[[paste0("H_",p)]] != 1, 0, IDs_XX[[paste0("Phi_1_",p,"_XX")]])
-        IDs_XX[[paste0("Phi_1_",p,"_XX")]] <- IDs_XX[[paste0("Phi_1_",p,"_XX")]] / mean(IDs_XX[[paste0("H_",p)]], na.rm = TRUE)
-    }
-    if ("waoss" %in% estimator) {
-        IDs_XX[[paste0("Phi_2_",p,"_XX")]] <- ifelse(IDs_XX[[paste0("H_",p)]] != 1, 0, IDs_XX[[paste0("Phi_2_",p,"_XX")]])
-        IDs_XX[[paste0("Phi_2_",p,"_XX")]] <- IDs_XX[[paste0("Phi_2_",p,"_XX")]] / mean(IDs_XX[[paste0("H_",p)]], na.rm = TRUE)
-        IDs_XX[[paste0("abs_delta_D_",p,"_XX")]] <- IDs_XX[[paste0("abs_delta_D_",p,"_XX")]] * IDs_XX[[paste0("H_",p)]]    
-    }
-
+    IDs_XX <- IDs_XX[order(IDs_XX$ID_XX), ]
     for (p in 2:max_T_XX) {
         if (aoss_XX == 1 & scalars[[paste0("non_missing_",p,"_XX")]] == 1) {
             IDs_XX[[paste0("Phi_1_",p,"_XX")]] <- (scalars[[paste0("P_",p,"_XX")]]*IDs_XX[[paste0("Phi_1_",p,"_XX")]] + (scalars[[paste0("delta_1_",p,"_XX")]] - scalars$delta_1_1_XX) * (IDs_XX[[paste0("S_",p,"_XX")]] - scalars[[paste0("P_",p,"_XX")]])) / scalars$PS_sum_XX
@@ -348,12 +324,14 @@ did_multiplegt_stat_main <- function(
             if (scalars[[paste0("non_missing_",p,"_pl_XX")]] == 1) {
                 IDs_XX[[paste0("Phi_2_",p,"_pl_XX")]] <- (scalars[[paste0("E_abs_delta_D_",p,"_pl_XX")]]*IDs_XX[[paste0("Phi_2_",p,"_pl_XX")]] + (scalars[[paste0("delta_2_",p,"_pl_XX")]] - scalars$delta_2_1_pl_XX) * (IDs_XX[[paste0("abs_delta_D_",p,"_pl_XX")]] - scalars[[paste0("E_abs_delta_D_",p,"_pl_XX")]])) / scalars$E_abs_delta_D_sum_pl_XX
 
+
                 IDs_XX$Phi_2_pl_XX <- ifelse(is.na(IDs_XX[[paste0("Phi_2_",p,"_pl_XX")]]), IDs_XX$Phi_2_pl_XX, IDs_XX$Phi_2_pl_XX + IDs_XX[[paste0("Phi_2_",p,"_pl_XX")]])
             }
             }
         }
 
         if (ivwaoss_XX == 1 & scalars[[paste0("non_missing_",p,"_XX")]] == 1) {
+
             IDs_XX[[paste0("Phi_3_",p,"_XX")]] <- ((scalars[[paste0("denom_delta_IV_",p,"_XX")]] * IDs_XX[[paste0("Phi_3_",p,"_XX")]]) + (scalars[[paste0("delta_3_",p,"_XX")]] - scalars$delta_3_1_XX) * (IDs_XX[[paste0("inner_sum_IV_denom_",p,"_XX")]] - scalars[[paste0("denom_delta_IV_",p,"_XX")]])) / scalars$denom_delta_IV_sum_XX
 
             IDs_XX$Phi_3_XX <- ifelse(is.na(IDs_XX[[paste0("Phi_3_",p,"_XX")]]), IDs_XX$Phi_3_XX, IDs_XX$Phi_3_XX + IDs_XX[[paste0("Phi_3_",p,"_XX")]])
@@ -369,7 +347,6 @@ did_multiplegt_stat_main <- function(
 
         counter_XX <- counter_XX + 1
     }
-
     if (aoss_XX == 1) {
         scalars$mean_IF1 <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_1_XX, na.rm = TRUE))
         if (!is.null(cluster)) {

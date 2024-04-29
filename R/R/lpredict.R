@@ -35,7 +35,16 @@ lpredict <- function(
                 df[[varname]] + model$coefficients[[v]], df[[varname]])
             df[[paste0("sel",v)]] <- NULL
         } else if (!is.na(model$coefficients[[v]]) & (isFALSE(factor) |(isTRUE(factor) &  !grepl("FACT",v,fixed = TRUE)))) {
-            df[[varname]] <- df[[varname]] + df[[v]] * model$coefficients[[v]]
+            if (!grepl(":",v,fixed = TRUE)) {
+                df[[varname]] <- df[[varname]] + df[[v]] * model$coefficients[[v]]
+            } else  {
+                df$interact_tmp <- 1
+                for (var in strsplit(v,":")[[1]]) {
+                    df$interact_tmp <- df$interact_tmp * df[[var]]
+                }
+                df[[varname]] <- df[[varname]] + df$interact_tmp * model$coefficients[[v]]
+                df$interact_tmp <- NULL
+            }
         }
     }
     if (isTRUE(const)) {
@@ -49,6 +58,13 @@ lpredict <- function(
     return(df)
 }
 
+#' Internal function of did_multiplegt_stat that generates tre string handle for interactions.
+#' @param df df
+#' @param str str
+#' @param vars vars
+#' @importFrom stringr str_extract_all
+#' @returns A list with the string name of the factor variable and one of the values associated to it.
+#' @noRd
 var_extract <- function(str, vars) {
     if (length(vars) > 25) {
         stop("Interaction limit (25) exceeded. Reduce number of other treatments.")

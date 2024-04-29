@@ -27,7 +27,7 @@ by_fd_graph <- function(obj) {
             pe_set_temp$lbin_cdf <- obj$quantiles[1, 1:ncol(obj$quantiles) - 1] * 100
             pe_set_temp$ubin_cdf <- obj$quantiles[1, 2:ncol(obj$quantiles)] * 100
             pe_set_temp$id <- 1:length(obj$by_levels)
-            pe_set_temp$include <- ifelse(pe_set_temp$id == length(obj$by_levels), "]", ")")
+            pe_set_temp$include <- ifelse(pe_set_temp$id == 1, "[", "(")
             
             pe_set <- rbind(pe_set, pe_set_temp)
         }
@@ -36,7 +36,7 @@ by_fd_graph <- function(obj) {
         pe_set[,c] <- ifelse(is.nan(pe_set[,c]), NA, pe_set[,c])
     }
     var_gr <- ifelse("ivwaoss" %in% pe_set$model, "Z", "D")
-    pe_set$colname <- sprintf("%.2f\n(%.0f%%-%.0f%%)\n[%.2f,%.2f%s\nN=%.0f\n", pe_set$median, pe_set$lbin_cdf, pe_set$ubin_cdf,pe_set_temp$lbin, pe_set_temp$ubin, pe_set_temp$include, pe_set$nswitchers)
+    pe_set$colname <- sprintf("%.2f\n(%.0f%%-%.0f%%)\n%s%.2f,%.2f]\nN=%.0f\n", pe_set$median, pe_set$lbin_cdf, pe_set$ubin_cdf,pe_set_temp$include, pe_set_temp$lbin, pe_set_temp$ubin, pe_set$nswitchers)
 
     ticks <- c()
     labels <- c()

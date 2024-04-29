@@ -91,18 +91,13 @@ did_multiplegt_stat_pairwise <- function(
     if (ivwaoss == 1) {
         df$delta_Z_XX <- diff(df$Z_XX)        
     }
-    other_treatments_OG <- other_treatments
+
     if (!is.null(other_treatments)) {
         for (v in other_treatments) {
-            if (length(levels(factor(df[[v]]))) > 1) {
-                df[[paste0("fd_",v,"_temp_XX")]] <- diff(df[[v]])
-                df <- df %>% group_by(.data$ID_XX) %>% 
-                    mutate(!!paste0("fd_",v,"_XX") := sum(.data[[paste0("fd_",v,"_temp_XX")]], na.rm = TRUE))
-                df <- subset(df, df[[paste0("fd_",v,"_XX")]] == 0)
-                df[[paste0("fd_",v,"_temp_XX")]] <- df[[paste0("fd_",v,"_XX")]] <- NULL
-            } else {
-                other_treatments <- other_treatments[other_treatments != v]
-            }
+            df[[paste0("fd_",v,"_temp_XX")]] <- diff(df[[v]])
+            df <- df %>% group_by(.data$ID_XX) %>% 
+                mutate(!!paste0("fd_",v,"_XX") := sum(.data[[paste0("fd_",v,"_temp_XX")]], na.rm = TRUE))
+            df[[paste0("fd_",v,"_temp_XX")]] <- NULL
         }
     }
 
@@ -128,11 +123,12 @@ did_multiplegt_stat_pairwise <- function(
     if (isTRUE(placebo) & (aoss == 1 | waoss == 1)) {
         # Units s.t. D_{t-2} = D_{t-1}
         df$inSamplePlacebo_temp_XX <- (df$delta_D_XX == 0 & df$T_XX == 2)  
+        df$inSamplePlacebo_temp_XX <- ifelse(is.na(df$delta_D_XX), NA,df$inSamplePlacebo_temp_XX)
         df <- df %>% group_by(.data$ID_XX) %>%
                 mutate(inSamplePlacebo_XX = max(.data$inSamplePlacebo_temp_XX, na.rm = TRUE))
         
 	    # Only keep Units such that D_{t-2} = D_{t-1}
-        df <- subset(df, df$inSamplePlacebo_XX == 1)
+        #df <- subset(df, df$inSamplePlacebo_XX == 1)
         # we do not need that line since we've already computed y_{t-2} - y_{t-1}, and selected units such that d_{t-2} = d_{t-1} // and evrything that follows is the same as the computation of the effects:)
         df <- subset(df, df$T_XX != 1)
         # We need the DeltaD_t only and we will take the mean after to keep the same value for all the dates
@@ -142,16 +138,15 @@ did_multiplegt_stat_pairwise <- function(
     if (isTRUE(placebo) & ivwaoss == 1) {
         df$inSamplePlacebo_IV_temp_XX <- (df$delta_Z_XX == 0 & df$T_XX == 2)  
         df <- df %>% group_by(.data$ID_XX) %>%
-                mutate(inSamplePlacebo_IV_XX = max(.data$inSamplePlacebo_IV_temp_XX, na.rm = TRUE))
+                mutate(inSamplePlacebo_XX = max(.data$inSamplePlacebo_IV_temp_XX, na.rm = TRUE))
         
 	    # Only keep Units such that D_{t-2} = D_{t-1}
-        df <- subset(df, df$inSamplePlacebo_IV_XX == 1)
+        #df <- subset(df, df$inSamplePlacebo_IV_XX == 1)
         # we do not need that line since we've already computed y_{t-2} - y_{t-1}, and selected units such that z_{t-2} = z_{t-1} // and evrything that follows is the same as the computation of the effects:)
         df <- subset(df, df$T_XX != 1)
         # We need the Delta_Z_t only and we will take the mean after to keep the same value for all the dates
         df$delta_Z_XX <- ifelse(df$T_XX != 3, NA,  df$delta_Z_XX)
     }
-
     if (nrow(df) == 0) {
         # Since there are no obs, we exit the program
         for (v in names(scalars)) {
@@ -202,7 +197,6 @@ did_multiplegt_stat_pairwise <- function(
     df$delta_D_XX <- df$delta_D_temp_XX
     df$delta_D_temp_XX <- NULL
 
-
     if (ivwaoss == 1) {
         df <- df %>% group_by(.data$ID_XX) %>% 
             mutate(delta_Z_temp_XX = mean(.data$delta_Z_XX, na.rm = TRUE)) %>% ungroup()
@@ -220,12 +214,13 @@ did_multiplegt_stat_pairwise <- function(
         df <- subset(df, df[[paste0("used_in_IV_", pairwise, "_XX")]] == 1)
 
     } else {
-        df <- subset(df, df[[paste0("used_in_", pairwise, "_XX")]] == 1)
+        #df <- subset(df, df[[paste0("used_in_", pairwise, "_XX")]] == 1)
     }
     # Generate Switcher : S = 1 if switcher-up, -1 if switcher-down, 0 if stayer
     df$S_XX <- (df$delta_D_XX > 0) - (df$delta_D_XX < 0)
 
     if (waoss == 1 | aoss == 1) {
+        df$abs_delta_D_XX <- df$S_XX * df$delta_D_XX
         if (!is.null(switchers)) {
             df <- subset(df, !(df$S_XX == (switchers == "down") - (switchers == "up")))
         }
@@ -236,15 +231,45 @@ did_multiplegt_stat_pairwise <- function(
         }
         df$abs_delta_Z_XX <- df$SI_XX * df$delta_Z_XX
     }
-    df$abs_delta_D_XX <- df$S_XX * df$delta_D_XX
 
     # We have all the variable we need at the first year so we can drop the 'second' year line
     df <- subset(df, df$T_XX != max(df$T_XX, na.rm = TRUE))
+    df$D1_XX <- df$D_XX; df$D_XX <- NULL;
+
+    df$Ht_XX <- as.numeric(!is.na(df$delta_D_XX) & !is.na(df$delta_Y_XX))
+    df$S_XX <- ifelse(df$Ht_XX == 0, NA, df$S_XX)
+    if (ivwaoss == 1) {
+        df$Ht_XX <- as.numeric(df$Ht_XX == 1 & !is.na(df$delta_Z_XX))
+        df$SI_XX <- ifelse(df$Ht_XX == 0, NA, df$SI_XX)
+    }
+
     if (!is.null(by_fd_opt)) {
         df <- subset(df, df$partition_lead_XX == 0 | df$partition_lead_XX == by_fd_opt)
     }
 
-    df$D1_XX <- df$D_XX; df$D_XX <- NULL;
+    ## Imbalanced panel adjustments ##
+    vars_to_set_missing <- c("S_XX", "delta_D_XX", "delta_Y_XX", "D1_XX")
+    if (aoss == 1 | waoss == 1) {
+        vars_to_set_missing <- c(vars_to_set_missing, "abs_delta_D_XX")
+    } else {
+        vars_to_set_missing <- c(vars_to_set_missing, "Z1_XX", "SI_XX")
+    }
+
+    if (isTRUE(placebo)) {
+        for (v in vars_to_set_missing) {
+            df[[v]] <- ifelse(df$inSamplePlacebo_XX == 0, NA, df[[v]])
+        }
+        df$Ht_XX <- ifelse(df$inSamplePlacebo_XX == 0, 0, df$Ht_XX)
+    }
+    if (!is.null(other_treatments)) {
+        for (ot in other_treatments) {
+            for (v in vars_to_set_missing) {
+                df[[v]] <- ifelse(df[[paste0("fd_",ot,"_XX")]] != 0, NA, df[[v]])
+            }
+            df$Ht_XX <- ifelse(df[[paste0("fd_",ot,"_XX")]] != 0, 0, df$Ht_XX)
+        }
+    }
+
     if (isTRUE(noextrapolation)) {
         if (aoss == 1 | waoss == 1) {
             assign(paste0("max_D1",pl,"_XX"), max(df$D1_XX[df$S_XX == 0], na.rm = TRUE))
@@ -275,38 +300,37 @@ did_multiplegt_stat_pairwise <- function(
     if (isTRUE(exact_match)) {
         if (aoss == 1 | waoss == 1) {
             df <- df %>% group_by(.data$D1_XX) %>% 
-                    mutate(has_match_min_XX = min(.data$abs_delta_D_XX, na.rm = TRUE)) %>%
-                    mutate(has_match_max_XX = max(.data$abs_delta_D_XX, na.rm = TRUE)) %>% ungroup()
+                    mutate(has_match_min_XX = min(.data$abs_delta_D_XX[!is.na(.data$S_XX)], na.rm = TRUE)) %>%
+                    mutate(has_match_max_XX = max(.data$abs_delta_D_XX[!is.na(.data$S_XX)], na.rm = TRUE)) %>% ungroup()
+            df$s_has_match_XX <- ifelse(!is.na(df$S_XX), as.numeric(df$has_match_min_XX == 0), -1)
+            df$s_has_match_XX <- ifelse(df$S_XX == 0, -1, df$s_has_match_XX)
+            df$c_has_match_XX <- ifelse(!is.na(df$S_XX), as.numeric(df$has_match_max_XX > 0), -1)
+            df$c_has_match_XX <- ifelse(df$S_XX != 0 & !is.na(df$S_XX), -1, df$c_has_match_XX)
         } else if (ivwaoss == 1) {
             df <- df %>% group_by(.data$Z1_XX) %>% 
-                    mutate(has_match_min_XX = min(.data$abs_delta_Z_XX, na.rm = TRUE)) %>%
-                    mutate(has_match_max_XX = max(.data$abs_delta_Z_XX, na.rm = TRUE)) %>% ungroup()
+                    mutate(has_match_min_XX = min(.data$abs_delta_Z_XX[!is.na(.data$SI_XX)], na.rm = TRUE)) %>%
+                    mutate(has_match_max_XX = max(.data$abs_delta_Z_XX[!is.na(.data$SI_XX)], na.rm = TRUE)) %>% ungroup()
+            df$s_has_match_XX <- ifelse(!is.na(df$SI_XX), as.numeric(df$has_match_min_XX == 0, na.rm = TRUE), -1)
+            df$s_has_match_XX <- ifelse(df$SI_XX == 0, -1, df$s_has_match_XX)
+            df$c_has_match_XX <- ifelse(!is.na(df$SI_XX), as.numeric(df$has_match_max_XX > 0, na.rm = TRUE), -1)
+            df$c_has_match_XX <- ifelse(df$SI_XX != 0 & !is.na(df$S_XX), -1, df$c_has_match_XX)
         }
-        df$has_match_XX <- as.numeric(df$has_match_min_XX == 0 & df$has_match_max_XX != 0)
         df$has_match_min_XX <- df$has_match_max_XX <- NULL
 
-        if (aoss == 1 | waoss == 1) {
-            assign(paste0("N_drop_",pairwise,pl,"_XX"), nrow(subset(df, df$has_match_XX == 0 & df$S_XX != 0)))
-            assign(paste0("N_drop_",pairwise,pl,"_C_XX"), nrow(subset(df, df$has_match_XX == 0 & df$S_XX == 0)))
-            if (get(paste0("N_drop_",pairwise,pl,"_XX")) > 0 & gap_XX == 0) {
-                N_drop_total_XX <- N_drop_total_XX + get(paste0("N_drop_",pairwise,pl,"_XX")) 
-            }
-            if (get(paste0("N_drop_",pairwise,pl,"_C_XX")) > 0 & gap_XX == 0) {
-                N_drop_total_C_XX <- N_drop_total_C_XX + get(paste0("N_drop_",pairwise,pl,"_C_XX")) 
-            }
-            df <- subset(df, (df$has_match_XX != 0 & df$abs_delta_D_XX != 0) | df$abs_delta_D_XX == 0)
-        } else if (ivwaoss == 1) {
-            assign(paste0("N_drop_",pairwise,pl,"_XX"), nrow(subset(df, df$has_match_XX == 0 & df$SI_XX != 0)))
-            assign(paste0("N_drop_",pairwise,pl,"_C_XX"), nrow(subset(df, df$has_match_XX == 0 & df$SI_XX == 0)))
-            if (get(paste0("N_drop_",pairwise,pl,"_XX")) > 0 & gap_XX == 0) {
-                N_drop_total_XX <- N_drop_total_XX + get(paste0("N_drop_",pairwise,pl,"_XX")) 
-            }
-            if (get(paste0("N_drop_",pairwise,pl,"_C_XX")) > 0 & gap_XX == 0) {
-                N_drop_total_C_XX <- N_drop_total_C_XX + get(paste0("N_drop_",pairwise,pl,"_C_XX")) 
-            }
-            df <- subset(df, (df$has_match_XX != 0 & df$abs_delta_Z_XX != 0) | df$abs_delta_Z_XX == 0)
+        assign(paste0("N_drop_",pairwise,pl,"_XX"), nrow(subset(df, df$s_has_match_XX == 0)))
+        assign(paste0("N_drop_",pairwise,pl,"_C_XX"), nrow(subset(df, df$c_has_match_XX == 0)))
+        if (get(paste0("N_drop_",pairwise,pl,"_XX")) > 0 & get(paste0("N_drop_",pairwise,pl,"_XX")) != nrow(df) & gap_XX == 0) {
+            N_drop_total_XX <- N_drop_total_XX + get(paste0("N_drop_",pairwise,pl,"_XX")) 
         }
-
+        if (get(paste0("N_drop_",pairwise,pl,"_C_XX")) > 0 & get(paste0("N_drop_",pairwise,pl,"_C_XX")) != nrow(df) & gap_XX == 0) {
+            N_drop_total_C_XX <- N_drop_total_C_XX + get(paste0("N_drop_",pairwise,pl,"_C_XX")) 
+        }
+        for (v in vars_to_set_missing) {
+            df[[v]] <- ifelse((df$s_has_match_XX == 0 | df$c_has_match_XX == 0), NA, df[[v]])
+        }
+        df$Ht_XX <- ifelse((df$s_has_match_XX == 0 | df$c_has_match_XX == 0), 0, df$Ht_XX)
+        df$c_has_match_XX <- df$s_has_match_XX <- NULL
+        
         order <- length(unique(df$D1_XX))
     }
     assign(paste0("W",pl,"_XX"), sum(df$weight_XX, na.rm = TRUE))
@@ -314,14 +338,15 @@ did_multiplegt_stat_pairwise <- function(
 
     # Panel with gaps (using tsfilled_XX) and cases where we have only switchers or only stayers (using count)
     if (waoss == 1 | aoss == 1) {
-        assign(paste0("N_Switchers",pl,"_XX"), nrow(subset(df, df$S_XX != 0)))
+        assign(paste0("N_Switchers",pl,"_XX"), nrow(subset(df, df$S_XX != 0 & !is.na(df$S_XX))))
         assign(paste0("N_Stayers",pl,"_XX"),nrow(subset(df, df$S_XX == 0)))
     }
     if (ivwaoss == 1) {
-        assign(paste0("N_Switchers_IV",pl,"_XX"), nrow(subset(df, df$SI_XX != 0)))
+        assign(paste0("N_Switchers_IV",pl,"_XX"), nrow(subset(df, df$SI_XX != 0 & !is.na(df$SI_XX))))
         assign(paste0("N_Stayers_IV",pl,"_XX"),nrow(subset(df, df$SI_XX == 0)))
     }
 
+    factor_temp <- FALSE
     vars_pol_XX <- c()
     for (pol_level in 1:order) {
         df[[paste0("D1_",pol_level,"_XX")]] <- df$D1_XX^pol_level
@@ -335,18 +360,27 @@ did_multiplegt_stat_pairwise <- function(
         reg_pol_XX <- paste0(reg_pol_XX,paste0("D1_",level,"_XX"))
     } 
     if (!is.null(other_treatments)) {
-        df$D1_1_XXFACT <- as.factor(df$D1_1_XX) 
-        for (v in other_treatments) {
-            df[[paste0(v,"FACT")]] <- as.factor(df[[v]])
-            other_treatments[other_treatments == v] <- paste0(v,"FACT")
+        if (isTRUE(factor_temp)) {
+            df$D1_1_XXFACT <- as.factor(df$D1_1_XX) 
+            for (v in other_treatments) {
+                df[[paste0(v,"FACT")]] <- as.factor(df[[v]])
+                other_treatments[other_treatments == v] <- paste0(v,"FACT")
+            }
+            interact <- "D1_1_XXFACT"
+            for (v in other_treatments) {
+                interact <- paste0(interact," * ",v)
+            }
+            reg_pol_XX <- paste0(reg_pol_XX," + ", interact)
+            saturated_reg <- power_set(c("D1_1_XXFACT", other_treatments))
+            vars_pol_XX <- union(vars_pol_XX, saturated_reg)
+        } else {
+            vars_pol_XX <- power_set(c("D1_1_XX", other_treatments))
+            interact <- "D1_1_XX"
+            for (v in other_treatments) {
+                interact <- paste0(interact," * ",v)                
+            }
+            reg_pol_XX <- paste0(reg_pol_XX," + ", interact)
         }
-        interact <- "D1_1_XXFACT"
-        for (v in other_treatments) {
-            interact <- paste0(interact," * ",v)
-        }
-        reg_pol_XX <- paste0(reg_pol_XX," + ", interact)
-        saturated_reg <- power_set(c("D1_1_XXFACT", other_treatments))
-        vars_pol_XX <- union(vars_pol_XX, saturated_reg)
     }
 
     if (ivwaoss == 1) {
@@ -371,7 +405,7 @@ did_multiplegt_stat_pairwise <- function(
         }
     }
 
-    df$S_bis_XX <- df$S_XX != 0 & !is.na(df$S_XX)
+    df$S_bis_XX <- ifelse(!is.na(df$S_XX), as.numeric(df$S_XX!= 0), NA)
 
     # Feasibility conditions:
     feasible_est <- FALSE
@@ -381,8 +415,9 @@ did_multiplegt_stat_pairwise <- function(
         feasible_est <- (gap_XX == 0 & get(paste0("N_Switchers_IV",pl,"_XX")) > 0 & get(paste0("N_Stayers_IV",pl,"_XX")) > 1)
     }
 
-    fact_reg <- !is.null(other_treatments)
-
+    #fact_reg <- !is.null(other_treatments)
+    fact_reg <- FALSE
+    assign(paste0("P_Ht_",pairwise,pl,"_XX"), Mean("Ht_XX", df))
     # Start of feasible estimation
     if (feasible_est) {       
 
@@ -417,9 +452,9 @@ did_multiplegt_stat_pairwise <- function(
 
         if (aoss == 1) {
 	        # 0) Compute P_t = P(S_t = 1) = E(S_t) for the aggregation afterward
-            assign(paste0("P_",pairwise,pl,"_XX"), Mean("S_bis_XX", df))
+            assign(paste0("P_",pairwise,pl,"_XX"), Mean("S_bis_XX", df) * get(paste0("P_Ht_",pairwise,pl,"_XX")))
             assign(paste0("PS_sum",pl,"_XX"), get(paste0("PS_sum",pl,"_XX")) + get(paste0("P_",pairwise,pl,"_XX")))
-            assign(paste0("ES",pl,"_XX"), get(paste0("P_",pairwise,pl,"_XX")))
+            assign(paste0("ES",pl,"_XX"), Mean("S_bis_XX", df))
 
             # 1) Compute \hat{delta}_1
             df$inner_sum_delta_1_XX <- df$inner_sum_delta_1_2_XX / df$delta_D_XX
@@ -440,7 +475,8 @@ did_multiplegt_stat_pairwise <- function(
                df[[paste0("Phi_1_",pairwise,pl,"_XX")]] <- (df$S_over_delta_D_XX - df$mean_S_over_delta_D_XX * ((1 - df$S_bis_XX)/(1-df$ES_bis_XX_D_1))) * df$inner_sum_delta_1_2_XX
             }
 
-            df[[paste0("Phi_1_",pairwise,pl,"_XX")]] <- (df[[paste0("Phi_1_",pairwise,pl,"_XX")]] - (get(paste0("delta_1_", pairwise,pl,"_XX")) * df$S_bis_XX)) / get(paste0("ES",pl,"_XX"))
+            df[[paste0("Phi_1_",pairwise,pl,"_XX")]] <- (df[[paste0("Phi_1_",pairwise,pl,"_XX")]] - (get(paste0("delta_1_", pairwise,pl,"_XX")) * df$S_bis_XX)) / (get(paste0("ES",pl,"_XX")) * get(paste0("P_Ht_",pairwise,pl,"_XX")))
+            df[[paste0("Phi_1_",pairwise,pl,"_XX")]] <- ifelse(df$Ht_XX == 0, 0, df[[paste0("Phi_1_",pairwise,pl,"_XX")]])
 
             assign(paste0("mean_IF_1_",pairwise,pl),
                     Mean(paste0("Phi_1_",pairwise,pl,"_XX"), df))
@@ -456,7 +492,7 @@ did_multiplegt_stat_pairwise <- function(
                 nobs_c_XX <- df$first_obs_by_clus <- NULL
             } else {
                 assign(paste0("sd_delta_1_",pairwise,pl,"_XX"),
-                        Sd(paste0("Phi_1_",pairwise,pl,"_XX"), df)/sqrt(wSum(df)))
+                        sd(df[[paste0("Phi_1_",pairwise,pl,"_XX")]], na.rm = TRUE)/sqrt(wSum(df)))
             }
             assign(paste0("LB_1_",pairwise,pl,"_XX"),
             get(paste0("delta_1_",pairwise,pl,"_XX")) - 1.96 * get(paste0("sd_delta_1_", pairwise,pl,"_XX")))
@@ -464,13 +500,14 @@ did_multiplegt_stat_pairwise <- function(
             get(paste0("delta_1_",pairwise,pl,"_XX")) + 1.96 * get(paste0("sd_delta_1_", pairwise,pl,"_XX")))
 
             df[[paste0("S_",pairwise,pl,"_XX")]] <- df$S_bis_XX
+            df[[paste0("S_",pairwise,pl,"_XX")]] <- ifelse(df$Ht_XX == 0, df$Ht_XX, df[[paste0("S_",pairwise,pl,"_XX")]] )
         }
         
         ###################################################### WAOSS ##########
 
         if (waoss == 1) {
             assign(paste0("E_abs_delta_D",pl,"_XX"), Mean("abs_delta_D_XX", df))
-            assign(paste0("E_abs_delta_D_",pairwise,pl,"_XX"), get(paste0("E_abs_delta_D",pl,"_XX")))
+            assign(paste0("E_abs_delta_D_",pairwise,pl,"_XX"), get(paste0("E_abs_delta_D",pl,"_XX")) * get(paste0("P_Ht_",pairwise,pl,"_XX")))
             assign(paste0("E_abs_delta_D_sum",pl,"_XX"), get(paste0("E_abs_delta_D_sum",pl,"_XX")) + get(paste0("E_abs_delta_D_",pairwise,pl,"_XX")))
 
             for (suffix in c("Minus", "Plus")) {
@@ -547,10 +584,12 @@ did_multiplegt_stat_pairwise <- function(
 
             # Computing the variance
             if (isFALSE(exact_match)) {
-                df[[paste0("Phi_2_",pairwise,pl,"_XX")]] <- (df$dr_delta_Y_XX - get(paste0("delta_2_", pairwise,pl,"_XX")) * df$abs_delta_D_XX) / get(paste0("E_abs_delta_D",pl,"_XX"))
+                df[[paste0("Phi_2_",pairwise,pl,"_XX")]] <- (df$dr_delta_Y_XX - get(paste0("delta_2_", pairwise,pl,"_XX")) * df$abs_delta_D_XX)
             } else {
-                df[[paste0("Phi_2_",pairwise,pl,"_XX")]] <- ((df$S_XX - df$ES_XX_D_1 * ((1 - df$S_bis_XX)/(1 - df$ES_bis_XX_D_1))) * df$inner_sum_delta_1_2_XX - get(paste0("delta_2_", pairwise,pl,"_XX")) * df$abs_delta_D_XX) / get(paste0("E_abs_delta_D",pl,"_XX"))
+                df[[paste0("Phi_2_",pairwise,pl,"_XX")]] <- ((df$S_XX - df$ES_XX_D_1 * ((1 - df$S_bis_XX)/(1 - df$ES_bis_XX_D_1))) * df$inner_sum_delta_1_2_XX - get(paste0("delta_2_", pairwise,pl,"_XX")) * df$abs_delta_D_XX)
             }
+            df[[paste0("Phi_2_",pairwise,pl,"_XX")]] <- df[[paste0("Phi_2_",pairwise,pl,"_XX")]]/(get(paste0("P_Ht_",pairwise,pl,"_XX"))*get(paste0("E_abs_delta_D",pl,"_XX")))
+            df[[paste0("Phi_2_",pairwise,pl,"_XX")]]  <- ifelse(df$Ht_XX == 0, df$Ht_XX, df[[paste0("Phi_2_",pairwise,pl,"_XX")]])
 
             assign(paste0("mean_IF_2_",pairwise,pl),
                     Mean(paste0("Phi_2_",pairwise,pl,"_XX"), df))
@@ -571,7 +610,7 @@ did_multiplegt_stat_pairwise <- function(
             assign(paste0("LB_2_",pairwise,pl,"_XX"), get(paste0("delta_2_",pairwise,pl,"_XX")) - 1.96 * get(paste0("sd_delta_2_", pairwise,pl,"_XX")))
             assign(paste0("UB_2_",pairwise,pl,"_XX"), get(paste0("delta_2_",pairwise,pl,"_XX")) + 1.96 * get(paste0("sd_delta_2_", pairwise,pl,"_XX")))
 
-            df[[paste0("abs_delta_D_",pairwise,pl,"_XX")]] <- df$abs_delta_D_XX
+            df[[paste0("abs_delta_D_",pairwise,pl,"_XX")]] <- ifelse(df$Ht_XX == 0, 0, df$abs_delta_D_XX)
         }
 
         ##################################################### ivwaoss ##########
@@ -686,26 +725,33 @@ did_multiplegt_stat_pairwise <- function(
                 df$Phi_D_XX <- ((df$SI_XX - (df$ES_I_XX_Z_1) * ((1 - df$SI_bis_XX) / (1- df$ES_I_bis_XX_Z_1))) * (df$delta_D_XX - df$mean_pred_D_IV_XX) - get(paste0("delta_D",pl,"_XX")) * df$abs_delta_Z_XX) / get(paste0("E_abs_delta_Z",pl,"_XX"))
             }
 
-            df[[paste0("Phi_3_",pairwise,pl,"_XX")]] <- (df$Phi_Y_XX - get(paste0("delta_3_",pairwise,pl,"_XX")) * df$Phi_D_XX) / get(paste0("delta_D",pl,"_XX"))
-            mean_IF3 <- Mean(paste0("Phi_3_",pairwise,pl,"_XX"), df)
+            if (get(paste0("delta_D",pl,"_XX"))!= 0) {
+                df[[paste0("Phi_3_",pairwise,pl,"_XX")]] <- (df$Phi_Y_XX - get(paste0("delta_3_",pairwise,pl,"_XX")) * df$Phi_D_XX) / get(paste0("delta_D",pl,"_XX"))
+                mean_IF3 <- Mean(paste0("Phi_3_",pairwise,pl,"_XX"), df)
 
-            if (!is.null(cluster)) {
-                df <- df %>% group_by(.data$cluster_XX) %>% 
-                        mutate(!!paste0("Phi_3_",pairwise,pl,"_c_XX") := sum(.data[[paste0("Phi_3_", pairwise,pl,"_XX")]], na.rm = TRUE)) %>%
-                        mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
-                df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]] <- ifelse(df$first_obs_by_clus == 1, df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]], NA)
-                nobs_c_XX <- wSum(subset(df, !is.na(df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]])), w = "weight_c_XX")
-                assign(paste0("sd_delta_3_",pairwise,pl,"_XX"),
-                        Sd(paste0("Phi_3_",pairwise,pl,"_c_XX"), df, w = "weight_c_XX")/sqrt(nobs_c_XX))
-                nobs_c_XX <- NULL
-                df$first_obs_by_clus <- NULL
+                if (!is.null(cluster)) {
+                    df <- df %>% group_by(.data$cluster_XX) %>% 
+                            mutate(!!paste0("Phi_3_",pairwise,pl,"_c_XX") := sum(.data[[paste0("Phi_3_", pairwise,pl,"_XX")]], na.rm = TRUE)) %>%
+                            mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
+                    df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]] <- ifelse(df$first_obs_by_clus == 1, df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]], NA)
+                    nobs_c_XX <- wSum(subset(df, !is.na(df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]])), w = "weight_c_XX")
+                    assign(paste0("sd_delta_3_",pairwise,pl,"_XX"),
+                            Sd(paste0("Phi_3_",pairwise,pl,"_c_XX"), df, w = "weight_c_XX")/sqrt(nobs_c_XX))
+                    nobs_c_XX <- NULL
+                    df$first_obs_by_clus <- NULL
+                } else {
+                    assign(paste0("sd_delta_3_",pairwise,pl,"_XX"),
+                            Sd(paste0("Phi_3_",pairwise,pl,"_XX"), df)/sqrt(wSum(df)))
+                }
+
+                assign(paste0("LB_3_",pairwise,pl,"_XX"), get(paste0("delta_3_",pairwise,pl,"_XX")) - 1.96*get(paste0("sd_delta_3_",pairwise,pl,"_XX")))
+                assign(paste0("UB_3_",pairwise,pl,"_XX"), get(paste0("delta_3_",pairwise,pl,"_XX")) + 1.96*get(paste0("sd_delta_3_",pairwise,pl,"_XX")))
             } else {
-                assign(paste0("sd_delta_3_",pairwise,pl,"_XX"),
-                        Sd(paste0("Phi_3_",pairwise,pl,"_XX"), df)/sqrt(wSum(df)))
+                df[[paste0("Phi_3_",pairwise,pl,"_XX")]] <- NA
+                assign(paste0("sd_delta_3_",pairwise,pl,"_XX"), NA)
+                assign(paste0("LB_3_",pairwise,pl,"_XX"), NA)
+                assign(paste0("UB_3_",pairwise,pl,"_XX"), NA)
             }
-
-            assign(paste0("LB_3_",pairwise,pl,"_XX"), get(paste0("delta_3_",pairwise,pl,"_XX")) - 1.96*get(paste0("sd_delta_3_",pairwise,pl,"_XX")))
-            assign(paste0("UB_3_",pairwise,pl,"_XX"), get(paste0("delta_3_",pairwise,pl,"_XX")) + 1.96*get(paste0("sd_delta_3_",pairwise,pl,"_XX")))
 
             df[[paste0("inner_sum_IV_denom_",pairwise,pl,"_XX")]] <- df$inner_sum_IV_denom_XX
         }
@@ -759,9 +805,6 @@ did_multiplegt_stat_pairwise <- function(
     df <- df %>% select(dplyr::any_of(to_keep))
 
     ## End of the program
-
-    other_treatments <- other_treatments_OG
-    other_treatments_OG <- NULL
 
     for (v in names(scalars)) {
         scalars[[v]] <- get(v)

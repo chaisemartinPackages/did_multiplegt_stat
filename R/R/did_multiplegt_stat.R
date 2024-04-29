@@ -105,11 +105,11 @@ did_multiplegt_stat <- function(
     other_treatments = NULL
 ) {
 
+  params <- as.list(match.call())[-1]
   ## For now, the weight, cluster and by_fd options will be shut down until further theoretical results about the appropriate way to perform weighting and clustering while aggregating the IFs
   weight <- cluster <- NULL
-  #by_fd <- NULL
 
-  args <- list()
+  args <- list()  
   for (v in names(formals(did_multiplegt_stat))) {
     if (!is.null(get(v))) {
       if (v == "df" & !inherits(get(v), "data.frame")) {
@@ -138,8 +138,11 @@ did_multiplegt_stat <- function(
     }
     if (v != "df") {
       args[[v]] <- get(v)
+    } else {
+      args$df <- params$df
     }
   }
+  params <- NULL
 
   if (is.null(estimator) & is.null(Z)) {
       estimator <-  c("aoss", "waoss")
@@ -271,6 +274,7 @@ did_multiplegt_stat <- function(
   df_main <- df
   obj_name <- "results"
   by_fd_opt <- NULL
+
   for (by_lev in 1:length(by_levels)) {
     if (by_levels[by_lev] != "_no_by" & !is.null(by)) {
       df_main <- subset(df, df$by_total == by_levels[by_lev])
@@ -279,8 +283,8 @@ did_multiplegt_stat <- function(
     } else if (by_levels[by_lev] != "_no_by" & !is.null(by_fd)) {
       obj_name <- paste0("results_by_", by_lev)
       diff_var <- ifelse("ivwaoss" %in% estimator, "Z", "D")
-      sep <- ifelse(by_lev == length(by_levels), "]", ")")
-      message(sprintf("Running did_multiplegt_stat with switchers s.t. \U0394%s \U2208 [%.3f,%.3f%s <%.0f%%-%.0f%% quantiles>.", diff_var, val_quantiles[by_lev], val_quantiles[by_lev + 1],sep, quantiles[by_lev] * 100, quantiles[by_lev+1]*100))
+      sep <- ifelse(by_lev == 1, "[", "(")
+      message(sprintf("Running did_multiplegt_stat with switchers s.t. \U0394%s \U2208 %s%.3f,%.3f] <%.0f%%-%.0f%% quantiles>.", diff_var, sep, val_quantiles[by_lev], val_quantiles[by_lev + 1], quantiles[by_lev] * 100, quantiles[by_lev+1]*100))
       if (val_quantiles[by_lev] == val_quantiles[by_lev + 1])  {
         warning(sprintf("(%.0f%%, %0.f%%) quantile bin dropped: upper and lower bounds are equal.", quantiles[by_lev] * 100, quantiles[by_lev+1]*100))
       }
@@ -299,8 +303,6 @@ did_multiplegt_stat <- function(
     did_multiplegt_stat <- append(did_multiplegt_stat, list(by_fd_graph(obj = did_multiplegt_stat)))
     names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "by_fd_graph"
   }
-
-
 
   class(did_multiplegt_stat) <- "did_multiplegt_stat"
   return(did_multiplegt_stat)
