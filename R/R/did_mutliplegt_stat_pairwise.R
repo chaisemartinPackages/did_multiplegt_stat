@@ -91,12 +91,16 @@ did_multiplegt_stat_pairwise <- function(
     if (ivwaoss == 1) {
         df$delta_Z_XX <- diff(df$Z_XX)        
     }
-
     if (!is.null(other_treatments)) {
         for (v in other_treatments) {
             df[[paste0("fd_",v,"_temp_XX")]] <- diff(df[[v]])
+        }
+    }
+
+    if (!is.null(other_treatments)) {
+        for (v in other_treatments) {
             df <- df %>% group_by(.data$ID_XX) %>% 
-                mutate(!!paste0("fd_",v,"_XX") := sum(.data[[paste0("fd_",v,"_temp_XX")]], na.rm = TRUE))
+                mutate(!!paste0("fd_",v,"_XX") := sum(.data[[paste0("fd_",v,"_temp_XX")]], na.rm = TRUE)) %>%ungroup()
             df[[paste0("fd_",v,"_temp_XX")]] <- NULL
         }
     }

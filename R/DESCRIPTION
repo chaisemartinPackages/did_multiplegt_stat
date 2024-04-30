@@ -1,5 +1,5 @@
 Package: DIDmultiplegtSTAT
-Title: did_multiplegt_stat, Estimation in Difference-in-Difference (DID) designs with treatments continuously distributed at every period
+Title: Estimation of Heterogeneity-robust Difference-in-Differences Estimators, with a Binary, Discrete, or Continuous Treatment or Instrument, in Designs with Stayers
 Version: 1.0.0
 Authors@R: 
     c(person("Diego", "Ciccia", role = c("aut", "cre"), email = "diego.ciccia@sciencespo.fr"),
