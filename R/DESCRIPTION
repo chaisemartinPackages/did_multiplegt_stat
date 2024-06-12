@@ -7,7 +7,7 @@ Authors@R:
 	person("Doulo", "Sow", role = "aut", email = "doulo.sow@sciencespo.fr"),
     person("Clément", "de Chaisemartin", role = "aut", email = "clement.dechaisemartin@sciencespo.fr"))
 Maintainer: Diego Ciccia <diego.ciccia@sciencespo.fr>
-Description: This program estimates the three estimators (aoss, waoss, iv-aoss) developped in de Chaisemartin, Clément and d'Haultfoeuille, Xavier and Pasquier, Félix and Vazquez-Bare, Gonzalo, Difference-in-Differences Estimators for Treatments Continuously Distributed at Every Period (January 18, 2022). 
+Description: This program estimates the three estimators (aoss, waoss, iv-aoss) developped in Difference-in-Differences for Continuous Treatments and Instruments with Stayers (2022), by Clément de Chaisemartin, Xavier d'Haultfoeuille, Félix Pasquier, and Gonzalo Vazquez-Bare. 
 License: MIT + file LICENSE
 Author: Diego Ciccia [aut, cre],
 	Felix Knau [aut],

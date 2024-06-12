@@ -303,7 +303,8 @@ did_multiplegt_stat_pairwise <- function(
     }
     if (isTRUE(exact_match)) {
         if (aoss == 1 | waoss == 1) {
-            df <- df %>% group_by(.data$D1_XX) %>% 
+            df$all_treat_XX <- df[c("D1_XX", other_treatments)]
+            df <- df %>% group_by(.data$all_treat_XX) %>% 
                     mutate(has_match_min_XX = min(.data$abs_delta_D_XX[!is.na(.data$S_XX)], na.rm = TRUE)) %>%
                     mutate(has_match_max_XX = max(.data$abs_delta_D_XX[!is.na(.data$S_XX)], na.rm = TRUE)) %>% ungroup()
             df$s_has_match_XX <- ifelse(!is.na(df$S_XX), as.numeric(df$has_match_min_XX == 0), -1)
@@ -311,7 +312,8 @@ did_multiplegt_stat_pairwise <- function(
             df$c_has_match_XX <- ifelse(!is.na(df$S_XX), as.numeric(df$has_match_max_XX > 0), -1)
             df$c_has_match_XX <- ifelse(df$S_XX != 0 & !is.na(df$S_XX), -1, df$c_has_match_XX)
         } else if (ivwaoss == 1) {
-            df <- df %>% group_by(.data$Z1_XX) %>% 
+            df$all_treat_XX <- df[c("Z1_XX", other_treatments)]
+            df <- df %>% group_by(.data$all_treat_XX) %>% 
                     mutate(has_match_min_XX = min(.data$abs_delta_Z_XX[!is.na(.data$SI_XX)], na.rm = TRUE)) %>%
                     mutate(has_match_max_XX = max(.data$abs_delta_Z_XX[!is.na(.data$SI_XX)], na.rm = TRUE)) %>% ungroup()
             df$s_has_match_XX <- ifelse(!is.na(df$SI_XX), as.numeric(df$has_match_min_XX == 0, na.rm = TRUE), -1)
@@ -319,6 +321,7 @@ did_multiplegt_stat_pairwise <- function(
             df$c_has_match_XX <- ifelse(!is.na(df$SI_XX), as.numeric(df$has_match_max_XX > 0, na.rm = TRUE), -1)
             df$c_has_match_XX <- ifelse(df$SI_XX != 0 & !is.na(df$S_XX), -1, df$c_has_match_XX)
         }
+        df$all_treat_XX <- NULL
         df$has_match_min_XX <- df$has_match_max_XX <- NULL
 
         assign(paste0("N_drop_",pairwise,pl,"_XX"), nrow(subset(df, df$s_has_match_XX == 0)))

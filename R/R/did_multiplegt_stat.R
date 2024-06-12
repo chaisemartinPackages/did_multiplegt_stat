@@ -8,18 +8,18 @@
 #' @param Time (char) Time variable.
 #' @param D (char) Treatment variable.
 #' @param Z (char) Instrumental variable. This option is only required when the IV-related estimator (the so-called ivwaoss) is requested.
-#' @param estimator (char vector) Estimator(s) to be computed. The allowed arguments are: (1) "aoss", i.e the Average Of Switchers’ Slopes which is the average, across switchers, of the effect on their period-(t) outcome of moving their treatment from its period-(t-1) to its period-(t) value, scaled by the difference between these two values. (2) "waoss" which corresponds to a weighted version of "aoss" where slopes receive a weight proportional to switchers’ absolute treatment change from period-(t-1) to period-(t). (3) "ivwaoss" which generalizes "waoss" to the instrumental-variable case, and is equal to the reduced-form "waoss" effect of the instrument on the outcome, divided by the first-stage "waoss" effect of the instrument on the treatment. If this option is not specified: by default, the command estimates both "aoss" and "waoss" if the instrumental-variable Z is not specified, or only ivwaoss otherwise. 
-#' @param aoss_vs_waoss (logical) When this option is specified, the command performs and displays the test of the equality between the aoss and  the waoss. Note that the use of this option requires specifying in the estimator option both aoss and waoss.
-#' @param exact_match (logical) With this option, the DID estimators computed by the command compare the outcome evolution of switchers and stayers with the same period-\eqn{(t-1)} treatment (or instrument) value. This option can only be used when the treatment (or instrument) is binary or discrete: with a continuously distributed treatment (or instrument), one cannot find switchers and stayers with the exact same period-\eqn{(t-1)} treatment (or instrument). With a discrete treatment taking a large number of values, specifying this option may be undesirable: then, there may only be few switchers that can be matched to a stayer with the exact same period-eqn{(t-1)} treatment, thus restricting the estimation sample.
-#' @param estimation_method (char) This option allows to specify which estimation method to use when estimating the waoss or the ivwaoss. The allowed arguments are "ra" (regression adjustment-based approach), "ps" (propensity-based approach), "dr" (double robust-based approach).
+#' @param estimator (char vector) Estimator(s) to be computed. The allowed arguments are: (1) "aoss", i.e the Average Of Switchers’ Slopes which is the average, across switchers, of the effect on their period-(t) outcome of moving their treatment from its period-(t-1) to its period-(t) value, scaled by the difference between these two values. (2) "waoss" which corresponds to a weighted version of "aoss" where slopes receive a weight proportional to switchers’ absolute treatment change from period-(t-1) to period-(t). (3) "ivwaoss" which generalizes "waoss" to the instrumental-variable case, and is equal to the reduced-form "waoss" effect of the instrument on the outcome, divided by the first-stage "waoss" effect of the instrument on the treatment. If this option is not specified: by default, the command estimates both "aoss" and "waoss" if the instrumental-variable Z is not specified, or only "ivwaoss" otherwise. 
+#' @param estimation_method (char) This option allows to specify which estimation method to use when estimating the waoss or the ivwaoss. The allowed arguments are "ra" (regression adjustment-based approach), "ps" (propensity-based approach), "dr" (double robust-based approach). By default, a doubly-robust estimator is used.
 #' @param order (int) when the exact_match option is not specified, this option specifies the polynomial order to be used in the OLS regressions of \eqn{Y_t-Y_{t-1}} on a polynomial in \eqn{D_{t-1}} and/or in the logistic regressions of an indicator for \eqn{(t-1)}-to-\eqn{t} switchers on a polynomial in \eqn{D_{t-1}}. By default, a polynomial of order 1 is used.
-#' @param noextrapolation (logical) when this option is specified, the command only keeps switchers whose period-\eqn{(t-1)} treatment (or instrument) is between the minimum and the maximum values of the period-\eqn{(t-1)} treatment (or instrument) of stayers.
 #' @param switchers (char)  if the argument \code{up} is inputted, the command estimates the AOSS, WAOSS, or IV-WAOSS for switchers-up only, i.e for units whose treatment (or instrument) increases from period \eqn{(t-1)} to \eqn{t}. If the argument \code{down} is inputted, the command estimates the AOSS, WAOSS, or IV-WAOSS for switchers-down only, i.e. for units whose treament (or instrument) decreases from period \eqn{(t-1)} to \eqn{t}. By default, the command estimates those parameters for all switchers.
-#' @param disaggregate (logical)  when this option is specified, the command shows the estimated AOSS, WAOSS, or IV-WAOSS effects for each pair of consecutive time periods, on top of the effects aggregated across all time periods. By default, the command only shows effects aggregated across all time periods.
-#' @param other_treatments (character, len \eqn{\geq 1}) This option allows controlling for other treatments that may also change over the panel.
 #' @param placebo (logical) This option allows to estimate the placebos versions of the estimators requested in the estimator option.
+#' @param aoss_vs_waoss (logical) When this option is specified, the command performs and displays the test of the equality between the aoss and  the waoss. Note that the use of this option requires specifying in the estimator option both aoss and waoss.
+#' @param other_treatments (character, len \eqn{\geq 1}) This option allows controlling for other treatments that may also change over the panel.
+#' @param exact_match (logical) With this option, the DID estimators computed by the command compare the outcome evolution of switchers and stayers with the same period-\eqn{(t-1)} treatment (or instrument) value. This option can only be used when the treatment (or instrument) is binary or discrete: with a continuously distributed treatment (or instrument), one cannot find switchers and stayers with the exact same period-\eqn{(t-1)} treatment (or instrument). With a discrete treatment taking a large number of values, specifying this option may be undesirable: then, there may only be few switchers that can be matched to a stayer with the exact same period-\eqn{(t-1)} treatment, thus restricting the estimation sample.
+#' @param noextrapolation (logical) when this option is specified, the command only keeps switchers whose period-\eqn{(t-1)} treatment (or instrument) is between the minimum and the maximum values of the period-\eqn{(t-1)} treatment (or instrument) of stayers.
 #' @param by (character) runs the program by each level of varname specified. Only time-invariant variables are allowed.
 #' @param by_fd (numeric integer) This option can be used if one wants to assess the heterogeneity of the effect according to the absolute value of the changes in the treatment. For example, if \code{by_fd = 5} is specified, the command will split the switchers into 5 groups delimited by the 4 quantiles of the distribution of \eqn{|\Delta D_t|} (or \eqn{|\Delta Z_t|}), and computes the models of each sample.
+#' @param disaggregate (logical)  when this option is specified, the command shows the estimated AOSS, WAOSS, or IV-WAOSS effects for each pair of consecutive time periods, on top of the effects aggregated across all time periods. By default, the command only shows effects aggregated across all time periods.
 #' @details
 #' # Overview
 #' ## Data and design
@@ -301,6 +301,9 @@ did_multiplegt_stat <- function(
           by_str <- paste0(by_str,",", by[j])
         }      
       }
+
+      did_multiplegt_stat <- append(did_multiplegt_stat, list(by_levels))
+
     } else if (!is.null(by_fd)) {
       if (100 %% by_fd != 0) {
         stop("Syntax error in by option. When the by option is specified with an integer, the argument must be divisible by 100 to allow for an integer subsetting of the quantiles.")
@@ -329,8 +332,9 @@ did_multiplegt_stat <- function(
        if (length(by_levels) != by_fd) {
         message(sprintf("Point mass > %.0f%% detected. %.0f bin(s) collapsed.", 100/by_fd, by_fd - length(by_levels)))
        }
+
+       did_multiplegt_stat <- append(did_multiplegt_stat, list(levels(factor(subset(df, df$partition_XX != 0)$partition_XX))))
     }
-    did_multiplegt_stat <- append(did_multiplegt_stat, list(levels(factor(subset(df, df$partition_XX != 0)$partition_XX))))
     names(did_multiplegt_stat)[length(did_multiplegt_stat)] <- "by_levels"
   } else {
     by_levels <- "_no_by"
