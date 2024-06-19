@@ -425,6 +425,16 @@ did_multiplegt_stat_pairwise <- function(
     #fact_reg <- !is.null(other_treatments)
     fact_reg <- FALSE
     assign(paste0("P_Ht_",pairwise,pl,"_XX"), Mean("Ht_XX", df))
+
+    if (!is.null(cluster)) {
+        df <- df %>% group_by(.data$ID_XX) %>%
+            mutate(gr_id = row_number()) %>% ungroup()
+        df$id_temp <- as.numeric(df$gr_id == 1)
+        df <- df %>% group_by(.data$cluster_XX) %>%
+            mutate(N_c_XX = sum(.data$id_temp, na.rm = TRUE)) %>% ungroup()
+        assign(paste0("N_bar_c_",pairwise,pl,"_XX"), mean(df$N_c_XX, na.rm = TRUE))
+        df$id_temp <- df$N_c_XX <- df$gr_id <- NULL
+    }
     # Start of feasible estimation
     if (feasible_est) {       
 
@@ -492,7 +502,7 @@ did_multiplegt_stat_pairwise <- function(
                 df <- df %>% group_by(.data$cluster_XX) %>% 
                         mutate(!!paste0("Phi_1_",pairwise,pl,"_c_XX") := sum(.data[[paste0("Phi_1_", pairwise,pl,"_XX")]], na.rm = TRUE)) %>%
                         mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
-                df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]] <- ifelse(df$first_obs_by_clus == 1, df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]], NA)
+                df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]] <- ifelse(df$first_obs_by_clus == 1, df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]], NA) / get(paste0("N_bar_c_",pairwise,pl,"_XX"))
                 nobs_c_XX <- wSum(subset(df, !is.na(df[[paste0("Phi_1_",pairwise,pl,"_c_XX")]])), w = "weight_c_XX")
                 assign(paste0("sd_delta_1_",pairwise,pl,"_XX"),
                         Sd(paste0("Phi_1_",pairwise,pl,"_c_XX"), df, w = "weight_c_XX")/sqrt(nobs_c_XX))
@@ -605,7 +615,7 @@ did_multiplegt_stat_pairwise <- function(
                 df <- df %>% group_by(.data$cluster_XX) %>% 
                         mutate(!!paste0("Phi_2_",pairwise,pl,"_c_XX") := sum(.data[[paste0("Phi_2_", pairwise,pl,"_XX")]], na.rm = TRUE)) %>%
                         mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
-                df[[paste0("Phi_2_",pairwise,pl,"_c_XX")]] <- ifelse(df$first_obs_by_clus == 1, df[[paste0("Phi_2_",pairwise,pl,"_c_XX")]], NA)
+                df[[paste0("Phi_2_",pairwise,pl,"_c_XX")]] <- ifelse(df$first_obs_by_clus == 1, df[[paste0("Phi_2_",pairwise,pl,"_c_XX")]], NA) / get(paste0("N_bar_c_",pairwise, pl,"_XX"))
                 nobs_c_XX <- wSum(subset(df, !is.na(df[[paste0("Phi_2_",pairwise,pl,"_c_XX")]])), w = "weight_c_XX")
                 assign(paste0("sd_delta_2_",pairwise,pl,"_XX"),
                         Sd(paste0("Phi_2_",pairwise,pl,"_c_XX"), df, w = "weight_c_XX")/sqrt(nobs_c_XX))
@@ -740,7 +750,7 @@ did_multiplegt_stat_pairwise <- function(
                     df <- df %>% group_by(.data$cluster_XX) %>% 
                             mutate(!!paste0("Phi_3_",pairwise,pl,"_c_XX") := sum(.data[[paste0("Phi_3_", pairwise,pl,"_XX")]], na.rm = TRUE)) %>%
                             mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
-                    df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]] <- ifelse(df$first_obs_by_clus == 1, df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]], NA)
+                    df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]] <- ifelse(df$first_obs_by_clus == 1, df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]], NA) / get(paste0("N_bar_c_",pairwise,pl,"_XX"))
                     nobs_c_XX <- wSum(subset(df, !is.na(df[[paste0("Phi_3_",pairwise,pl,"_c_XX")]])), w = "weight_c_XX")
                     assign(paste0("sd_delta_3_",pairwise,pl,"_XX"),
                             Sd(paste0("Phi_3_",pairwise,pl,"_c_XX"), df, w = "weight_c_XX")/sqrt(nobs_c_XX))
@@ -807,7 +817,7 @@ did_multiplegt_stat_pairwise <- function(
     }
 
     df <- df[order(df$ID_XX), ]
-    to_keep <- c("ID_XX", paste0("Phi_1_",pairwise,pl,"_XX"), paste0("Phi_2_",pairwise,pl,"_XX"), paste0("Phi_3_",pairwise,pl,"_XX"), paste0("S_",pairwise,pl,"_XX"), paste0("abs_delta_D_",pairwise,pl,"_XX"), paste0("used_in_",pairwise,pl,"_XX"), paste0("inner_sum_IV_denom_",pairwise,pl,"_XX")) 
+    to_keep <- c("ID_XX", paste0("Phi_1_",pairwise,pl,"_XX"), paste0("Phi_2_",pairwise,pl,"_XX"), paste0("Phi_3_",pairwise,pl,"_XX"), paste0("S_",pairwise,pl,"_XX"), paste0("abs_delta_D_",pairwise,pl,"_XX"), paste0("used_in_",pairwise,pl,"_XX"), paste0("inner_sum_IV_denom_",pairwise,pl,"_XX"), cluster) 
 
     df <- df %>% select(dplyr::any_of(to_keep))
 

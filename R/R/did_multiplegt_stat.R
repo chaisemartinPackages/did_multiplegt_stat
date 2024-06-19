@@ -20,6 +20,7 @@
 #' @param by (character) runs the program by each level of varname specified. Only time-invariant variables are allowed.
 #' @param by_fd (numeric integer) This option can be used if one wants to assess the heterogeneity of the effect according to the absolute value of the changes in the treatment. For example, if \code{by_fd = 5} is specified, the command will split the switchers into 5 groups delimited by the 4 quantiles of the distribution of \eqn{|\Delta D_t|} (or \eqn{|\Delta Z_t|}), and computes the models of each sample.
 #' @param disaggregate (logical)  when this option is specified, the command shows the estimated AOSS, WAOSS, or IV-WAOSS effects for each pair of consecutive time periods, on top of the effects aggregated across all time periods. By default, the command only shows effects aggregated across all time periods.
+#' @param cluster cluster
 #' @details
 #' # Overview
 #' ## Data and design
@@ -168,12 +169,13 @@ did_multiplegt_stat <- function(
     exact_match = FALSE,
     by = NULL,
     by_fd = NULL,
-    other_treatments = NULL
+    other_treatments = NULL,
+    cluster = NULL
 ) {
 
   params <- as.list(match.call())[-1]
   ## For now, the weight, cluster and by_fd options will be shut down until further theoretical results about the appropriate way to perform weighting and clustering while aggregating the IFs
-  weight <- cluster <- NULL
+  weight <- NULL
 
   args <- list()  
   for (v in names(formals(did_multiplegt_stat))) {

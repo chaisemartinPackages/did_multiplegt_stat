@@ -347,13 +347,24 @@ did_multiplegt_stat_main <- function(
 
         counter_XX <- counter_XX + 1
     }
+
+    if (!is.null(cluster)) {
+        df <- df %>% group_by(.data$ID_XX) %>%
+            mutate(gr_id = row_number()) %>% ungroup()
+        df$id_temp <- as.numeric(df$gr_id == 1)
+        df <- df %>% group_by(.data$cluster_XX) %>%
+            mutate(N_c_XX = sum(.data$id_temp, na.rm = TRUE)) %>% ungroup()
+        N_bar_c_XX <-  mean(df$N_c_XX, na.rm = TRUE)
+        df$id_temp <- df$N_c_XX <- df$gr_id <- NULL
+    }
+
     if (aoss_XX == 1) {
         scalars$mean_IF1 <- ifelse(counter_XX == 0, NA, mean(IDs_XX$Phi_1_XX, na.rm = TRUE))
         if (!is.null(cluster)) {
             IDs_XX <- IDs_XX %>% group_by(.data$cluster_XX) %>% 
                     mutate(Phi_1_c_XX = sum(.data$Phi_1_XX, na.rm = TRUE)) %>%
                     mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
-            IDs_XX$Phi_1_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_1_c_XX, NA)
+            IDs_XX$Phi_1_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_1_c_XX, NA) / N_bar_c_XX
             n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_1_c_XX)))
             scalars$sd_delta_1_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_1_c_XX, na.rm = TRUE)/ sqrt(n_obs))
             df$first_obs_by_clus <- NULL
@@ -370,7 +381,7 @@ did_multiplegt_stat_main <- function(
                 IDs_XX <- IDs_XX %>% group_by(.data$cluster_XX) %>% 
                         mutate(Phi_1_pl_c_XX = sum(.data$Phi_1_pl_XX, na.rm = TRUE)) %>%
                         mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
-                IDs_XX$Phi_1_pl_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_1_pl_c_XX, NA)
+                IDs_XX$Phi_1_pl_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_1_pl_c_XX, NA) / N_bar_c_XX
                 n_obs_pl <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_1_pl_c_XX)))
                 scalars$sd_delta_1_1_pl_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_1_pl_c_XX, na.rm = TRUE)/ sqrt(n_obs_pl))
                 df$first_obs_by_clus <- NULL
@@ -389,7 +400,7 @@ did_multiplegt_stat_main <- function(
             IDs_XX <- IDs_XX %>% group_by(.data$cluster_XX) %>% 
                     mutate(Phi_2_c_XX = sum(.data$Phi_2_XX, na.rm = TRUE)) %>%
                     mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
-            IDs_XX$Phi_2_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_2_c_XX, NA)
+            IDs_XX$Phi_2_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_2_c_XX, NA) / N_bar_c_XX
             n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_2_c_XX)))
             scalars$sd_delta_2_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_2_c_XX, na.rm = TRUE)/ sqrt(n_obs))
             df$first_obs_by_clus <- NULL
@@ -407,7 +418,7 @@ did_multiplegt_stat_main <- function(
                 IDs_XX <- IDs_XX %>% group_by(.data$cluster_XX) %>% 
                         mutate(Phi_2_pl_c_XX = sum(.data$Phi_2_pl_XX, na.rm = TRUE)) %>%
                         mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
-                IDs_XX$Phi_2_pl_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_2_pl_c_XX, NA)
+                IDs_XX$Phi_2_pl_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_2_pl_c_XX, NA) / N_bar_c_XX
                 n_obs_pl <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_2_pl_c_XX)))
                 scalars$sd_delta_2_1_pl_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_2_pl_c_XX, na.rm = TRUE)/ sqrt(n_obs_pl))
                 df$first_obs_by_clus <- NULL
@@ -426,7 +437,7 @@ did_multiplegt_stat_main <- function(
             IDs_XX <- IDs_XX %>% group_by(.data$cluster_XX) %>% 
                     mutate(Phi_3_c_XX = sum(.data$Phi_3_XX, na.rm = TRUE)) %>%
                     mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
-            IDs_XX$Phi_3_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_3_c_XX, NA)
+            IDs_XX$Phi_3_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_3_c_XX, NA) / N_bar_c_XX
             n_obs <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_3_c_XX)))
             scalars$sd_delta_3_1_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_3_c_XX, na.rm = TRUE)/ sqrt(n_obs))
             df$first_obs_by_clus <- NULL
@@ -444,7 +455,7 @@ did_multiplegt_stat_main <- function(
                 IDs_XX <- IDs_XX %>% group_by(.data$cluster_XX) %>% 
                         mutate(Phi_3_pl_c_XX = sum(.data$Phi_3_pl_XX, na.rm = TRUE)) %>%
                         mutate(first_obs_by_clus = row_number() == 1) %>% ungroup()
-                IDs_XX$Phi_3_pl_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_3_pl_c_XX, NA)
+                IDs_XX$Phi_3_pl_c_XX <- ifelse(IDs_XX$first_obs_by_clus == 1, IDs_XX$Phi_3_pl_c_XX, NA) / N_bar_c_XX
                 n_obs_pl <- nrow(subset(IDs_XX, !is.na(IDs_XX$Phi_3_pl_c_XX)))
                 scalars$sd_delta_3_1_pl_XX <- ifelse(counter_XX == 0, NA, sd(IDs_XX$Phi_3_pl_c_XX, na.rm = TRUE)/ sqrt(n_obs_pl))
                 df$first_obs_by_clus <- NULL
