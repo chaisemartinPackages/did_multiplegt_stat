@@ -18,6 +18,7 @@ do not affect the current outcome.
 {title:Syntax}
 
 {p 4 4}
+
 [{opt bys:ort} {varlist}{cmd::}]
 {cmd:did_multiplegt_stat Y ID T D [Z]} {ifin}
 [{cmd:,}
@@ -48,12 +49,11 @@ do not affect the current outcome.
 {p_end}
 
 {p 4 4}
-{cmd:G} is the identifier of the unit of analysis.
+{cmd:ID} is the identifier of the unit of analysis.
 {p_end}
 
 {p 4 4}
-{cmd:T} is the time period variable. This variable should take integer values, and consecutive time periods should be one integer away 
-from each other. For instance, a bi-yearly time variable should be recoded by assigning consecutive values to years t and t+2.
+{cmd:T} is the time period variable.
 {p_end}
 
 {p 4 4}
@@ -70,7 +70,7 @@ from each other. For instance, a bi-yearly time variable should be recoded by as
 {title:Description}
 
 {p 4 4}
-{cmd:Data and design.} The command uses panel data at the {cmd:(G,T)} level to estimate heterogeneity-robust DID estimators, 
+{cmd:Data and design.} The command uses panel data at the {cmd:(ID,T)} level to estimate heterogeneity-robust DID estimators, 
 with a binary, discrete, or continuous treatment (or instrument). The command can be used in designs where there is at least one 
 pair of consecutive time periods between which the treatment of some units, the switchers, changes, while the treatment of some
 other units, the stayers, does not change. 
@@ -159,22 +159,29 @@ WAOSS estimator of the instrument's first-stage effect on the treatment.
 and (3) {cmd:iv-waoss}. By default, the command computes the AOSS and WAOSS estimators if no instrumental variable
 Z is specified, while it computes the IV-WAOSS if an instrumental variable
 Z is specified.
+{p_end}
 
-{phang}
+{p 4 4}
+{cmd:aoss_vs_waoss}: shows a test that the AOSS and WAOSS are equal. This option can only be used when estimation of the AOSS and WAOSS is requested.
+{p_end}
+
+{p 4 4}
 {cmd:exact_match}: with this option, the DID estimators computed by the command compare the outcome evolution of switchers and stayers 
 with the same period-(t-1) treatment (or instrument) value. This option can only be used when the treatment (or instrument) is binary or discrete:
 with a continuously distributed treatment (or instrument), one cannot find switchers and stayers 
 with the exact same period-(t-1) treatment (or instrument). 
 With a discrete treatment taking a large number of values, specifying this option may be undesirable: then, there may only be few switchers that can be
 matched to a stayer with the exact same period-(t-1) treatment, thus restricting the estimation sample.
+{p_end}
 
-{phang}
+{p 4 4}
 {cmd: estimation_method(}{it:string}{cmd:)}: when the {cmd:exact_match} option is not specified and estimation of the WAOSS or IV-WAOSS is requested, 
 this option can be used to specify which estimation method to use when estimating the WAOSS or IV-WAOSS. 
 The allowed arguments are: (1) {cmd:ra} (regression adjustment), (2) {cmd:ps} (propensity-based reweighting), and (3) {cmd:dr} (doubly-robust). 
 By default, a doubly-robust estimator is used.
+{p_end}
 
-{phang}
+{p 4 4}
 {cmd:{ul:or}der(}{it:#}{cmd:)}: when the exact_match option is not specified, 
 this option specifies the polynomial order to be used in the OLS regressions of Y_t-Y_{t-1} on a polynomial in D_{t-1}
 and/or in the logistic regressions of an indicator for (t-1)-to-t switchers on a polynomial in D_{t-1}. 
@@ -459,5 +466,3 @@ Gonzalo Vazquez-Bare, UCSB, USA.
 {synopt:{cmd:e(PlaceboAOSS_ℓ_k)}}   The results for AOSS.{p_end}
 {synopt:{cmd:e(PlaceboWAOSS_ℓ_k)}}  The results for WAOSS.{p_end}
 {synopt:{cmd:e(PlaceboIWAOSS_ℓ_k)}} The results for IVWAOSS.{p_end}
-
-
