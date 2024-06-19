@@ -65,6 +65,11 @@ program did_multiplegt_stat, eclass sortpreserve byable(recall)
 	version 12.0
 	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 0) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate aoss_vs_waoss exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weight(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off ] 
 
+	marksample touse
+	if _by() {
+		quietly replace `touse' = 0 if `_byindex' != _byindex()
+	}
+
 	//tokenize the varlist
 tokenize `varlist'
 
@@ -78,12 +83,13 @@ local IV_var_XX  `5'
 		di as input "{hline 80}"
 		//if strpos("`5'", ",") != 0 local 5 = strtrim(substr("`5'", 1, strpos("`5'", ",") - 1))
 		local estimator = "waoss"
-		did_multiplegt_stat2 `4' `2' `3' `5',  estimator(`estimator') estimation_method(`estimation_method') order(`order') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `aoss_vs_waoss' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weight(`weight') cross_validation(`cross_validation') `graph_off' //twfe(`twfe')
+		did_multiplegt_stat2 `4' `2' `3' `5' if `touse' == 1,  estimator(`estimator') estimation_method(`estimation_method') order(`order') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `aoss_vs_waoss' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weight(`weight') cross_validation(`cross_validation') `graph_off' //twfe(`twfe')
 }
 
 
 //Show the main results
-		did_multiplegt_stat2 `0'
+		local cmd = subinstr("`0'", ",", " if `touse' == 1,", 1)
+		did_multiplegt_stat2 `cmd'
 				
 		//Drop scalar created by the program
 		cap scalars_to_drop  //a subprogram dropping all scalars with the pattern _XX
@@ -298,6 +304,11 @@ if ("`iwaoss_XX'" == "1"&("`waoss_XX'" == "1"|"`aoss_XX'" == "1")){
 local a_vs_w = `aoss_XX' + `waoss_XX'
 if ("`aoss_vs_waoss'"!=""&`a_vs_w'!=2){
 	di as error "To test the equility between AOSS and WAOSS you must specify aoss and waoss in the estimator option."
+	exit
+}
+
+if !(mod(`order', 1)  == 0 & `order' > 0) {
+	di as error "Order should be a positive integer"
 	exit
 }
 
@@ -2612,7 +2623,7 @@ if ("`graph_off'"==""){
 	
 	// Define fixed graph options as they are implemented as flexible locals
 	cap drop time_to_treat
-	gen time_to_treat = _n
+	gen time_to_treat = _n if !missing(graph_inputAOSS1)
 	replace time_to_treat = 0 if time_to_treat ==2
 	replace time_to_treat = 2 -time_to_treat if !inlist(time_to_treat, 1, 0)
 	
@@ -2640,7 +2651,7 @@ twoway `graph_input', xlabel(`=-`placebo''[1]1) xtitle("Relative time", size(lar
 	
 	// Define fixed graph options as they are implemented as flexible locals
 	cap drop time_to_treat
-	gen time_to_treat = _n
+	gen time_to_treat = _n if !missing(graph_inputWAOSS1)
 	replace time_to_treat = 0 if time_to_treat ==2
 	replace time_to_treat = 2 -time_to_treat if !inlist(time_to_treat, 1, 0)
 	
@@ -2651,6 +2662,7 @@ twoway `graph_input', xlabel(`=-`placebo''[1]1) xtitle("Relative time", size(lar
 }
 
 
+	restore 
 	}
 	//di as error "Im here"
 	//matlist V2res_mat_plaXX
@@ -2660,7 +2672,6 @@ twoway `graph_input', xlabel(`=-`placebo''[1]1) xtitle("Relative time", size(lar
 	graph combine aoss waoss, cols(1) name(all, replace ) title(DID from last period before treatment changes (t=0) to t, size(medium))
 	}
 	
-	restore 
 	
 end
 
