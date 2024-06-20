@@ -63,7 +63,12 @@
 capture program drop did_multiplegt_stat
 program did_multiplegt_stat, eclass sortpreserve byable(recall)
 	version 12.0
-	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 0) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate aoss_vs_waoss exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weight(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off ] 
+	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate aoss_vs_waoss exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weight(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off ] 
+
+	marksample touse
+	if _by() {
+		quietly replace `touse' = 0 if `_byindex' != _byindex()
+	}
 
 	//tokenize the varlist
 tokenize `varlist'
@@ -78,12 +83,13 @@ local IV_var_XX  `5'
 		di as input "{hline 80}"
 		//if strpos("`5'", ",") != 0 local 5 = strtrim(substr("`5'", 1, strpos("`5'", ",") - 1))
 		local estimator = "waoss"
-		did_multiplegt_stat2 `4' `2' `3' `5',  estimator(`estimator') estimation_method(`estimation_method') order(`order') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `aoss_vs_waoss' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weight(`weight') cross_validation(`cross_validation') `graph_off' //twfe(`twfe')
+		did_multiplegt_stat2 `4' `2' `3' `5' if `touse' == 1,  estimator(`estimator') estimation_method(`estimation_method') order(`order') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `aoss_vs_waoss' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weight(`weight') cross_validation(`cross_validation') `graph_off' //twfe(`twfe')
 }
 
 
 //Show the main results
-		did_multiplegt_stat2 `0'
+		local cmd = subinstr("`0'", ",", " if `touse' == 1,", 1)
+		did_multiplegt_stat2 `cmd'
 				
 		//Drop scalar created by the program
 		cap scalars_to_drop  //a subprogram dropping all scalars with the pattern _XX
@@ -95,7 +101,8 @@ end
 capture program drop did_multiplegt_stat2
 program did_multiplegt_stat2, eclass sortpreserve byable(recall)
 	version 12.0
-	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 0) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate aoss_vs_waoss exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weight(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off ] // FIRST_stage   twfe(percentile same_sample)
+	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate aoss_vs_waoss exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weight(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off ] // FIRST_stage   twfe(percentile same_sample)
+
 
 	//>MAIN: Preserve the inputted dataset
 	preserve
@@ -301,6 +308,11 @@ if ("`aoss_vs_waoss'"!=""&`a_vs_w'!=2){
 	exit
 }
 
+if !(mod(`order', 1)  == 0 & `order' > 0) {
+	di as error "Order should be a positive integer"
+	exit
+}
+
 //5.
 if (`total_estimator'==0){
 		di as error "Error in the option estimator."
@@ -315,14 +327,22 @@ if ("`exact_match'"!=""&"`noextrapolation'"!=""){
 	local noextrapolation = ""
 }
 
-//7. exact_match and [order, estimation_method, order]
+//7. Order and cross_validation
+if (`order'>1&"`cross_validation'"!=""){
+	di as error ""
+	di as error "The option order is not allowed along with cross-validation."
+	di as error "The command will ignore the option order()."
+	local order = 1
+}
+
+//8. exact_match and [order, estimation_method, order]
 if ("`exact_match'"!=""){
 	if ("`estimation_method'"!=""){
 		di as error "As the exact_match option is specified,"
 		di as error "the estimation_method option is ignored."
 	}
 	
-	if (`order'!=0){ //The values are then set within the pairwise program.  To se where search local order = r(r)
+	if (`order'!=1){ //The values are then set within the pairwise program.  To se where search local order = r(r)
 		di as error "As the exact_match option is specified,"
 		di as error "the order option is ignored."
 	}
@@ -330,16 +350,21 @@ local estimation_method = "ra"	//set the default if exact_match>
 	
 }
 else{
+	
+	//Set the default to 1 if the option is not specified and without exact_match
+	// Modif. -> now the default is always 1
+	/*
 	if (`order'==0){
-		local order =1 //Set the default to 1 if the option is not specified and without exact_match
-}
+		local order =1 
+	}
+	*/
 	if ((`waoss_XX'==1|`iwaoss_XX'==1)&"`estimation_method'"==""){
 		local estimation_method = "dr" //default option
 		
 	}
 }
 
-//8. Cluster non-nested  //CLUSTER OPTION
+//9. Cluster non-nested  //CLUSTER OPTION
 if ("`cluster'"!=""&"`cluster'"!="`OG_nameID_XX'"){
 	cap drop cluster_numeric_XX 
 	egen cluster_numeric_XX = group(`cluster')
@@ -353,7 +378,7 @@ if ("`cluster'"!=""&"`cluster'"!="`OG_nameID_XX'"){
 	}
 }	
 
-//9.Bootstrap is only allowed with iv-waoss
+//10.Bootstrap is only allowed with iv-waoss
 if (`bootstrap'!=0&`iwaoss_XX'==0&"`twfe'"==""){
 	di as error ""
 	di as error "The bootstrap option is only available for the iv-waoss,"
@@ -365,19 +390,6 @@ if (`seed'!=0&`bootstrap'==0){
 	di as error ""
 	di as test "Warning: The seed option is only relevant when specified with bootstrap."
 }	
-if (`waoss_XX'==0&"`cross_validation'"!=""){
-	di as error ""
-	di as error "The cross_validation algorithm only has a theoritical basis"
-	di as error "for the WAOSS estimator. The command will then ignore the option."
-	local cross_validation ""
-}	
-//10 Order and cross_validation
-if (`order'>0&"`cross_validation'"!=""){
-	di as error ""
-	di as error "The option order is not allowed along with cross-validation."
-	di as error "The command will ignore the option order()."
-	local order = 0
-}
 
 ********************************************************************************
 
@@ -2612,7 +2624,7 @@ if ("`graph_off'"==""){
 	
 	// Define fixed graph options as they are implemented as flexible locals
 	cap drop time_to_treat
-	gen time_to_treat = _n
+	gen time_to_treat = _n if !missing(graph_inputAOSS1)
 	replace time_to_treat = 0 if time_to_treat ==2
 	replace time_to_treat = 2 -time_to_treat if !inlist(time_to_treat, 1, 0)
 	
@@ -2640,7 +2652,7 @@ twoway `graph_input', xlabel(`=-`placebo''[1]1) xtitle("Relative time", size(lar
 	
 	// Define fixed graph options as they are implemented as flexible locals
 	cap drop time_to_treat
-	gen time_to_treat = _n
+	gen time_to_treat = _n if !missing(graph_inputWAOSS1)
 	replace time_to_treat = 0 if time_to_treat ==2
 	replace time_to_treat = 2 -time_to_treat if !inlist(time_to_treat, 1, 0)
 	
@@ -2651,6 +2663,7 @@ twoway `graph_input', xlabel(`=-`placebo''[1]1) xtitle("Relative time", size(lar
 }
 
 
+	restore 
 	}
 	//di as error "Im here"
 	//matlist V2res_mat_plaXX
@@ -2660,7 +2673,6 @@ twoway `graph_input', xlabel(`=-`placebo''[1]1) xtitle("Relative time", size(lar
 	graph combine aoss waoss, cols(1) name(all, replace ) title(DID from last period before treatment changes (t=0) to t, size(medium))
 	}
 	
-	restore 
 	
 end
 
