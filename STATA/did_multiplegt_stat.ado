@@ -63,7 +63,7 @@
 capture program drop did_multiplegt_stat
 program did_multiplegt_stat, eclass sortpreserve byable(recall)
 	version 12.0
-	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 0) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate aoss_vs_waoss exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weight(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off ] 
+	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate aoss_vs_waoss exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weight(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off ] 
 
 	marksample touse
 	if _by() {
@@ -101,7 +101,8 @@ end
 capture program drop did_multiplegt_stat2
 program did_multiplegt_stat2, eclass sortpreserve byable(recall)
 	version 12.0
-	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 0) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate aoss_vs_waoss exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weight(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off ] // FIRST_stage   twfe(percentile same_sample)
+	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate aoss_vs_waoss exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weight(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off ] // FIRST_stage   twfe(percentile same_sample)
+
 
 	//>MAIN: Preserve the inputted dataset
 	preserve
@@ -326,14 +327,22 @@ if ("`exact_match'"!=""&"`noextrapolation'"!=""){
 	local noextrapolation = ""
 }
 
-//7. exact_match and [order, estimation_method, order]
+//7. Order and cross_validation
+if (`order'>1&"`cross_validation'"!=""){
+	di as error ""
+	di as error "The option order is not allowed along with cross-validation."
+	di as error "The command will ignore the option order()."
+	local order = 1
+}
+
+//8. exact_match and [order, estimation_method, order]
 if ("`exact_match'"!=""){
 	if ("`estimation_method'"!=""){
 		di as error "As the exact_match option is specified,"
 		di as error "the estimation_method option is ignored."
 	}
 	
-	if (`order'!=0){ //The values are then set within the pairwise program.  To se where search local order = r(r)
+	if (`order'!=1){ //The values are then set within the pairwise program.  To se where search local order = r(r)
 		di as error "As the exact_match option is specified,"
 		di as error "the order option is ignored."
 	}
@@ -341,16 +350,21 @@ local estimation_method = "ra"	//set the default if exact_match>
 	
 }
 else{
+	
+	//Set the default to 1 if the option is not specified and without exact_match
+	// Modif. -> now the default is always 1
+	/*
 	if (`order'==0){
-		local order =1 //Set the default to 1 if the option is not specified and without exact_match
-}
+		local order =1 
+	}
+	*/
 	if ((`waoss_XX'==1|`iwaoss_XX'==1)&"`estimation_method'"==""){
 		local estimation_method = "dr" //default option
 		
 	}
 }
 
-//8. Cluster non-nested  //CLUSTER OPTION
+//9. Cluster non-nested  //CLUSTER OPTION
 if ("`cluster'"!=""&"`cluster'"!="`OG_nameID_XX'"){
 	cap drop cluster_numeric_XX 
 	egen cluster_numeric_XX = group(`cluster')
@@ -364,7 +378,7 @@ if ("`cluster'"!=""&"`cluster'"!="`OG_nameID_XX'"){
 	}
 }	
 
-//9.Bootstrap is only allowed with iv-waoss
+//10.Bootstrap is only allowed with iv-waoss
 if (`bootstrap'!=0&`iwaoss_XX'==0&"`twfe'"==""){
 	di as error ""
 	di as error "The bootstrap option is only available for the iv-waoss,"
@@ -376,19 +390,6 @@ if (`seed'!=0&`bootstrap'==0){
 	di as error ""
 	di as test "Warning: The seed option is only relevant when specified with bootstrap."
 }	
-if (`waoss_XX'==0&"`cross_validation'"!=""){
-	di as error ""
-	di as error "The cross_validation algorithm only has a theoritical basis"
-	di as error "for the WAOSS estimator. The command will then ignore the option."
-	local cross_validation ""
-}	
-//10 Order and cross_validation
-if (`order'>0&"`cross_validation'"!=""){
-	di as error ""
-	di as error "The option order is not allowed along with cross-validation."
-	di as error "The command will ignore the option order()."
-	local order = 0
-}
 
 ********************************************************************************
 
