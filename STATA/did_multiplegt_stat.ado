@@ -2612,14 +2612,20 @@ if ("`graph_off'"==""){
 	matrix graph_inputAOSS = J(`=`placebo'+2', 6, 0)
 	mata: graph_inputAOSS = st_matrix("graph_inputAOSS")
 	mata: res_mat_XX = st_matrix("res_mat_XX")
-	mata: graph_inputAOSS[1::1, ] = res_mat_XX[1::1, ]
+	mata: max_T = st_numscalar("max_T")
+	mata: graph_inputAOSS[1, ] = res_mat_XX[1, ]
 
 	forvalues placebo_index = 3/`=`placebo'+2'{
-		mata: res_mat_tmpXX = st_matrix("V`=`placebo_index'-2'res_mat_plaXX")
-		mata: graph_inputAOSS[`placebo_index'::`placebo_index', ] = res_mat_tmpXX[1::1, ]
-		mata: st_matrix("graph_inputAOSS", graph_inputAOSS)
+		matrix tmp = V`=`placebo_index'-2'res_mat_plaXX
+		mata: res_mat_tmpXX = st_matrix("tmp")
+		scalar p_index = `placebo_index'
+		mata: p_index = st_numscalar("p_index")
+		mata: graph_inputAOSS[p_index,.] = res_mat_tmpXX[1,.]
+		cap matrix drop tmp
+		cap scalar drop p_index
 	}
 	
+	mata: st_matrix("graph_inputAOSS", graph_inputAOSS)
 	svmat graph_inputAOSS
 	
 	// Define fixed graph options as they are implemented as flexible locals
@@ -2638,16 +2644,21 @@ twoway `graph_input', xlabel(`=-`placebo''[1]1) xtitle("Relative time", size(lar
 	matrix graph_inputWAOSS = J(`=`placebo'+2', 6, 0)
 	mata: graph_inputWAOSS = st_matrix("graph_inputWAOSS")
 	mata: res_mat_XX = st_matrix("res_mat_XX")
-	
-	mata: graph_inputWAOSS[1::1, ] = res_mat_XX[`=`max_T'+1'::`=`max_T'+1', ]
+	mata: max_T = st_numscalar("max_T")
+	mata: graph_inputWAOSS[1,.] = res_mat_XX[max_T+1,.]
+
 
 	forvalues placebo_index = 3/`=`placebo'+2'{
-		mata: res_mat_tmpXX = st_matrix("V`=`placebo_index'-2'res_mat_plaXX")
-		mata: max_T = st_local("max_T")
-		mata: graph_inputWAOSS[`placebo_index'::`placebo_index', ] = res_mat_tmpXX[`=`max_T'+1'::`=`max_T'+1', ]
-		mata: st_matrix("graph_inputWAOSS", graph_inputWAOSS)
+		matrix tmp = V`=`placebo_index'-2'res_mat_plaXX
+		scalar p_index = `placebo_index'
+		mata: res_mat_tmpXX = st_matrix("tmp")
+		mata: p_index = st_numscalar("p_index")
+		mata: graph_inputWAOSS[p_index,.] = res_mat_tmpXX[max_T+1,.]
+		cap matrix drop tmp
+		cap scalar drop p_index
 	}
 	
+	mata: st_matrix("graph_inputWAOSS", graph_inputWAOSS)
 	svmat graph_inputWAOSS
 	
 	// Define fixed graph options as they are implemented as flexible locals
