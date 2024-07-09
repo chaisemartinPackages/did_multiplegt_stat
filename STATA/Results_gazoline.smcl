@@ -255,4 +255,351 @@
 {com}. 
 . //2. Quadratic model
 . did_multiplegt_stat lngpinc id year tau, or(2)  estimation_method(dr) as_vs_was placebo(3)
+{res}                                  {com}{hline 46}
+                                  {txt}{it: Number of observations}     =             1632
+                                  {it: WAS Estimation method  }    = {it:   doubly-robust}
+                                  {it: Polynomial order   }        =                2
+                                  {com}{hline 46}
+{hline 80}
+                               Average Slope (AS)
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:AS}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0023765}}}{space 1}{space 1}{ralign 9:{res:{sf: .0024362}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0023984}}}{space 1}{space 1}{ralign 9:{res:{sf: .0071514}}}{space 1}{space 1}{ralign 9:{res:{sf:      384}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:AS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:     1248}}}{space 1}
+{com}{hline 80}
+                                 Placebo(s) AS
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0001227}}}{space 1}{space 1}{ralign 9:{res:{sf: .0057351}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0111181}}}{space 1}{space 1}{ralign 9:{res:{sf: .0113634}}}{space 1}{space 1}{ralign 9:{res:{sf:      178}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0004725}}}{space 1}{space 1}{ralign 9:{res:{sf: .0079618}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0151327}}}{space 1}{space 1}{ralign 9:{res:{sf: .0160778}}}{space 1}{space 1}{ralign 9:{res:{sf:      200}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0081015}}}{space 1}{space 1}{ralign 9:{res:{sf: .0037044}}}{space 1}{space 1}{ralign 9:{res:{sf:  .000841}}}{space 1}{space 1}{ralign 9:{res:{sf: .0153621}}}{space 1}{space 1}{ralign 9:{res:{sf:      234}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      881}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      759}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      853}}}{space 1}
+{com}{hline 80}
+                           Weighted Average Slope (WAS)
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0050047}}}{space 1}{space 1}{ralign 9:{res:{sf: .0008753}}}{space 1}{space 1}{ralign 9:{res:{sf:  .003289}}}{space 1}{space 1}{ralign 9:{res:{sf: .0067203}}}{space 1}{space 1}{ralign 9:{res:{sf:      384}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:     1248}}}{space 1}
+{com}{hline 80}
+                                 Placebo(s) WAS
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:  .001361}}}{space 1}{space 1}{ralign 9:{res:{sf: .0016285}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0018309}}}{space 1}{space 1}{ralign 9:{res:{sf: .0045529}}}{space 1}{space 1}{ralign 9:{res:{sf:      178}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0013892}}}{space 1}{space 1}{ralign 9:{res:{sf: .0015266}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0043814}}}{space 1}{space 1}{ralign 9:{res:{sf: .0016029}}}{space 1}{space 1}{ralign 9:{res:{sf:      200}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0023515}}}{space 1}{space 1}{ralign 9:{res:{sf: .0011925}}}{space 1}{space 1}{ralign 9:{res:{sf: .0000141}}}{space 1}{space 1}{ralign 9:{res:{sf: .0046889}}}{space 1}{space 1}{ralign 9:{res:{sf:      234}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      881}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      759}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      853}}}{space 1}
+{com} 
+{hline 80}
+ 
+                          Test of difference between AS and WAS
+{txt}{it:H0: AS = WAS}
+{com}{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Diff.}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:pval.}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:AS-WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0026282}}}{space 1}{space 1}{ralign 9:{res:{sf: .0136468}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0064889}}}{space 1}{space 1}{ralign 9:{res:{sf: .0012325}}}{space 1}{space 1}{ralign 9:{res:{sf: .1821083}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:t}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:AS-WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-1.334292}}}{space 1}
+{com}{hline 80}
+{res}{txt}
+{com}. 
+. *******************************************************************************/
+. //IV: 
+. *******************************************************************************
+. 
+. did_multiplegt_stat lngca id year lngpinc tau, or(1)  estimator(iv-was) estimation_method(dr) placebo(3)
+{hline 80}
+                              First stage estimation
+{hline 80}
+{res}                                  {com}{hline 46}
+                                  {txt}{it: Number of observations}     =             1632
+                                  {it: WAS Estimation method  }    = {it:   doubly-robust}
+                                  {it: Polynomial order   }        =                1
+                                  {com}{hline 46}
+{hline 80}
+                           Weighted Average Slope (WAS)
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0053561}}}{space 1}{space 1}{ralign 9:{res:{sf:  .000918}}}{space 1}{space 1}{ralign 9:{res:{sf: .0035569}}}{space 1}{space 1}{ralign 9:{res:{sf: .0071553}}}{space 1}{space 1}{ralign 9:{res:{sf:      384}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:     1248}}}{space 1}
+{com}{hline 80}
+                                 Placebo(s) WAS
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0019712}}}{space 1}{space 1}{ralign 9:{res:{sf: .0016091}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0011826}}}{space 1}{space 1}{ralign 9:{res:{sf: .0051249}}}{space 1}{space 1}{ralign 9:{res:{sf:      178}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0013675}}}{space 1}{space 1}{ralign 9:{res:{sf:  .001476}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0042605}}}{space 1}{space 1}{ralign 9:{res:{sf: .0015254}}}{space 1}{space 1}{ralign 9:{res:{sf:      200}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0021347}}}{space 1}{space 1}{ralign 9:{res:{sf:  .001217}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0002506}}}{space 1}{space 1}{ralign 9:{res:{sf:   .00452}}}{space 1}{space 1}{ralign 9:{res:{sf:      234}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      881}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      759}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      853}}}{space 1}
+{com} 
+{hline 80}
+{hline 80}
+{res}                                  {com}{hline 46}
+                                  {txt}{it: Number of observations}     =             1632
+                                  {it: IV-WAS Estimation method}   = {it:   doubly-robust}
+                                  {it: Polynomial order   }        =                1
+                                  {com}{hline 46}
+{hline 80}
+                         IV-Weighted Average Slope (IV-WAS)
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:IV-WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.7256556}}}{space 1}{space 1}{ralign 9:{res:{sf: 4.804093}}}{space 1}{space 1}{ralign 9:{res:{sf:-10.14168}}}{space 1}{space 1}{ralign 9:{res:{sf: 8.690366}}}{space 1}{space 1}{ralign 9:{res:{sf:      384}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:IV-WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:     1248}}}{space 1}
+{com}{hline 80}
+                                 Placebo(s) IV-WAS
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0753869}}}{space 1}{space 1}{ralign 9:{res:{sf: 19.47811}}}{space 1}{space 1}{ralign 9:{res:{sf:-38.25247}}}{space 1}{space 1}{ralign 9:{res:{sf:  38.1017}}}{space 1}{space 1}{ralign 9:{res:{sf:      178}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0680322}}}{space 1}{space 1}{ralign 9:{res:{sf: 4.596755}}}{space 1}{space 1}{ralign 9:{res:{sf:-9.077672}}}{space 1}{space 1}{ralign 9:{res:{sf: 8.941608}}}{space 1}{space 1}{ralign 9:{res:{sf:      200}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf: 1.938949}}}{space 1}{space 1}{ralign 9:{res:{sf: 20.84522}}}{space 1}{space 1}{ralign 9:{res:{sf:-38.91769}}}{space 1}{space 1}{ralign 9:{res:{sf: 42.79558}}}{space 1}{space 1}{ralign 9:{res:{sf:      234}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      881}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      759}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      853}}}{space 1}
+{com} 
+{hline 80}
+{hline 80}
+{res}{txt}
+{com}.         
+. did_multiplegt_stat lngca id year lngpinc tau, or(1)  estimator(iv-was) estimation_method(dr) noextra placebo(3)
+{hline 80}
+                              First stage estimation
+{hline 80}
+{res}                                  {com}{hline 46}
+                                  {txt}{it: Number of observations}     =             1603
+                                  {it: WAS Estimation method  }    = {it:   doubly-robust}
+                                  {it: Polynomial order   }        =                1
+                                  {it: Common support*}            ={it: no extrapolation}
+                                  {com}{hline 46}
+{hline 80}
+                           Weighted Average Slope (WAS)
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0051255}}}{space 1}{space 1}{ralign 9:{res:{sf: .0009851}}}{space 1}{space 1}{ralign 9:{res:{sf: .0031947}}}{space 1}{space 1}{ralign 9:{res:{sf: .0070563}}}{space 1}{space 1}{ralign 9:{res:{sf:      355}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:     1248}}}{space 1}
+{com}{hline 80}
+                                 Placebo(s) WAS
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0020187}}}{space 1}{space 1}{ralign 9:{res:{sf:   .00137}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0006665}}}{space 1}{space 1}{ralign 9:{res:{sf: .0047038}}}{space 1}{space 1}{ralign 9:{res:{sf:      170}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0014137}}}{space 1}{space 1}{ralign 9:{res:{sf: .0011142}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0035976}}}{space 1}{space 1}{ralign 9:{res:{sf: .0007702}}}{space 1}{space 1}{ralign 9:{res:{sf:      189}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0014295}}}{space 1}{space 1}{ralign 9:{res:{sf: .0008997}}}{space 1}{space 1}{ralign 9:{res:{sf: -.000334}}}{space 1}{space 1}{ralign 9:{res:{sf: .0031929}}}{space 1}{space 1}{ralign 9:{res:{sf:      224}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      881}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      759}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      853}}}{space 1}
+{com} 
+{hline 80}
+{txt}* : 29{it: switchers are dropped out of the estimation because their baseline }
+{it: treatments do not belong to the support of stayers' baseline treatments.}
+{com}{hline 80}
+{res}                                  {com}{hline 46}
+                                  {txt}{it: Number of observations}     =             1603
+                                  {it: IV-WAS Estimation method}   = {it:   doubly-robust}
+                                  {it: Polynomial order   }        =                1
+                                  {it: Common support*}            ={it: no extrapolation}
+                                  {com}{hline 46}
+{hline 80}
+                         IV-Weighted Average Slope (IV-WAS)
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:IV-WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.6761761}}}{space 1}{space 1}{ralign 9:{res:{sf: 3.537389}}}{space 1}{space 1}{ralign 9:{res:{sf:-7.609458}}}{space 1}{space 1}{ralign 9:{res:{sf: 6.257106}}}{space 1}{space 1}{ralign 9:{res:{sf:      355}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:IV-WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:     1248}}}{space 1}
+{com}{hline 80}
+                                 Placebo(s) IV-WAS
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0110467}}}{space 1}{space 1}{ralign 9:{res:{sf: 14.83153}}}{space 1}{space 1}{ralign 9:{res:{sf:-29.05876}}}{space 1}{space 1}{ralign 9:{res:{sf: 29.08085}}}{space 1}{space 1}{ralign 9:{res:{sf:      170}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0686404}}}{space 1}{space 1}{ralign 9:{res:{sf:  6.60872}}}{space 1}{space 1}{ralign 9:{res:{sf:-12.88445}}}{space 1}{space 1}{ralign 9:{res:{sf: 13.02173}}}{space 1}{space 1}{ralign 9:{res:{sf:      189}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf: 1.877199}}}{space 1}{space 1}{ralign 9:{res:{sf: 17.13068}}}{space 1}{space 1}{ralign 9:{res:{sf:-31.69893}}}{space 1}{space 1}{ralign 9:{res:{sf: 35.45333}}}{space 1}{space 1}{ralign 9:{res:{sf:      224}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      881}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      759}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      853}}}{space 1}
+{com} 
+{hline 80}
+{txt}* : 29{it: switchers are dropped out of the estimation because their baseline }
+{it: treatments do not belong to the support of stayers' baseline treatments.}
+{com}{hline 80}
+{res}{txt}
+{com}. 
+. did_multiplegt_stat lngca id year lngpinc tau, or(2)  estimator(iv-was) estimation_method(dr) placebo(3)
+{hline 80}
+                              First stage estimation
+{hline 80}
+{res}                                  {com}{hline 46}
+                                  {txt}{it: Number of observations}     =             1632
+                                  {it: WAS Estimation method  }    = {it:   doubly-robust}
+                                  {it: Polynomial order   }        =                2
+                                  {com}{hline 46}
+{hline 80}
+                           Weighted Average Slope (WAS)
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0050047}}}{space 1}{space 1}{ralign 9:{res:{sf: .0008753}}}{space 1}{space 1}{ralign 9:{res:{sf:  .003289}}}{space 1}{space 1}{ralign 9:{res:{sf: .0067203}}}{space 1}{space 1}{ralign 9:{res:{sf:      384}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:     1248}}}{space 1}
+{com}{hline 80}
+                                 Placebo(s) WAS
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:  .001361}}}{space 1}{space 1}{ralign 9:{res:{sf: .0016285}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0018309}}}{space 1}{space 1}{ralign 9:{res:{sf: .0045529}}}{space 1}{space 1}{ralign 9:{res:{sf:      178}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0013892}}}{space 1}{space 1}{ralign 9:{res:{sf: .0015266}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0043814}}}{space 1}{space 1}{ralign 9:{res:{sf: .0016029}}}{space 1}{space 1}{ralign 9:{res:{sf:      200}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0023515}}}{space 1}{space 1}{ralign 9:{res:{sf: .0011925}}}{space 1}{space 1}{ralign 9:{res:{sf: .0000141}}}{space 1}{space 1}{ralign 9:{res:{sf: .0046889}}}{space 1}{space 1}{ralign 9:{res:{sf:      234}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      881}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      759}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      853}}}{space 1}
+{com} 
+{hline 80}
+{hline 80}
+{res}                                  {com}{hline 46}
+                                  {txt}{it: Number of observations}     =             1632
+                                  {it: IV-WAS Estimation method}   = {it:   doubly-robust}
+                                  {it: Polynomial order   }        =                2
+                                  {com}{hline 46}
+{hline 80}
+                         IV-Weighted Average Slope (IV-WAS)
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:IV-WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.7611861}}}{space 1}{space 1}{ralign 9:{res:{sf: 9.519766}}}{space 1}{space 1}{ralign 9:{res:{sf:-19.41993}}}{space 1}{space 1}{ralign 9:{res:{sf: 17.89756}}}{space 1}{space 1}{ralign 9:{res:{sf:      384}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:IV-WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:     1248}}}{space 1}
+{com}{hline 80}
+                                 Placebo(s) IV-WAS
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0697622}}}{space 1}{space 1}{ralign 9:{res:{sf: 5.918408}}}{space 1}{space 1}{ralign 9:{res:{sf:-11.66984}}}{space 1}{space 1}{ralign 9:{res:{sf: 11.53032}}}{space 1}{space 1}{ralign 9:{res:{sf:      178}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.3355133}}}{space 1}{space 1}{ralign 9:{res:{sf: 5.377775}}}{space 1}{space 1}{ralign 9:{res:{sf:-10.87595}}}{space 1}{space 1}{ralign 9:{res:{sf: 10.20493}}}{space 1}{space 1}{ralign 9:{res:{sf:      200}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .7376982}}}{space 1}{space 1}{ralign 9:{res:{sf: 10.42148}}}{space 1}{space 1}{ralign 9:{res:{sf:-19.68841}}}{space 1}{space 1}{ralign 9:{res:{sf: 21.16381}}}{space 1}{space 1}{ralign 9:{res:{sf:      234}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      881}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      759}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      853}}}{space 1}
+{com} 
+{hline 80}
+{hline 80}
+{res}{txt}
+{com}. 
+. did_multiplegt_stat lngca id year lngpinc tau, or(2)  estimator(iv-was) estimation_method(dr) noextra placebo(3)
+{hline 80}
+                              First stage estimation
+{hline 80}
+{res}                                  {com}{hline 46}
+                                  {txt}{it: Number of observations}     =             1603
+                                  {it: WAS Estimation method  }    = {it:   doubly-robust}
+                                  {it: Polynomial order   }        =                2
+                                  {it: Common support*}            ={it: no extrapolation}
+                                  {com}{hline 46}
+{hline 80}
+                           Weighted Average Slope (WAS)
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0052603}}}{space 1}{space 1}{ralign 9:{res:{sf: .0009087}}}{space 1}{space 1}{ralign 9:{res:{sf: .0034791}}}{space 1}{space 1}{ralign 9:{res:{sf: .0070414}}}{space 1}{space 1}{ralign 9:{res:{sf:      355}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:     1248}}}{space 1}
+{com}{hline 80}
+                                 Placebo(s) WAS
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0016832}}}{space 1}{space 1}{ralign 9:{res:{sf: .0014232}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0011062}}}{space 1}{space 1}{ralign 9:{res:{sf: .0044727}}}{space 1}{space 1}{ralign 9:{res:{sf:      170}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0012994}}}{space 1}{space 1}{ralign 9:{res:{sf: .0011659}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0035846}}}{space 1}{space 1}{ralign 9:{res:{sf: .0009858}}}{space 1}{space 1}{ralign 9:{res:{sf:      189}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0010615}}}{space 1}{space 1}{ralign 9:{res:{sf: .0009027}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0007077}}}{space 1}{space 1}{ralign 9:{res:{sf: .0028307}}}{space 1}{space 1}{ralign 9:{res:{sf:      224}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      881}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      759}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      853}}}{space 1}
+{com} 
+{hline 80}
+{txt}* : 29{it: switchers are dropped out of the estimation because their baseline }
+{it: treatments do not belong to the support of stayers' baseline treatments.}
+{com}{hline 80}
 {res}
