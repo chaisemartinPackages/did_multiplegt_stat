@@ -99,4 +99,160 @@
 {com}. 
 . //2. Quadratic model
 . did_multiplegt_stat lngca id year tau, or(2) estimation_method(dr) as_vs_was placebo(3)
+{res}                                  {com}{hline 46}
+                                  {txt}{it: Number of observations}     =             1632
+                                  {it: WAS Estimation method  }    = {it:   doubly-robust}
+                                  {it: Polynomial order   }        =                2
+                                  {com}{hline 46}
+{hline 80}
+                               Average Slope (AS)
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:AS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0050474}}}{space 1}{space 1}{ralign 9:{res:{sf: .0026258}}}{space 1}{space 1}{ralign 9:{res:{sf: -.010194}}}{space 1}{space 1}{ralign 9:{res:{sf: .0000992}}}{space 1}{space 1}{ralign 9:{res:{sf:      384}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:AS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:     1248}}}{space 1}
+{com}{hline 80}
+                                 Placebo(s) AS
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0043325}}}{space 1}{space 1}{ralign 9:{res:{sf: .0033127}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0021604}}}{space 1}{space 1}{ralign 9:{res:{sf: .0108254}}}{space 1}{space 1}{ralign 9:{res:{sf:      178}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0031844}}}{space 1}{space 1}{ralign 9:{res:{sf:  .003001}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0090663}}}{space 1}{space 1}{ralign 9:{res:{sf: .0026975}}}{space 1}{space 1}{ralign 9:{res:{sf:      200}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0002859}}}{space 1}{space 1}{ralign 9:{res:{sf:  .002074}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0043509}}}{space 1}{space 1}{ralign 9:{res:{sf: .0037791}}}{space 1}{space 1}{ralign 9:{res:{sf:      234}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      881}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      759}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      853}}}{space 1}
+{com}{hline 80}
+                           Weighted Average Slope (WAS)
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0038095}}}{space 1}{space 1}{ralign 9:{res:{sf: .0010495}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0058666}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0017524}}}{space 1}{space 1}{ralign 9:{res:{sf:      384}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:     1248}}}{space 1}
+{com}{hline 80}
+                                 Placebo(s) WAS
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0003056}}}{space 1}{space 1}{ralign 9:{res:{sf: .0014415}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0031309}}}{space 1}{space 1}{ralign 9:{res:{sf: .0025197}}}{space 1}{space 1}{ralign 9:{res:{sf:      178}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0006904}}}{space 1}{space 1}{ralign 9:{res:{sf: .0009253}}}{space 1}{space 1}{ralign 9:{res:{sf: -.002504}}}{space 1}{space 1}{ralign 9:{res:{sf: .0011232}}}{space 1}{space 1}{ralign 9:{res:{sf:      200}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0007453}}}{space 1}{space 1}{ralign 9:{res:{sf: .0010669}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0028364}}}{space 1}{space 1}{ralign 9:{res:{sf: .0013458}}}{space 1}{space 1}{ralign 9:{res:{sf:      234}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      881}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      759}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      853}}}{space 1}
+{com} 
+{hline 80}
+ 
+                          Test of difference between AS and WAS
+{txt}{it:H0: AS = WAS}
+{com}{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Diff.}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:pval.}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:AS-WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0012379}}}{space 1}{space 1}{ralign 9:{res:{sf: .0151942}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0055363}}}{space 1}{space 1}{ralign 9:{res:{sf: .0030606}}}{space 1}{space 1}{ralign 9:{res:{sf: .5724542}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:t}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:AS-WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.5644408}}}{space 1}
+{com}{hline 80}
+{res}{txt}
+{com}. 
+. 
+. *******************************************************************************/
+. //Panel B: First-stage effect of taxes on quantities consumed.
+. *******************************************************************************
+. //1. Linear model 
+. did_multiplegt_stat lngpinc id year tau, or(1)  estimation_method(dr) as_vs_was placebo(3)
+{res}                                  {com}{hline 46}
+                                  {txt}{it: Number of observations}     =             1632
+                                  {it: WAS Estimation method  }    = {it:   doubly-robust}
+                                  {it: Polynomial order   }        =                1
+                                  {com}{hline 46}
+{hline 80}
+                               Average Slope (AS)
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:AS}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0028211}}}{space 1}{space 1}{ralign 9:{res:{sf: .0022881}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0016637}}}{space 1}{space 1}{ralign 9:{res:{sf: .0073058}}}{space 1}{space 1}{ralign 9:{res:{sf:      384}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:AS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:     1248}}}{space 1}
+{com}{hline 80}
+                                 Placebo(s) AS
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0004314}}}{space 1}{space 1}{ralign 9:{res:{sf: .0059095}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0111512}}}{space 1}{space 1}{ralign 9:{res:{sf: .0120141}}}{space 1}{space 1}{ralign 9:{res:{sf:      178}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:  .001793}}}{space 1}{space 1}{ralign 9:{res:{sf: .0080271}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0139401}}}{space 1}{space 1}{ralign 9:{res:{sf: .0175262}}}{space 1}{space 1}{ralign 9:{res:{sf:      200}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0069909}}}{space 1}{space 1}{ralign 9:{res:{sf: .0034663}}}{space 1}{space 1}{ralign 9:{res:{sf:  .000197}}}{space 1}{space 1}{ralign 9:{res:{sf: .0137849}}}{space 1}{space 1}{ralign 9:{res:{sf:      234}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      881}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      759}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      853}}}{space 1}
+{com}{hline 80}
+                           Weighted Average Slope (WAS)
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0053561}}}{space 1}{space 1}{ralign 9:{res:{sf:  .000918}}}{space 1}{space 1}{ralign 9:{res:{sf: .0035569}}}{space 1}{space 1}{ralign 9:{res:{sf: .0071553}}}{space 1}{space 1}{ralign 9:{res:{sf:      384}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:     1248}}}{space 1}
+{com}{hline 80}
+                                 Placebo(s) WAS
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0019712}}}{space 1}{space 1}{ralign 9:{res:{sf: .0016091}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0011826}}}{space 1}{space 1}{ralign 9:{res:{sf: .0051249}}}{space 1}{space 1}{ralign 9:{res:{sf:      178}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0013675}}}{space 1}{space 1}{ralign 9:{res:{sf:  .001476}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0042605}}}{space 1}{space 1}{ralign 9:{res:{sf: .0015254}}}{space 1}{space 1}{ralign 9:{res:{sf:      200}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0021347}}}{space 1}{space 1}{ralign 9:{res:{sf:  .001217}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0002506}}}{space 1}{space 1}{ralign 9:{res:{sf:   .00452}}}{space 1}{space 1}{ralign 9:{res:{sf:      234}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      881}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      759}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      853}}}{space 1}
+{com} 
+{hline 80}
+ 
+                          Test of difference between AS and WAS
+{txt}{it:H0: AS = WAS}
+{com}{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Diff.}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:pval.}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:AS-WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0025351}}}{space 1}{space 1}{ralign 9:{res:{sf:  .012316}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0060193}}}{space 1}{space 1}{ralign 9:{res:{sf: .0009492}}}{space 1}{space 1}{ralign 9:{res:{sf: .1538504}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:t}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:AS-WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-1.426062}}}{space 1}
+{com}{hline 80}
+{res}{txt}
+{com}. 
+. //2. Quadratic model
+. did_multiplegt_stat lngpinc id year tau, or(2)  estimation_method(dr) as_vs_was placebo(3)
 {res}
