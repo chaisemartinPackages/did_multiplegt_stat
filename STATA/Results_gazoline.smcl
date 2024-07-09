@@ -1,0 +1,98 @@
+{smcl}
+{txt}{sf}{ul off}{.-}
+      name:  {res}<unnamed>
+       {txt}log:  {res}C:\Users\doulo\Dropbox (Personal)\SciencesPo\did_continuous\STATA\Results_gazoline.smcl
+  {txt}log type:  {res}smcl
+ {txt}opened on:  {res} 8 Jul 2024, 22:20:36
+{txt}
+{com}. use "gazoline_did_multiplegt_stat.dta", clear
+{txt}
+{com}. 
+. 
+. *******************************************************************************
+. cap prog drop did_multiplegt_stat
+{txt}
+{com}. qui do "did_multiplegt_stat.ado"
+{txt}
+{com}. 
+. /*******************************************************************************STATA version 
+> *******************************************************************************/
+. //Panel A: Reduced-form effect of taxes on quantities consumed.
+. 
+. //1. Linear model
+. //describe, short
+. 
+. did_multiplegt_stat lngca id year tau, or(1) estimation_method(dr) as_vs_was placebo(3)
+{res}                                  {com}{hline 46}
+                                  {txt}{it: Number of observations}     =             1632
+                                  {it: WAS Estimation method  }    = {it:   doubly-robust}
+                                  {it: Polynomial order   }        =                1
+                                  {com}{hline 46}
+{hline 80}
+                               Average Slope (AS)
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:AS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0058239}}}{space 1}{space 1}{ralign 9:{res:{sf: .0025553}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0108324}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0008154}}}{space 1}{space 1}{ralign 9:{res:{sf:      384}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:AS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:     1248}}}{space 1}
+{com}{hline 80}
+                                 Placebo(s) AS
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf: .0039986}}}{space 1}{space 1}{ralign 9:{res:{sf: .0029018}}}{space 1}{space 1}{ralign 9:{res:{sf: -.001689}}}{space 1}{space 1}{ralign 9:{res:{sf: .0096861}}}{space 1}{space 1}{ralign 9:{res:{sf:      178}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0031927}}}{space 1}{space 1}{ralign 9:{res:{sf: .0028446}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0087682}}}{space 1}{space 1}{ralign 9:{res:{sf: .0023828}}}{space 1}{space 1}{ralign 9:{res:{sf:      200}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0015551}}}{space 1}{space 1}{ralign 9:{res:{sf:  .001992}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0054594}}}{space 1}{space 1}{ralign 9:{res:{sf: .0023491}}}{space 1}{space 1}{ralign 9:{res:{sf:      234}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      881}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      759}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      853}}}{space 1}
+{com}{hline 80}
+                           Weighted Average Slope (WAS)
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0038867}}}{space 1}{space 1}{ralign 9:{res:{sf: .0009433}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0057355}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0020379}}}{space 1}{space 1}{ralign 9:{res:{sf:      384}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:     1248}}}{space 1}
+{com}{hline 80}
+                                 Placebo(s) WAS
+{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Estimate}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:Switchers}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0003293}}}{space 1}{space 1}{ralign 9:{res:{sf: .0014001}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0030735}}}{space 1}{space 1}{ralign 9:{res:{sf:  .002415}}}{space 1}{space 1}{ralign 9:{res:{sf:      178}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0001601}}}{space 1}{space 1}{ralign 9:{res:{sf: .0008794}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0018836}}}{space 1}{space 1}{ralign 9:{res:{sf: .0015634}}}{space 1}{space 1}{ralign 9:{res:{sf:      200}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0011166}}}{space 1}{space 1}{ralign 9:{res:{sf: .0010924}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0032576}}}{space 1}{space 1}{ralign 9:{res:{sf: .0010245}}}{space 1}{space 1}{ralign 9:{res:{sf:      234}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Stayers}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:Placebo_1}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      881}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_2}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      759}}}{space 1}
+{space 0}{space 0}{ralign 12:Placebo_3}{space 1}{c |}{space 1}{ralign 9:{res:{sf:      853}}}{space 1}
+{com} 
+{hline 80}
+ 
+                          Test of difference between AS and WAS
+{txt}{it:H0: AS = WAS}
+{com}{hline 80}
+{res}
+{txt}{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:Diff.}{space 1}{space 1}{ralign 9:SE}{space 1}{space 1}{ralign 9:LB CI}{space 1}{space 1}{ralign 9:UB CI}{space 1}{space 1}{ralign 9:pval.}{space 1}
+{space 0}{hline 13}{c   +}{hline 11}{hline 11}{hline 11}{hline 11}{hline 11}
+{space 0}{space 0}{ralign 12:AS-WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.0019372}}}{space 1}{space 1}{ralign 9:{res:{sf: .0145815}}}{space 1}{space 1}{ralign 9:{res:{sf:-.0060623}}}{space 1}{space 1}{ralign 9:{res:{sf: .0021879}}}{space 1}{space 1}{ralign 9:{res:{sf: .3573482}}}{space 1}
+
+{space 0}{space 0}{ralign 12:}{space 1}{c |}{space 1}{ralign 9:t}{space 1}
+{space 0}{hline 13}{c   +}{hline 10}
+{space 0}{space 0}{ralign 12:AS-WAS}{space 1}{c |}{space 1}{ralign 9:{res:{sf:-.9204299}}}{space 1}
+{com}{hline 80}
+{res}
