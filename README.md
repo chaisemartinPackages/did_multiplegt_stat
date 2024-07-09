@@ -28,9 +28,7 @@ install_github("chaisemartinPackages/did_multiplegt_stat/R", force = TRUE)
 
 ### Stata
 ```r
-[bysort varlist:] did_multiplegt_stat Y G T D [Z] [if] [in] [, estimator(string) as_vs_was exact_match estimation_method(string) order(#) controls(varlist) weights(
-    varname) cluster(varlist) noextrapolation by_fd(\#) by_baseline(#) other_treatments(varlist) switchers(string) placebo(#) disaggregate graph_off bys_graph_off
-    bootstrap(#) seed(#) cross_validation(cv_suboptions) twfe(twfe_suboptions)]
+[bysort varlist:] did_multiplegt_stat Y G T D [Z] [if] [in] [, estimator(string) as_vs_was exact_match estimation_method(string) order(#) controls(varlist) weights(varname) cluster(varlist) noextrapolation by_fd(#) by_baseline(#) other_treatments(varlist) switchers(string) placebo(#) disaggregate graph_off bys_graph_off bootstrap(#) seed(#) cross_validation(cv_suboptions) twfe(twfe_suboptions)]
 ```
 
 ### R 
