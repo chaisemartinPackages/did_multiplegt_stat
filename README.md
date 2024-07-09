@@ -1,5 +1,5 @@
 # did_multiplegt_stat
-Estimation of Difference-in-Difference (DID) Estimators for Treatments and Instruments Continuously Distributed at Every Period with Stayers ([de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez-Bare, G, 2022](https://ssrn.com/abstract=4011782)).
+ did_multiplegt_stat -- Estimation of heterogeneity-robust difference-in-differences (DID) estimators, with a binary, discrete, or continuous treatment or instrument, in designs with stayers, assuming that past treatments do not affect the current outcome. ([de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez-Bare, G, 2022](https://ssrn.com/abstract=4011782)).
 
 ## Overview
 
@@ -28,8 +28,10 @@ install_github("chaisemartinPackages/did_multiplegt_stat/R", force = TRUE)
 
 ### Stata
 ```r
-did_multiplegt_stat Y ID T D [Z] [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) 
-NOEXTRApolation placebo weight(varlist numeric) switchers(string) DISAGgregate aoss_vs_waoss]
+[bysort varlist:] did_multiplegt_stat Y G T D [Z] [if] [in] [, estimator(string) as_vs_was exact_match estimation_method(string) order(#) controls(varlist) weights(
+    varname) cluster(varlist) noextrapolation by_fd(#) by_baseline(#) other_treatments(varlist) switchers(string) placebo(#) disaggregate graph_off bys_graph_off
+    bootstrap(#) seed(#) cross_validation(cv_suboptions) twfe(twfe_suboptions)]
+
 ```
 
 ### R 
