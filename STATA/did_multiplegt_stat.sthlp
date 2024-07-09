@@ -18,12 +18,11 @@ do not affect the current outcome.
 {title:Syntax}
 
 {p 4 4}
-
 [{opt bys:ort} {varlist}{cmd::}]
-{cmd:did_multiplegt_stat Y ID T D [Z]} {ifin}
+{cmd:did_multiplegt_stat Y G T D [Z]} {ifin}
 [{cmd:,}
 {cmd:estimator(}{it:string}{cmd:)}
-{cmd:aoss_vs_waoss}
+{cmd:as_vs_was}
 {cmd:exact_match}
 {cmd: estimation_method(}{it:string}{cmd:)}
 {cmd:{ul:or}der(}{it:#}{cmd:)}
@@ -37,11 +36,12 @@ do not affect the current outcome.
 {cmd: switchers(}{it:string}{cmd:)}
 {cmd:placebo(}{it:#}{cmd:)}
 {cmd:{ul:disag}gregate}
+{cmd:graph_off}
 {cmd:bys_graph_off}
 {cmd:bootstrap({it:#})}
 {cmd:seed({it:#})}
 {cmd:cross_validation(}{help did_multiplegt_stat##cv_suboptions:cv_suboptions}{cmd:)} 
-{cmd:twfe(}{help did_multiplegt_stat##twfe_suboptions:twfe_suboptions}{cmd:)} 
+{cmd:twfe(}{help did_multiplegt_stat##twfe_suboptions:twfe_suboptions}{cmd:)]} 
 {p_end}
 
 {p 4 4}
@@ -49,11 +49,12 @@ do not affect the current outcome.
 {p_end}
 
 {p 4 4}
-{cmd:ID} is the identifier of the unit of analysis.
+{cmd:G} is the identifier of the unit of analysis.
 {p_end}
 
 {p 4 4}
-{cmd:T} is the time period variable.
+{cmd:T} is the time period variable. This variable should take integer values, and consecutive time periods should be one integer away 
+from each other. For instance, a bi-yearly time variable should be recoded by assigning consecutive values to years t and t+2.
 {p_end}
 
 {p 4 4}
@@ -70,7 +71,7 @@ do not affect the current outcome.
 {title:Description}
 
 {p 4 4}
-{cmd:Data and design.} The command uses panel data at the {cmd:(ID,T)} level to estimate heterogeneity-robust DID estimators, 
+{cmd:Data and design.} The command uses panel data at the {cmd:(G,T)} level to estimate heterogeneity-robust DID estimators, 
 with a binary, discrete, or continuous treatment (or instrument). The command can be used in designs where there is at least one 
 pair of consecutive time periods between which the treatment of some units, the switchers, changes, while the treatment of some
 other units, the stayers, does not change. 
@@ -78,15 +79,15 @@ other units, the stayers, does not change.
 
 {p 4 4}
 {cmd:Target parameters.}
-The command can estimate the Average Of Switchers' Slopes (AOSS) and the Weighted Average Of Switchers' Slopes (WAOSS) parameters
+The command can estimate the Average Slope (AS) and the Weighted Average Slope (WAS) parameters
 introduced in {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2022)}.
-The AOSS is the average, across switchers, of (Y_t(D_t)-Y_t(D_{t-1})/(D_t-D_{t-1}), the effect 
+The AS is the average, across switchers, of (Y_t(D_t)-Y_t(D_{t-1})/(D_t-D_{t-1}), the effect 
 on their period-t outcome of moving their period-t
-treatment from its period-(t-1) to its period-t value, scaled by the difference between these two values. The WAOSS is a weighted 
+treatment from its period-(t-1) to its period-t value, scaled by the difference between these two values. The WAS is a weighted 
 average of switchers' slopes (Y_t(D_t)-Y_t(D_{t-1})/(D_t-D_{t-1}), where slopes receive a weight proportional to |D_t-D_{t-1}|,
-switchers’ absolute treatment change from period-(t-1) to period-t. The variance of the WAOSS estimator is often smaller 
-than that of the AOSS estimator, especially when there are switchers that experience a small treatment change. 
-The WAOSS estimator is also amenable to doubly-robust estimation, unlike the AOSS estimator.
+switchers’ absolute treatment change from period-(t-1) to period-t. The variance of the WAS estimator is often smaller 
+than that of the AS estimator, especially when there are switchers that experience a small treatment change. 
+The WAS estimator is also amenable to doubly-robust estimation, unlike the AS estimator.
 {p_end}
 
 {p 4 4}
@@ -108,11 +109,11 @@ the outcome evolution of switchers and stayers with the same baseline treatment 
 {cmd:Estimators, when the exact_match option is specified.}
 With a binary or discrete treatment, if the {cmd:exact_match} option is specified, the estimators computed by the command compare the 
 outcome evolution of switchers and stayers 
-with the same period-(t-1) treatment. Then, the WAOSS estimator computed by {cmd:did_multiplegt_stat} 
+with the same period-(t-1) treatment. Then, the WAS estimator computed by {cmd:did_multiplegt_stat} 
 is numerically equivalent to the DID_M estimator proposed by 
 {browse "https://aeaweb.org/articles?id=10.1257/aer.20181169":de Chaisemartin and D'Haultfoeuille (2020)}, 
-and computed by the {cmd:did_multiplegt} command. {cmd:did_multiplegt_stat} uses an analytic formula
-to compute the estimator's variance, while {cmd:did_multiplegt} uses the bootstrap. 
+and already computed by the {cmd:did_multiplegt_old} command. {cmd:did_multiplegt_stat} uses an analytic formula
+to compute the estimator's variance, while {cmd:did_multiplegt_old} uses the bootstrap. 
 Thus, the run time of {cmd:did_multiplegt_stat} is typically much lower. 
 The {cmd:exact_match} option can only be specified when the treatment is binary or discrete:
 with a continuously distributed treatment, one cannot find switchers and stayers 
@@ -127,11 +128,11 @@ matched to a stayer with the exact same period-(t-1) treatment, thus restricting
 When the {cmd:exact_match} option is not specified, the command can use a regression adjustment to recover switchers' 
 counterfactual outcome evolution: for all t, it runs an OLS regression of Y_t-Y_{t-1} on a polynomial in D_{t-1} in the sample of (t-1)-to-t stayers, 
 and uses that regression
-to predict switchers' counterfactual outcome evolution. Alternatively, when it estimates the WAOSS, the command can also use propensity-score 
+to predict switchers' counterfactual outcome evolution. Alternatively, when it estimates the WAS, the command can also use propensity-score 
 reweighting to recover switchers' counterfactual outcome evolution. First, for all t it estimates a logistic regression of an indicator 
 for (t-1)-to-t switchers on a polynomial in D_{t-1}, to predict units' probability of being a switcher. 
 Then, it computes a weighted average of stayers' outcome evolution, upweighting stayers with a large probability of being switchers, 
-and downweighting stayers with a low probability of being switchers. Finally, when it estimates the WAOSS, the command can also combine 
+and downweighting stayers with a low probability of being switchers. Finally, when it estimates the WAS, the command can also combine 
 regression-adjustment and propensity-score reweighting, thus yielding a doubly-robust estimator.
 {p_end}
 
@@ -143,10 +144,12 @@ be interested in estimating the price-elasticity of a good's consumption, but pr
 supply and demand shocks, and the counterfactual consumption evolution of units experiencing and not experiencing a price 
 change may therefore not be the same. On the other hand, taxes
 may not respond to supply and demand shocks and may satisfy a parallel-trends assumption. In such cases, the command
-can compute the IV-WAOSS estimator introduced in 
+can compute the IV-WAS estimator introduced in 
 {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2022)}.
-The IV-WAOSS estimator is equal to the WAOSS estimator of the instrument's reduced-form effect on the outcome, divided by the
-WAOSS estimator of the instrument's first-stage effect on the treatment.
+The IV-WAS estimator is equal to the WAS estimator of the instrument's reduced-form effect on the outcome controlling for D_{t-1}, divided by the
+WAS estimator of the instrument's first-stage effect on the treatment controlling for D_{t-1}. 
+See {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2022)} for some explanations as to why controlling for D_{t-1}
+is desirable in IV estimation.
 {p_end}
 
 {marker options}{...}
@@ -155,33 +158,24 @@ WAOSS estimator of the instrument's first-stage effect on the treatment.
 {dlgtab:Main options}
 
 {phang}
-{cmd:estimator(}{it:string}{cmd:)} gives the name(s) of the estimator(s) to be estimated. The allowed arguments are: (1) {cmd:aoss}, (2) {cmd:waoss}, 
-and (3) {cmd:iv-waoss}. By default, the command computes the AOSS and WAOSS estimators if no instrumental variable
-Z is specified, while it computes the IV-WAOSS if an instrumental variable
-Z is specified.
-{p_end}
+{cmd:estimator(}{it:string}{cmd:)} gives the name(s) of the estimator(s) to be estimated. The allowed arguments are: (1) {cmd:as}, (2) {cmd:was}, 
+and (3) {cmd:iv-was}.
 
-{p 4 4}
-{cmd:aoss_vs_waoss}: shows a test that the AOSS and WAOSS are equal. This option can only be used when estimation of the AOSS and WAOSS is requested.
-{p_end}
-
-{p 4 4}
+{phang}
 {cmd:exact_match}: with this option, the DID estimators computed by the command compare the outcome evolution of switchers and stayers 
 with the same period-(t-1) treatment (or instrument) value. This option can only be used when the treatment (or instrument) is binary or discrete:
 with a continuously distributed treatment (or instrument), one cannot find switchers and stayers 
 with the exact same period-(t-1) treatment (or instrument). 
 With a discrete treatment taking a large number of values, specifying this option may be undesirable: then, there may only be few switchers that can be
 matched to a stayer with the exact same period-(t-1) treatment, thus restricting the estimation sample.
-{p_end}
 
-{p 4 4}
-{cmd: estimation_method(}{it:string}{cmd:)}: when the {cmd:exact_match} option is not specified and estimation of the WAOSS or IV-WAOSS is requested, 
-this option can be used to specify which estimation method to use when estimating the WAOSS or IV-WAOSS. 
+{phang}
+{cmd: estimation_method(}{it:string}{cmd:)}: when the {cmd:exact_match} option is not specified and estimation of the WAS or IV-WAS is requested, 
+this option can be used to specify which estimation method to use when estimating the WAS or IV-WAS. 
 The allowed arguments are: (1) {cmd:ra} (regression adjustment), (2) {cmd:ps} (propensity-based reweighting), and (3) {cmd:dr} (doubly-robust). 
 By default, a doubly-robust estimator is used.
-{p_end}
 
-{p 4 4}
+{phang}
 {cmd:{ul:or}der(}{it:#}{cmd:)}: when the exact_match option is not specified, 
 this option specifies the polynomial order to be used in the OLS regressions of Y_t-Y_{t-1} on a polynomial in D_{t-1}
 and/or in the logistic regressions of an indicator for (t-1)-to-t switchers on a polynomial in D_{t-1}. 
@@ -189,7 +183,7 @@ By default, a polynomial of order 1 is used.
 
 {phang}
 {cmd:placebo(}{it:#}{cmd:)}: when this option is specified, the command computes the 
-placebo version of each estimator requested. Actual estimators compares the
+placebo version of each estimator requested. Actual estimators compare the
 t-1-to-t outcome evolution of period t-1-to-t switchers and stayers with the same baseline
     treatment. When {it:#} is equal to 1, placebo estimators compare the
 t-2-to-t-1 outcome evolution of period t-1-to-t switchers and stayers with the same baseline
@@ -199,7 +193,7 @@ t-3 to t-2, from t-4 to t-3,... , and from t-{it:#}-1 to t-{it:#} are also repor
 of periods.
 
 {phang}
-{cmd:aoss_vs_waoss}: shows a test that the AOSS and WAOSS are equal. This option can only be used when estimation of the AOSS and WAOSS is requested.
+{cmd:as_vs_was}: shows a test that the AS and WAS are equal. This option can only be used when estimation of the AS and WAS is requested.
 
 {phang}
 {cmd:controls({varlist}{cmd:})}: the command can compute estimators with control variables. They rely on a conditional parallel trends assumption:
@@ -208,7 +202,8 @@ to the outcome evolution of stayers with the same baseline
     treatment, and with the same value of {varlist}{cmd:}. When time-varying control variables are inputted to the command, the command compares the
 t-1-to-t outcome evolution of switchers and stayers with the same baseline
     treatment, and with the same controls at period t-1.
-Specifying too many control variables may lead to noisy estimators.
+Specifying too many control variables may lead to noisy estimators. If placebo estimators are small, insignificant and precisely estimated without
+control variables, including control variables may not be necessary.
 
 {phang}
 {cmd:weights({varname}{cmd:})} : This option allows to compute estimators weighted by {varname}{cmd:}.
@@ -216,9 +211,9 @@ Specifying too many control variables may lead to noisy estimators.
 {dlgtab:Options to estimate heterogeneous treatment effects}
 
 {phang}
-{cmd: switchers(}{it:string}{cmd:)}: if the argument {cmd:up} is inputted, the command estimates the AOSS, WAOSS, or IV-WAOSS 
+{cmd: switchers(}{it:string}{cmd:)}: if the argument {cmd:up} is inputted, the command estimates the AS, WAS, or IV-WAS 
 for switchers-up only, i.e for units whose treatment (or instrument) increases from period (t-1) to t. If the argument {cmd:down}
-is inputted, the command estimates the AOSS, WAOSS, or IV-WAOSS for switchers-down only, i.e. for units whose treament (or instrument)  
+is inputted, the command estimates the AS, WAS, or IV-WAS for switchers-down only, i.e. for units whose treament (or instrument)  
 decreases from period (t-1) to t. By default, the command estimates those parameters for all switchers.
 
 {phang}
@@ -239,15 +234,16 @@ are split into subsamples according to their values of D_{t-1} (or Z_{t-1}).
 {dlgtab:Standard-error options}
 
 {phang}
-{cmd:bootstrap({it:#})}: If the number of units is low, one may want to check if the analytic standard errors produced by the command are close to 
+{cmd:bootstrap({it:#})}: If the number of switchers or the number of stayers is low, 
+one may want to check if the analytic standard errors produced by the command are close to 
 bootstrap standard errors. If they are not, this may indicate that the asymptotic approximation underlying the analytic standard errors may not be reliable.
 In that case, there is of course no guarantee that bootstrap standard errors are valid: this comparison is just a diagnostic check
 researchers may use to assess if they need to resort to inference methods that do not rely on asymptotic approximations, like permutation tests.
-The {cmd:bootstrap} option takes as argument the number of replications. Currently, it is only allowed when the IV-WAOSS is requested,
+The {cmd:bootstrap} option takes as argument the number of replications. Currently, it is only allowed when the IV-WAS is requested,
 as failure of asymptotic approximations are more likely to arise with IV estimators, when the first-stage is weak.
 
 {phang}
-{cmd:seed({it:#})}: This option is only needed when one is running bootstrap, and it allows to set the seed so as to ensure replicability of the results.
+{cmd:seed({it:#})}: This option is only needed when one is using the bootstrap, and it allows to set the seed so as to ensure replicability of the results.
 
 {phang}
 {cmd:cluster({varlist}{cmd:})} : This option allows clustering standard errors at the level of {cmd:{varlist}{cmd:}}.
@@ -267,36 +263,54 @@ is between the minimum and the maximum values of the period-(t-1) treatment (or 
 {dlgtab:TWFE Comparison}
 
 {synoptset 22}{...}
-{phang} The command allows to compare the estimator specified in {cmd:estimator()} to a TWFE-estimator, computed via a regression of Y_{i,t} on D_{i,t} and unit and year fixed effects. 
-If the iv-waoss is specified in {cmd:estimator()}, a 2SLS-TWFE is used, using Z_{i,t} as the instrument. With the option {cmd: twfe}, {cmd:did_multiplegt_stat}, on top of the main results, 
+{phang} The command allows to compare the estimator specified in {cmd:estimator()} to a TWFE-estimator, 
+computed via a regression of Y_{i,t} on D_{i,t} and unit and year fixed effects. 
+If the iv-was is specified in {cmd:estimator()}, a 2SLS-TWFE is used, using Z_{i,t} as the instrument. 
+With the option {cmd: twfe}, {cmd:did_multiplegt_stat}, on top of the main results, 
 diplays a table showing the difference between the estimator requested and the TWFE-estimator, the p-value of the test of the difference and the 
 corresponding condidence interval.
-By default, the command runs the test using 100 bootstrap replications. To increase the number of replications, the user can use the option {cmd: bootstrap(#)} of {cmd: did_multiplegt_stat}.
+By default, the command runs the test using 100 bootstrap replications. 
+To increase the number of replications, the user can use the option {cmd: bootstrap(#)} of {cmd: did_multiplegt_stat}.
+Also for replicability you should consider using the {cmd:seed(#)} option. 
+
+{phang} To use the {cmd:twfe(}{help did_multiplegt_stat##twfe_suboptions:twfe_suboptions}{cmd:)} option you need to specify 
+which sample you want to estimate the TWFE regression on, so you should always specify 
+either the {cmd:full_sample} or the {cmd:same_sample} suboption.
 
 {synopthdr:twfe_suboptions}
 {synoptline}
-{synopt:{cmd:percentile}}By default, {cmd: did_multiplegt_stat} computes the s.e and p-value of the test of the difference between the ({cmd: aoss, waoss, or iv-waoss}) estimator and the TWFE-estimator
-using a t-test and a normal approximation. Instead, one may use the percentile boostrap. Then, one can specify the option {cmd: percentile} 
-to compute p-values and confidence intervals using the percentile bootstrap method.{p_end}
 
 {synopt:{cmd:same_sample}} Sometimes, {cmd: did_multiplegt_stat} might not use all time periods in the estimation. 
 For instance, one might have a panel data where at a particular time (say p) there
-is no switcher. In that case, {cmd: did_multiplegt_stat} does not use the pair of periods (p-1, p). Then, the ({cmd: aoss, waoss, or iv-waoss})
+is no switcher. In that case, {cmd: did_multiplegt_stat} does not use the pair of periods (p-1, p). Then, the ({cmd: as, was, or iv-was})
 estimator and the TWFE-estimator will rely on different samples. 
 To avoid such discrepancy, the option {cmd: same_sample} allows to estimate the TWFE-estimator using the same sample
 as {cmd:did_multiplegt_stat}.{p_end} 
+
+{synopt:{cmd:full_sample}} Counterpart to the {cmd:same_sample} option. Use this in case you do not want to impose the sample restrictions
+described in {cmd:same_sample} and estimate the TWFE regression in the full sample instead.{p_end} 
+
+{synopt:{cmd:percentile}} By default, {cmd: did_multiplegt_stat} computes the s.e and p-value of the test of the difference 
+between the ({cmd:as, was, or iv-was}) estimator and the TWFE-estimator
+using a t-test and a normal approximation. Instead, one may use the percentile boostrap. Then, one can specify the option {cmd: percentile} 
+to compute p-values and confidence intervals using the percentile bootstrap method.{p_end}
+
 {p2colreset}{...}
 {marker cv_suboptions}{...}
 {dlgtab:Cross-validation}
 
 {synoptset 22}{...}
-{phang} If the treatment is continuous (or if the option {cmd: exact_match}  is not specified), and the doubly-robust WAOSS estimator
+{phang} If the treatment is continuous (or if the option {cmd: exact_match}  is not specified), and the doubly-robust WAS estimator
 is used, instead of specifying the order of the polynomial series 
 that {cmd:did_multiplegt_stat} uses
 to estimate E(Y_t-Y_{t-1}|D_{t-1}), P(S_{t}=0|D_{t-1}), P(S_{+, t}=1|D_{t-1}), and P(S_{-, t}=1|D_{t-1}), one may use cross validation. 
 Then, the command will choose the polynomial order with the best fit. This option can only be used
-to compute the doubly-robust WAOSS estimator: cross-validation does not have proven theoretical guarantees for the other estimators. This option can
+to compute the doubly-robust WAS estimator: cross-validation does not have proven theoretical guarantees for the other estimators. This option can
 also not be used together with the {cmd:by_fd} and {cmd:by_baseline} options.
+
+{phang} To use cross validation you have to specify {cmd:cross_validation(}algorithm(string) {help did_multiplegt_stat##cv_suboptions:cv_suboptions}{cmd:)}.
+The {cmd:algorithm(string)} suboption is required for the {cmd:cross_validation(}{help did_multiplegt_stat##cv_suboptions:cv_suboptions}{cmd:)} to function
+and has therefore to be specified in any case.
 
 {synopthdr:cv_suboptions}
 {synoptline}
@@ -307,7 +321,8 @@ can only be used in linear regressions.
 {p_end}
 
 {synopt:{cmd:{ul: tole}rance(#)}} This option allows to set a stop criterion based on the gain in prediction power. 
-By default, {cmd: tolerance} is set to 0.01, i.e., the cross-validation stops when the gain in prediction power is less than 1%.
+By default, {cmd: tolerance} is set to 0.01, i.e., the cross-validation stops when the gain in prediction power when
+increasing the polynomial order is less than 1%.
 {p_end}
 
 {synopt:{cmd:max_k(#)}} This is another stop criterion based on the maximum order to test (the grid-search of the hyperparameter).
@@ -323,9 +338,14 @@ By default, the number of folds is set to 5.{p_end}
 {dlgtab:Display}
 
 {phang}
-{cmd:{ul:disag}gregate}: when this option is specified, the command shows the estimated AOSS, WAOSS, or IV-WAOSS effects for each 
+{cmd:{ul:disag}gregate}: when this option is specified, the command shows the estimated AS, WAS, or IV-WAS effects for each 
 pair of consecutive time periods, on top of the effects aggregated across all time periods. By default, the command only shows
 effects aggregated across all time periods.
+
+{phang}
+{cmd:graph_off}: The program displays by default a graph of the aggregated 
+results (coefficients, effects and placebos, and their confidence intervals). If {cmd:graph_off} is specified, 
+the graph is not displayed.
 
 {phang}
 {cmd:bys_graph_off}: If the program is by'd (i.e. ran with [{opt bys:ort} {varlist}{cmd::}]), or used with the option {cmd:by_fd(}{it:#}{cmd:)} 
@@ -355,17 +375,13 @@ which contains gasoline taxes, prices, and consumption for 48 US states, every y
 {phang2}{stata net get did_multiplegt_stat}{p_end}
 {phang2}{stata use gazoline_did_multiplegt_stat.dta, clear}{p_end}
 
-{title:Example 1: Estimating the effect of gasoline taxes (tau) on log gasoline consumption (lngpinc)}
+{title:Example 1: Estimating the effect of gasoline taxes (tau) on log gasoline price (lngpinc)}
 
-{phang2}{stata did_multiplegt_stat lngpinc id year tau, or(2) aoss_vs_waoss placebo}{p_end}
+{phang2}{stata did_multiplegt_stat lngpinc id year tau, or(1) estimator(as was)  placebo(3)  as_vs_was}{p_end}
 
-{title:Example 2: Estimating the effect of gasoline taxes (tau) on log gasoline prices (lngca)}
+{title:Example 2: Estimating the effect of gasoline taxes (tau) on log gasoline consumption (lngca)}
 
-{phang2}{stata did_multiplegt_stat lngca id year tau, or(1) estimation_method(ra) aoss_vs_waoss placebo}{p_end}
-
-{title:Example 3: Estimating the price-elasticity of gasoline consumption, using taxes as an instrument}
-
-{phang2}{stata did_multiplegt_stat lngca id year lngpinc tau, or(2)  estimator(iv-waoss) placebo}{p_end}
+{phang2}{stata did_multiplegt_stat lngca id year tau, or(1) estimator(as was)  placebo(3)  as_vs_was}{p_end}
 
 {title:References}
 
@@ -437,32 +453,34 @@ Gonzalo Vazquez-Bare, UCSB, USA.
 
 {p2col 5 16 30 2: Effects' estimation}{p_end}
 
-{synopt:{cmd:e(AOSS)}}   The results for AOSS.{p_end}
-{synopt:{cmd:e(WAOSS)}}  The results for WAOSS.{p_end}
-{synopt:{cmd:e(IWAOSS)}} The results for IVWAOSS.{p_end}
+{synopt:{cmd:e(AS)}}   The results for AS.{p_end}
+{synopt:{cmd:e(WAS)}}  The results for WAS.{p_end}
+{synopt:{cmd:e(IWAS)}} The results for IVWAS.{p_end}
 
 {p2col 5 16 30 2: Placebos' estimation}{p_end}
 
-{synopt:{cmd:e(PlaceboAOSS)}}   The results for AOSS.{p_end}
-{synopt:{cmd:e(PlaceboWAOSS)}}  The results for WAOSS.{p_end}
-{synopt:{cmd:e(PlaceboIWAOSS)}} The results for IVWAOSS.{p_end}
+{synopt:{cmd:e(PlaceboAS)}}   The results for AS.{p_end}
+{synopt:{cmd:e(PlaceboWAS)}}  The results for WAS.{p_end}
+{synopt:{cmd:e(PlaceboIWAS)}} The results for IVWAS.{p_end}
 
 {p2col 5 16 30 2: If the program is by'd, for each level ℓ of varlist:}{p_end}
 
-{synopt:{cmd:e(AOSS_ℓ)}}   The results for AOSS.{p_end}
-{synopt:{cmd:e(WAOSS_ℓ)}}  The results for WAOSS.{p_end}
-{synopt:{cmd:e(IWAOSS_ℓ)}} The results for IVWAOSS.{p_end}
+{synopt:{cmd:e(AS_ℓ)}}   The results for AS.{p_end}
+{synopt:{cmd:e(WAS_ℓ)}}  The results for WAS.{p_end}
+{synopt:{cmd:e(IWAS_ℓ)}} The results for IVWAS.{p_end}
 
-{synopt:{cmd:e(PlaceboAOSS_ℓ)}}   The results for AOSS.{p_end}
-{synopt:{cmd:e(PlaceboWAOSS_ℓ)}}  The results for WAOSS.{p_end}
-{synopt:{cmd:e(PlaceboIWAOSS_ℓ)}} The results for IVWAOSS.{p_end}
+{synopt:{cmd:e(PlaceboAS_ℓ)}}   The results for AS.{p_end}
+{synopt:{cmd:e(PlaceboWAS_ℓ)}}  The results for WAS.{p_end}
+{synopt:{cmd:e(PlaceboIWAS_ℓ)}} The results for IVWAS.{p_end}
 
 {p2col 5 16 30 2: If the program is by'd, and the option {cmd:by_fd(}{it:#}{cmd:)} or {cmd:by_baseline(}{it:#}{cmd:)} is specified, for each level ℓ of varlist, and for each level k of quantile:}{p_end}
 
-{synopt:{cmd:e(AOSS_ℓ_k)}}   The results for AOSS.{p_end}
-{synopt:{cmd:e(WAOSS_ℓ_k)}}  The results for WAOSS.{p_end}
-{synopt:{cmd:e(IWAOSS_ℓ_k)}} The results for IVWAOSS.{p_end}
+{synopt:{cmd:e(AS_ℓ_k)}}   The results for AS.{p_end}
+{synopt:{cmd:e(WAS_ℓ_k)}}  The results for WAS.{p_end}
+{synopt:{cmd:e(IWAS_ℓ_k)}} The results for IVWAS.{p_end}
 
-{synopt:{cmd:e(PlaceboAOSS_ℓ_k)}}   The results for AOSS.{p_end}
-{synopt:{cmd:e(PlaceboWAOSS_ℓ_k)}}  The results for WAOSS.{p_end}
-{synopt:{cmd:e(PlaceboIWAOSS_ℓ_k)}} The results for IVWAOSS.{p_end}
+{synopt:{cmd:e(PlaceboAS_ℓ_k)}}   The results for AS.{p_end}
+{synopt:{cmd:e(PlaceboWAS_ℓ_k)}}  The results for WAS.{p_end}
+{synopt:{cmd:e(PlaceboIWAS_ℓ_k)}} The results for IVWAS.{p_end}
+
+

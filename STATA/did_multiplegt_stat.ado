@@ -1,9 +1,9 @@
-*This program estimates the three estimators (aoss, waoss, iv-aoss) developped in 
+*This program estimates the three estimators (as, was, iv-as) developped in 
 **de Chaisemartin, Clément and d'Haultfoeuille, Xavier and Pasquier, Félix and Vazquez‐Bare, Gonzalo,
 ** Difference-in-Differences Estimators for Treatments Continuously Distributed at Every Period (January 18, 2022). 
 **Available at SSRN: https://ssrn.com/abstract=4011782 or http://dx.doi.org/10.2139/ssrn.4011782
 
-//Doulo: on Jan, 4: this versions compute the aoss - waoss - iwaoss estimators, and theirs variances with options (polynom, switchers)
+//Doulo: on Jan, 4: this versions compute the as - was - iwas estimators, and theirs variances with options (polynom, switchers)
 
 //1. The simulations made with this version look good: ~96% of coverage, with 100 simulations (test_simu_madeupData1.do)
 
@@ -13,35 +13,35 @@
 
 //4. Missing values problem is solved - unbalanced data
 
-//Main options: estimator(aoss|waoss|iwaoss), estimation_method(ra|ps|dr), order(), switchers(up|down), noextrapolation, placebo, disaggregate
+//Main options: estimator(as|was|iwas), estimation_method(ra|ps|dr), order(), switchers(up|down), noextrapolation, placebo, disaggregate
 
 
 *The aggregation is done, and is well working: as test I tried to also to test whether I have the same variance if T=2 for both the aggregated and the simple case. 
 *noextrapolation coded
 		
-//To be added checked: Consider the difference combination (aoss, waoss, iwaoss) in if conditions //solved
+//To be added checked: Consider the difference combination (as, was, iwas) in if conditions //solved
 
 //Janv, 15: the new versions of the IFs are implemented
 
 //panel data with gaps or one type cases are also coded
 
-//Janv, 17 I started coding the ps-based approach for the waoss, starting from the ra-based approach version
+//Janv, 17 I started coding the ps-based approach for the was, starting from the ra-based approach version
 //I added the dr-based approach
 
 //Janv, 29: Some adjustements to wrap up: 
-	/* 1. For the aoss, \hat{E}(S|D_1) in the influence function is no longer estimated by a linear regression but by a logit 
-	/All the methods (ra, ps, dr) are computed for aoss, waoss, and iwaoss as well. Need to do the aggreagation for iwaoss (done!).
+	/* 1. For the as, \hat{E}(S|D_1) in the influence function is no longer estimated by a linear regression but by a logit 
+	/All the methods (ra, ps, dr) are computed for as, was, and iwas as well. Need to do the aggreagation for iwas (done!).
 	*/
 //Janv 30, the aggregated and disaggregated placebos versions are computed.
 
-///FEBRUARY, 1: This version computes all the options provided in the syntax, except only the aggreagation of IWAOSS.
+///FEBRUARY, 1: This version computes all the options provided in the syntax, except only the aggreagation of IWAS.
 //FEB, 8: The command is more or less done, I made several checks (coverage rate, influence functions, points estimate, sanity-checks etc.) and we are find so far.
 
 //Feb, 19: Option cluster is computed. 
 
-//Feb 21: The weight option: The idea is (i) to exploit the command {sum varlist [iw = weight_XX]}, (ii) put the option weight in all the regressions (logit and linear), (iii) instead of usingg r(N) use r(sum_w) etc.
+//Feb 21: The weights option: The idea is (i) to exploit the command {sum varlist [iw = weights_XX]}, (ii) put the option weights in all the regressions (logit and linear), (iii) instead of usingg r(N) use r(sum_w) etc.
 
-//Feb, 23: Shut down the option weight and cluster: local weight = "" and local cluster = ""
+//Feb, 23: Shut down the option weights and cluster: local weights = "" and local cluster = ""
 
 //The program is now byable and produces a graph of the effects and the placebos (see bys_graph_off)
 
@@ -63,12 +63,38 @@
 capture program drop did_multiplegt_stat
 program did_multiplegt_stat, eclass sortpreserve byable(recall)
 	version 12.0
-	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate aoss_vs_waoss exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weight(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off ] 
+	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off ] 
 
-	marksample touse
+	marksample touse // Felix This causes the program to crash with weightss
 	if _by() {
 		quietly replace `touse' = 0 if `_byindex' != _byindex()
 	}
+	
+/// Modif Felix: Add some kind of preamble to ensure "meaningful" inputs ///
+
+// bootstrap has to be POSITIVE integer
+if `bootstrap'<0{
+	di ""
+	di as error "The input of the bootstrap() option has to be a positive integer!"
+	di as input _continue ""
+	exit
+}
+
+// seed has to be POSITIVE integer
+if `seed'<0{
+	di ""
+	di as error "The input of the seed() option has to be a positive integer!"
+	di as input _continue ""
+	exit
+}
+
+// switchers has to be up or down (or empty)
+if ("`switchers'"!="up" & "`switchers'"!="down" & "`switchers'"!=""){
+	di ""
+	di as error "The input of the switchers() option has to be either up or down!"
+	di as input _continue ""
+	exit
+}
 
 	//tokenize the varlist
 tokenize `varlist'
@@ -77,13 +103,21 @@ if ("`5'"!=""&"`5'"!=","){
 local IV_feed_XX = "yes"
 local IV_var_XX  `5' 
 
+// Modif Felix: add warning at the beginning
+if "`estimator'"!="iv-was"{
+		di ""
+		di as error "You specified the 5th input variable (Instrumental variable) which is only compatible with the iv-was estimator."
+		di as error "Therefore your estimator will be replaced by iv-was."
+		di as input _continue ""
+	}
+
 //Show the First Stage
 		di as input "{hline 80}"
 		di as input _skip(30) "First stage estimation"
 		di as input "{hline 80}"
 		//if strpos("`5'", ",") != 0 local 5 = strtrim(substr("`5'", 1, strpos("`5'", ",") - 1))
-		local estimator = "waoss"
-		did_multiplegt_stat2 `4' `2' `3' `5' if `touse' == 1,  estimator(`estimator') estimation_method(`estimation_method') order(`order') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `aoss_vs_waoss' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weight(`weight') cross_validation(`cross_validation') `graph_off' //twfe(`twfe')
+		local estimator = "was"
+		did_multiplegt_stat2 `4' `2' `3' `5' if `touse' == 1,  estimator(`estimator') estimation_method(`estimation_method') order(`order') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `as_vs_was' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weights(`weights') cross_validation(`cross_validation') `graph_off' //twfe(`twfe')
 }
 
 
@@ -94,22 +128,35 @@ local IV_var_XX  `5'
 		//Drop scalar created by the program
 		cap scalars_to_drop  //a subprogram dropping all scalars with the pattern _XX
 		cap scalar drop aggregated_data  max_mT
-		cap scalar N_var
+		cap scalar drop N_var
+		cap scalar drop set_chosen_order_linear
+		cap scalar drop N_drop_noextra_XX 
+		cap scalar drop max_T
 end 
 
 
 capture program drop did_multiplegt_stat2
 program did_multiplegt_stat2, eclass sortpreserve byable(recall)
 	version 12.0
-	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate aoss_vs_waoss exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weight(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off ] // FIRST_stage   twfe(percentile same_sample)
+	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off ] // FIRST_stage   twfe(percentile same_sample)
 
-
+	
+	// Felix: Do not show "event-study" graph with by_baseline or by_fd
+	if (`by_baseline'!=1 | `by_fd'!=1){
+		local graph_off="graph_off"
+	}
+	
+	// Felix: Only show "event-study" graph when at least one placebo is requested
+	if `placebo'==0{
+		local graph_off="graph_off"
+	}	
+	
 	//>MAIN: Preserve the inputted dataset
 	preserve
 	
 	//If the user specify twfe without setting the bootstrap, take 100 as default.
 	//And store all the suboptions of twfe: percentile, same_sample (default are normal and maybe different samples.)
-	if ("`twfe'"!=""){
+	if ("`twfe'"!=""){ // Felix: This is a problem as twfe is a string (this wont get triggered then with twfe() plus for the same reason an error with the bootstrap option will be triggered because it is only allowed with twfe(which the command thinks is not specified)), what are you supposed to input as default -> force user to specify something, see helpfile
 		parse_select_twfe_suboptions, `twfe'
 		if (`bootstrap'==0) local bootstrap = 100
 		local percentile "`s(percentile)'"
@@ -122,8 +169,8 @@ di _newline
 _dots 0, title(Bootstrap running) reps(`bootstrap')
 }
 quietly{
-//Shut down the option weight and cluster: 
-//local weight = "" 
+//Shut down the option weights and cluster: 
+//local weights = "" 
 //local cluster = ""
 
 // Check if gtools is installed, if not present link to install
@@ -153,8 +200,8 @@ cap drop Y_XX
 cap drop D_XX
 cap drop T_XX
 cap drop ID_XX
-cap drop weight_XX
-cap drop weight_cXX
+cap drop weights_XX
+cap drop weights_cXX
 cap drop S_XX
 cap drop D1_XX
 cap drop deltaD_XX
@@ -164,7 +211,7 @@ cap drop tsfilled_XX
 cap drop T_OG_XX
 
 
-///// Collapse and weight
+///// Collapse and weights
 	
 // Checking wether data has to be collapsed, because at a more disaggregated level than group*time.
  
@@ -183,15 +230,15 @@ scalar aggregated_data=1
 
 if scalar(aggregated_data)==0{
 	
-	replace weight_XX=0 if `1'==.
+	replace weights_XX=0 if `1'==.
 	
 	if "`1'"!="`4'"{
 				//Averging the outcome and treatment
-		collapse (mean) `1' `4' (count) weight_XX [iw=weight_XX], by(`2' `3')
+		collapse (mean) `1' `4' (count) weights_XX [iw=weights_XX], by(`2' `3')
 	}
 	
 	if "`1'"=="`4'"{			
-		collapse (mean) `1' (count) weight_XX [iw=weight_XX], by(`2' `3')
+		collapse (mean) `1' (count) weights_XX [iw=weights_XX], by(`2' `3')
 	}	
 }
 */
@@ -209,6 +256,12 @@ local IV_feed_XX = "no"
 if ("`5'"!=""&"`5'"!=","){
 local IV_feed_XX = "yes"
 local IV_var_XX  `5' 
+
+// Modif Felix: Replace the estimator we are actually using
+	if "`estimator'"!="iv-was"{		
+		local estimator = "iv-was" 
+	}
+
 }
 
  xtset `2'  `3' //make the quietly skip that to show the characteristics of the panel: balanced/unbalanced/w|o gaps etc.
@@ -222,58 +275,64 @@ local IV_var_XX  `5'
 	
 if("`estimator'" ==""){
 	if ("`IV_feed_XX'" == "no"){
-	local 1 "aoss"
-	local 2 "waoss"
-	//local 3 "iwaoss" //Now the default (when estimator is not specified) is to compute aoss and waoss only if Z is not given
-	local aoss_XX = 1
-	local waoss_XX = 1
-	local iwaoss_XX= 0
+	local 1 "as"
+	local 2 "was"
+	//local 3 "iwas" //Now the default (when estimator is not specified) is to compute as and was only if Z is not given
+	local as_XX = 1
+	local was_XX = 1
+	local iwas_XX= 0
+	local estimator = "as was"  //Doulo: Set estimator values
 	}
 	else{
-	//local 1 "aoss"
-	//local 2 "waoss"
-	local 3 "iv-waoss" //Now the default (when estimator is not specified) is to computes iwaoss only if Z is specify
-	local aoss_XX = 0
-	local waoss_XX = 0
-	local iwaoss_XX= 1
+	//local 1 "as"
+	//local 2 "was"
+	local 3 "iv-was" //Now the default (when estimator is not specified) is to computes iwas only if Z is specify
+	local as_XX = 0
+	local was_XX = 0
+	local iwas_XX= 1
+	local estimator = "iv-was" //Doulo: Set estimator values
 	}
 }
 else{
 	//Count the number of estimators requested
 	//scalar nb_estimatorts_XX = `:word count `estimator''
 		tokenize `estimator'
-		local aoss_XX = inlist("aoss", "`1'", "`2'", "`3'")
-		local waoss_XX = inlist("waoss", "`1'", "`2'", "`3'")
-		local iwaoss_XX= inlist("iv-waoss", "`1'", "`2'", "`3'")
+		local as_XX = inlist("as", "`1'", "`2'", "`3'")
+		local was_XX = inlist("was", "`1'", "`2'", "`3'")
+		local iwas_XX= inlist("iv-was", "`1'", "`2'", "`3'")
 		
-		if ("`aoss_XX'"=="1"){
-			local 1 = "aoss" 
+		if ("`as_XX'"=="1"){
+			local 1 = "as" 
 		}
-		if ("`waoss_XX'"=="1"){
-			local 2 = "waoss" 
+		if ("`was_XX'"=="1"){
+			local 2 = "was" 
 		}
-		if ("`iwaoss_XX'"=="1"){
-			local 3 = "iv-waoss" 
+		if ("`iwas_XX'"=="1"){
+			local 3 = "iv-was" 
 		}
 
 }
 
-local total_estimator = `aoss_XX' + `waoss_XX' + `iwaoss_XX'
+local total_estimator = `as_XX' + `was_XX' + `iwas_XX'
+
+// count the number of arguments in `estimator' compare them to total_estimator to see if there are other things specified that should not be
+local nb_estimatorts_XX = `:word count `estimator'' //Doulo: Set estimator values above, in case estimnator is empty
 
 /********************************************************************************
 			ERRORS MESSAGES FOR :
 ********************************************************************************/
+
 //0. Estimators
-if (`total_estimator'==0){
+if (`total_estimator'!=`nb_estimatorts_XX'){ // Modif Felix, see above
 		di as error "Error in the option estimator."
-		di as error "The arguments allowed are: aoss, waoss, or iv-waoss."
+		di as error "The arguments allowed are: as, was, or iv-was." //Doulo: This is to restrictive. By default if the user does not specify estimator and Z, we should automatically produce as and was. And if he specifies we displays automatically iv-was. Solved above(See //Doulo: Set estimator values)
 		exit
 }
 //1. Estimation method:
 
 if ("`estimation_method'" == "ps"|"`estimation_method'" == "dr"){
-	if ("`waoss_XX'"=="0"&"`iwaoss_XX'"=="0"){
-		di as error "The propensity/doubly-robust -based approach is only available for the waoss and the iv-waoss."
+	if ("`was_XX'"=="0"&"`iwas_XX'"=="0"){
+		di as error "The propensity/doubly-robust -based approach is only available for the was and the iv-was."
 		exit
 	}
 }
@@ -287,24 +346,24 @@ if (`req_est_method' == 0){
 }
 
 //2. IV
-if ("`IV_feed_XX'"=="no"&("`iwaoss_XX'" == "1")){
-	di as error "To compute the iwaoss you must specify the IV variable."
+if ("`IV_feed_XX'"=="no"&("`iwas_XX'" == "1")){
+	di as error "To compute the iv-was you must specify the IV variable."
 	exit
 }
 
 
 //3. Combination of estimators //Shut this constraint down: before I will need to modify the way the pairwise is called: We will need to call the pairwise program for each estimator and not once. Otherwise, if the user specifies for instance the option noextrapolation, the command will apply the two conditions (noextra on the iV and noextra on the treatment): Ask Clement?
 
-if ("`iwaoss_XX'" == "1"&("`waoss_XX'" == "1"|"`aoss_XX'" == "1")){
-	di as error "The estimation of AOSS or WAOSS cannot be combined with the estimation of IV-WAOSS (see helpfile)."
+if ("`iwas_XX'" == "1"&("`was_XX'" == "1"|"`as_XX'" == "1")){
+	di as error "The estimation of AS or WAS cannot be combined with the estimation of IV-WAS (see helpfile)."
 	exit
 }
 
 
-//4. The test of equality between aoss and waoss
-local a_vs_w = `aoss_XX' + `waoss_XX'
-if ("`aoss_vs_waoss'"!=""&`a_vs_w'!=2){
-	di as error "To test the equility between AOSS and WAOSS you must specify aoss and waoss in the estimator option."
+//4. The test of equality between as and was
+local a_vs_w = `as_XX' + `was_XX'
+if ("`as_vs_was'"!=""&`a_vs_w'!=2){
+	di as error "To test the equility between AS and WAS you must specify as and was in the estimator option."
 	exit
 }
 
@@ -314,9 +373,9 @@ if !(mod(`order', 1)  == 0 & `order' > 0) {
 }
 
 //5.
-if (`total_estimator'==0){
+if (`total_estimator'!=`nb_estimatorts_XX'){ // Modif Felix, see above
 		di as error "Error in the option estimator."
-		di as error "The arguments allowed are: aoss, waoss, or iv-waoss."
+		di as error "The arguments allowed are: as, was, or iv-was."
 		exit
 }
 
@@ -358,7 +417,7 @@ else{
 		local order =1 
 	}
 	*/
-	if ((`waoss_XX'==1|`iwaoss_XX'==1)&"`estimation_method'"==""){
+	if ((`was_XX'==1|`iwas_XX'==1)&"`estimation_method'"==""){
 		local estimation_method = "dr" //default option
 		
 	}
@@ -378,10 +437,10 @@ if ("`cluster'"!=""&"`cluster'"!="`OG_nameID_XX'"){
 	}
 }	
 
-//10.Bootstrap is only allowed with iv-waoss
-if (`bootstrap'!=0&`iwaoss_XX'==0&"`twfe'"==""){
+//10.Bootstrap is only allowed with iv-was
+if (`bootstrap'!=0&`iwas_XX'==0&"`twfe'"==""){
 	di as error ""
-	di as error "The bootstrap option is only available for the iv-waoss,"
+	di as error "The bootstrap option is only available for the iv-was,"
 	di as error "or combined with twfe."
 	di as error "Please run the command without that option."
 	exit
@@ -396,7 +455,7 @@ if (`seed'!=0&`bootstrap'==0){
 //Handle missing values i)
 //gen to_drop_XX = (Y_XX==.|T_OG_XX==.|D_XX==.|ID_XX==.)
 //Handle missing values ii)
-if ("`iwaoss_XX'" == "1"){
+if ("`iwas_XX'" == "1"){
 	//local controls "`controls' D_XX"
 //replace to_drop_XX = (to_drop_XX==.|`IV_var_XX'==.)
 }
@@ -417,25 +476,25 @@ sum tsfilled_XX
 gegen T_XX =  group(T_OG_XX)
 //save "Tsfilled.dta"
 
-// Creating the weight variable. //WEIGHT OPTION //CLUSTER OPTION 
+// Creating the weights variable. //weights OPTION //CLUSTER OPTION 
 
 
-if("`weight'"==""){
-gen weight_XX  = 1
-gen weight_cXX = 1 
+if("`weights'"==""){
+gen weights_XX  = 1
+gen weights_cXX = 1 
 }
 else{
-gen weight_XX = `weight'
+gen weights_XX = `weights'
 if ("`cluster'"!=""){
-	bysort `cluster' T_XX : egen weight_cXX = total(weight_XX)
+	bysort `cluster' T_XX : egen weights_cXX = total(weights_XX)
 }
 else{
-	gen weight_cXX = `weight'
+	gen weights_cXX = `weights'
 }
 }
 
-//replace weight_XX=0 if weight_XX==.
-//replace weight_cXX=0 if weight_cXX==.
+//replace weights_XX=0 if weights_XX==.
+//replace weights_cXX=0 if weights_cXX==.
 
 *******************************************************
 
@@ -455,6 +514,34 @@ if (scalar(max_T)<2){
 	exit
 }
 
+//// Modif Felix: generate upper bound for number of placebos
+cap drop fk_deltaD_glob_XX
+cap drop fk_Q_XX
+xtset ID_XX T_XX
+gen fk_deltaD_glob_XX = abs(D.D_XX)
+
+bysort T_XX: gen fk_stayer_pointer_tempXX = (fk_deltaD_glob_XX==0)
+bysort T_XX: egen fk_stayers_t_XX = total(fk_stayer_pointer_tempXX)	
+
+bysort T_XX: gen fk_switcher_pointer_tempXX = (fk_deltaD_glob_XX!=0)
+bysort T_XX: egen fk_switchers_t_XX = total(fk_switcher_pointer_tempXX)
+	
+bysort T_XX: gen fk_used_in_t_estimation_XX = fk_switcher_pointer_tempXX&fk_stayers_t_XX>1
+
+bysort T_XX: egen fk_used_period_XX=max(fk_used_in_t_estimation_XX)
+sum T_XX if fk_used_period_XX==1
+local fk_max_used_period_XX = r(max)
+
+if `placebo'>`=`fk_max_used_period_XX'-2'{
+	
+	di ""
+	di as error "The maximum number of placebos that can be computed is `=`fk_max_used_period_XX'-2'."
+	di as input _continue ""
+	
+	local placebo = `=`fk_max_used_period_XX'-2'
+}
+
+
 **# Bookmark #2 AGGREGATION TO OBTAIN delta_1, delta_2, and delta_3 and their variances
 
 **# Bookmark #2bis Call the program for each time pairwise dummy
@@ -465,7 +552,7 @@ if (`by_baseline'>1) local by_quantile = `by_baseline'
 
 if (`by_quantile'>1){
 	
-	if (`aoss_XX'==1| `waoss_XX'==1){
+	if (`as_XX'==1| `was_XX'==1){
 		
 	//1. Generate the FD of the treatment / or instrument if specified
 	cap drop deltaD_glob_XX
@@ -509,7 +596,7 @@ if (`by_quantile'>1){
 	
 	}
 	
-	if (`iwaoss_XX'==1){
+	if (`iwas_XX'==1){
 		
 	//1. Generate the FD of the treatment / or instrument if specified
 	cap drop deltaZ_glob_XX
@@ -646,7 +733,7 @@ quietly{
 //Note: the subprogram return_label is defined at the end of the code, and is used when the user specifies estout along with the option by_fd or by_baseline. Look at the dofile "different options.do" (in section estout + by_fd option) to see how I use it.
 if (`by_quantile'>1){
 di as input "{hline 80}"
-return_label, by_quantile(`by_quantile') by_fd(`by_fd') q(`q') aoss(`aoss_XX') waoss(`waoss_XX') iwaoss(`iwaoss_XX') display_message
+return_label, by_quantile(`by_quantile') by_fd(`by_fd') q(`q') as(`as_XX') was(`was_XX') iwas(`iwas_XX') display_message
 di as input "{hline 80}"
 }
 ***********************************************************************
@@ -668,10 +755,10 @@ gen S0bist_XX  = 1-Sbist_XX
 gen StPlus_XX  = deltaDt_XX>0  if  deltaDt_XX!=.
 gen StMinus_XX = deltaDt_XX<0  if  deltaDt_XX!=.
 
-if ("`iwaoss_XX'"=="1"){
+if ("`iwas_XX'"=="1"){
 cap drop SIt_XX
 cap drop deltaZt_XX
-cap drop SbisIt_XX
+cap drop SIbist_XX 
 cap drop SItPlus_XX
 cap drop SItMinus_XX
 cap drop SI0bist_XX
@@ -688,7 +775,7 @@ if ("`same_sample'"!=""){
 cap drop yeart_used_XX
 cap drop types_yeart_XX
 cap drop nb_stayers_yeart_XX
-if ("`iwaoss_XX'"=="1"){
+if ("`iwas_XX'"=="1"){
 	bysort T_XX : egen types_yeart_XX = sd(SI0bist_XX)
 	bysort T_XX : egen nb_stayers_yeart_XX = total(SI0bist_XX)
 }
@@ -709,45 +796,21 @@ else{
 
 
 /*******************************************************************************
-CROSS-VALIDATION TO SELECT THE OPTIMAL ORDER : Only with WAOSS
+CROSS-VALIDATION TO SELECT THE OPTIMAL ORDER : Only with WAS
 *******************************************************************************/
-if ("`cross_validation'"!=""&`waoss_XX'==1){
+if ("`cross_validation'"!=""&`was_XX'==1){
 _dots 0, title(`algorithm'(`kfolds'): Cross validation running) reps(`max_k')
 
 //Need to store the suboptions in cross_validation
 parse_select_cv_suboptions, `cross_validation'
 local cross_validation_logit = "algorithm(kfolds) tolerance(`s(tolerance)') max_k(`s(max_k)') seed(`s(seed)') kfolds(`s(kfolds)')"
 
-	if ("`s(max_k)'"!="") local max_k `s(max_k)'
-local cv_covariates	
 cap drop T_XX_FE_* 
 tab T_XX, gen(T_XX_FE_)
 
-local PolK 
-forvalues k =1/`max_k'{
-	
-	xtset ID_XX T_XX
-	cap drop LD_XX 
-	gen LD_XX = L.D_XX
-	
-cap drop Lag1Dt_`k'XX
-gen Lag1Dt_`k'XX = LD_XX^`k'
-local PolK "`PolK' c.Lag1Dt_`k'XX"
-
-foreach var of varlist T_XX_FE_1-T_XX_FE_`=max_T'{
-	cap drop bis`var'_Lag1Dt_`k'XX
-	gen  bis`var'_Lag1Dt_`k'XX = `var'*Lag1Dt_`k'XX
-	local cv_covariates	"`cv_covariates' bis`var'_Lag1Dt_`k'XX"
-}
-}
-//di as error "`PolK'"
-local controls_cv "(c.T_XX_FE_*)#(`PolK')"
-//di as error "`controls_cv'"
-//di as error "`cv_covariates'"
-
 cap drop St_XX
 cap drop deltaDt_XX
-cap drop Sbist_XX
+cap drop Sbist_XX // Modif Felix: spelling error corrected
 cap drop StPlus_XX
 cap drop StMinus_XX
 cap drop S0bist_XX
@@ -765,7 +828,7 @@ gen StMinus_XX = deltaDt_XX<0  if  deltaDt_XX!=.
 	gen deltaYt_XX = D.Y_XX
 
 //RUN THE CROSS-VALIDATION command
-cross_validation deltaYt_XX `controls_cv' if Sbist_XX==0 , `cross_validation' cv_covariates(`cv_covariates')
+cross_validation deltaYt_XX if Sbist_XX==0 , `cross_validation' 
 
 local reg_order  = `s(chosen_order)'
 //di as error "test chosen reg_order  = `reg_order'"
@@ -776,21 +839,22 @@ local reg_order  = `s(chosen_order)'
 //RUN THE CROSS-VALIDATION command
 //di as error "`cross_validation_logit'"
 //save "data_cv.dta", replace
-cross_validation S0bist_XX `controls_cv' , `cross_validation_logit' model(logit)
+cross_validation S0bist_XX , `cross_validation_logit' model(logit)
+
 if (`s(set_chosen_order_linear)' == 1) local logit_bis_order  = `reg_order'
 else local logit_bis_order  = `s(chosen_order)'
 //di as error "test chosen logit_bis_order  = `logit_bis_order'"
 
 count if StPlus_XX==1
 if (r(N)>0){
-cross_validation StPlus_XX `controls_cv' , `cross_validation_logit' model(logit)
+cross_validation StPlus_XX , `cross_validation_logit' model(logit)
 if (`s(set_chosen_order_linear)' == 1) local logit_Plus_order  = `reg_order'
 else local logit_Plus_order  = `s(chosen_order)'
 //di as error "test chosen logit_Plus_order  = `logit_Plus_order'"
 }
 count if StMinus_XX==1
 if (r(N)>0){
-cross_validation StMinus_XX `controls_cv' , `cross_validation_logit' model(logit)
+cross_validation StMinus_XX , `cross_validation_logit' model(logit)
 if (`s(set_chosen_order_linear)' == 1) local logit_Minus_order  = `reg_order'
 else local logit_Minus_order  = `s(chosen_order)'
 //di as error "test chosen logit_Minus_order  = `logit_Minus_order'"
@@ -834,12 +898,12 @@ else{
 forvalues p = 2/`=max_T'{
 	
 	//i) Calling the command for each pair of time periods
-	did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weight(weight_XX) switchers(`switchers') pairwise(`p') data_1XX($data_1XX) aoss(`aoss_XX') waoss(`waoss_XX') iwaoss(`iwaoss_XX') estimation_method(`estimation_method') `exact_match' cluster(`cluster') quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation')
+	did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weights(weights_XX) switchers(`switchers') pairwise(`p') data_1XX($data_1XX) as(`as_XX') was(`was_XX') iwas(`iwas_XX') estimation_method(`estimation_method') `exact_match' cluster(`cluster') quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation')
 
 	//i) Aggregation as the loop goes
 	
-	//aoss
-	if (`aoss_XX' == 1){
+	//as
+	if (`as_XX' == 1){
 		if (scalar(delta1_`p'XX)!=.){
 		scalar delta1_1XX = scalar(delta1_1XX) + scalar(P_`p'XX)*scalar(delta1_`p'XX)
 		
@@ -849,8 +913,8 @@ forvalues p = 2/`=max_T'{
 		}
 	}
 	
-	//waoss
-	if (`waoss_XX' == 1){
+	//was
+	if (`was_XX' == 1){
 		if (scalar(delta2_`p'XX)!=.){
 		scalar delta2_1XX = scalar(delta2_1XX) + scalar(EabsdeltaD_`p'XX)*scalar(delta2_`p'XX)
 		
@@ -860,8 +924,8 @@ forvalues p = 2/`=max_T'{
 		}
 	}
 	
-	//iwaoss
-	if (`iwaoss_XX' == 1){
+	//iwas
+	if (`iwas_XX' == 1){
 		if (scalar(delta3_`p'XX)!=.){
 		scalar delta3_1XX = scalar(delta3_1XX) + scalar(denom_deltaIV`p'XX)*scalar(delta3_`p'XX)
 		
@@ -875,18 +939,18 @@ forvalues p = 2/`=max_T'{
 
     //iii) Compute the aggregated estimators (Effects and Placebos)
 	
-	//aoss
-	if (`aoss_XX' == 1){
+	//as
+	if (`as_XX' == 1){
 		scalar delta1_1XX = scalar(delta1_1XX)/scalar(PS_sum_XX)
 	}
 	
-	//waoss
-	if (`waoss_XX' == 1){
+	//was
+	if (`was_XX' == 1){
 		scalar delta2_1XX = scalar(delta2_1XX)/scalar(EabsdeltaD_sum_XX)
 	}
 	
-	//iwaoss
-	if (`iwaoss_XX' == 1){
+	//iwas
+	if (`iwas_XX' == 1){
 		scalar delta3_1XX = scalar(delta3_1XX)/scalar(denom_deltaIV_sum_XX)
 	}
 	//iv) Compute the influence functions
@@ -906,15 +970,15 @@ forvalues p = 2/`=max_T'{
 	
 	forvalues p = 2/`=max_T'{
 		
-	//aoss: Phi1^{T>2}
-	if (`aoss_XX' == 1){
+	//as: Phi1^{T>2}
+	if (`as_XX' == 1){
 		//Effects
 		replace Phi1_`p'XX = [scalar(P_`p'XX)*Phi1_`p'XX + (scalar(delta1_`p'XX) - scalar(delta1_1XX))*(S_`p'XX - scalar(P_`p'XX))]/scalar(PS_sum_XX)
 		local Phi1_ts_XX `Phi1_ts_XX' Phi1_`p'XX
 	}
 	
-	//waoss: Phi2^{T>2}
-	if (`waoss_XX' == 1){
+	//was: Phi2^{T>2}
+	if (`was_XX' == 1){
 		
 		//Effects
 		replace Phi2_`p'XX = [scalar(EabsdeltaD_`p'XX)*Phi2_`p'XX + (scalar(delta2_`p'XX) - scalar(delta2_1XX))*(absdeltaD_`p'XX - scalar(EabsdeltaD_`p'XX))]/scalar(EabsdeltaD_sum_XX)
@@ -926,8 +990,8 @@ forvalues p = 2/`=max_T'{
 		local Phi2_ts_XX `Phi2_ts_XX' Phi2_`p'XX
 	}
 		
-	//iwaoss: Phi3^{T>2}
-	if (`iwaoss_XX' == 1){
+	//iwas: Phi3^{T>2}
+	if (`iwas_XX' == 1){
 		
 		//Effects
 		replace Phi3_`p'XX = [scalar(denom_deltaIV`p'XX)*Phi3_`p'XX + (scalar(delta3_`p'XX) - scalar(delta3_1XX))*(innerSumIV_denom_`p'XX - scalar(denom_deltaIV`p'XX))]/scalar(denom_deltaIV_sum_XX)
@@ -941,8 +1005,8 @@ sum N_c_XX
 scalar N_bar_c_XX = r(mean)
 //di as error N_bar_c_XX
 }
-	//aoss
-	if (`aoss_XX' == 1){
+	//as
+	if (`as_XX' == 1){
 		
 		//Effect
 		cap drop Phi1_XX
@@ -961,8 +1025,8 @@ scalar N_bar_c_XX = r(mean)
 		bysort `cluster': replace Phi1_cXX=. if _n!=1
 		replace Phi1_cXX = Phi1_cXX/scalar(N_bar_c_XX)
 		
-			if ("`weight'"!=""){
-			sum Phi1_cXX  // use the weight of the cluster, which is the total of the weights of groups in that cluster.
+			if ("`weights'"!=""){
+			sum Phi1_cXX  // use the weights of the cluster, which is the total of the weightss of groups in that cluster.
 			}
 			else{
 			sum Phi1_cXX 
@@ -976,8 +1040,8 @@ scalar N_bar_c_XX = r(mean)
 		scalar UB1_1XX = delta1_1XX + 1.96*sd_delta1_1XX
 	}
 	
-	//waoss
-	if (`waoss_XX' == 1){
+	//was
+	if (`was_XX' == 1){
 		
 		//Effect
 		cap drop Phi2_XX
@@ -995,8 +1059,8 @@ scalar N_bar_c_XX = r(mean)
 		bysort `cluster': replace Phi2_cXX=. if _n!=1
 		replace Phi2_cXX = Phi2_cXX/scalar(N_bar_c_XX)
 		
-				if ("`weight'"!=""){
-				sum Phi2_cXX // use the weight of the cluster, which is the total of the weights of groups in that cluster.
+				if ("`weights'"!=""){
+				sum Phi2_cXX // use the weights of the cluster, which is the total of the weightss of groups in that cluster.
 				}
 				else{
 				sum Phi2_cXX 
@@ -1013,8 +1077,8 @@ scalar N_bar_c_XX = r(mean)
 		
 	}
 
-	//iwaoss
-	if (`iwaoss_XX' == 1){
+	//iwas
+	if (`iwas_XX' == 1){
 		
 		//Effect
 		cap drop Phi3_XX
@@ -1031,8 +1095,8 @@ scalar N_bar_c_XX = r(mean)
 		bysort `cluster': gegen Phi3_cXX = total(Phi3_XX)
 		bysort `cluster': replace Phi3_cXX=. if _n!=1
 		replace Phi3_XX = Phi3_XX/scalar(N_bar_c_XX)		
-				if ("`weight'"!=""){
-				sum Phi3_cXX // use the weight of the cluster, which is the total of the weights of groups in that cluster.
+				if ("`weights'"!=""){
+				sum Phi3_cXX // use the weights of the cluster, which is the total of the weightss of groups in that cluster.
 				}
 				else{
 				sum Phi3_cXX 
@@ -1047,34 +1111,37 @@ scalar N_bar_c_XX = r(mean)
 
 	
 /******************************************************************************
-TESTING THE DIFFERENCE BETWEEN AOSS AND WAOSS IF REQUESTED
+TESTING THE DIFFERENCE BETWEEN AS AND WAS IF REQUESTED
 
 Note: Let UPhi1 and UPhi2 be the non-demeaned versions of Phi1 and Phi2
-Testing H_0: aoss = waoss is equivalent to testing H0: meanUPhi1 = meanUPhi2
+Testing H_0: as = was is equivalent to testing H0: meanUPhi1 = meanUPhi2
 H0: meanUPhi1 = meanUPhi2 <=> H0: mean(UPhi1 - UPhi2) = 0.
 Under H_0, mean(UPhi1 - UPhi2) = 0 <=> mean(Phi1 - Phi2) = 0.
 Then we can just test whether the variable  diff_Phi1_2_XX = Phi1_XX - Phi2_XX
 is mean-zero or not. This is also equivalent to run reg diff_Phi1_2_XX.
 *******************************************************************************/
-if ("`aoss_vs_waoss'"!=""&`a_vs_w'==2){
+if ("`as_vs_was'"!=""&`a_vs_w'==2){
+	
 	scalar diff_delta1_2_XX = scalar(delta1_1XX) - scalar(delta2_1XX)
 	cap drop diff_Phi1_2_XX 
 	gen  diff_Phi1_2_XX = Phi1_XX - Phi2_XX
 	sum diff_Phi1_2_XX
     scalar sd_diff_Phi1_2_XX = r(sd)
 	scalar tstat_XX = scalar(diff_delta1_2_XX)*sqrt(r(N))/sd_diff_Phi1_2_XX
-	scalar pval_XX = 2*(1-normal(abs(tstat_XX)))
+	scalar pval_as_vs_was = 2*(1-normal(abs(tstat_XX)))
 	
-	matrix aoss_vs_waoss_mat = J(1,6,.)
-	matrix aoss_vs_waoss_mat[1,1] = scalar(diff_delta1_2_XX)
-	matrix aoss_vs_waoss_mat[1,2] = scalar(sd_diff_Phi1_2_XX)
-	matrix aoss_vs_waoss_mat[1,3] = scalar(diff_delta1_2_XX) - 1.96*scalar(sd_diff_Phi1_2_XX)/sqrt(r(N))
-	matrix aoss_vs_waoss_mat[1,4] = scalar(diff_delta1_2_XX) + 1.96*scalar(sd_diff_Phi1_2_XX)/sqrt(r(N))
-	matrix aoss_vs_waoss_mat[1,5] = scalar(pval_XX)
-	matrix aoss_vs_waoss_mat[1,6] = scalar(tstat_XX)
+	matrix as_vs_was_mat = J(1,6,.)
+	matrix as_vs_was_mat[1,1] = scalar(diff_delta1_2_XX)
+	matrix as_vs_was_mat[1,2] = scalar(sd_diff_Phi1_2_XX)
+	matrix as_vs_was_mat[1,3] = scalar(diff_delta1_2_XX) - 1.96*scalar(sd_diff_Phi1_2_XX)/sqrt(r(N))
+	matrix as_vs_was_mat[1,4] = scalar(diff_delta1_2_XX) + 1.96*scalar(sd_diff_Phi1_2_XX)/sqrt(r(N))
+	matrix as_vs_was_mat[1,5] = scalar(pval_as_vs_was)
+	matrix as_vs_was_mat[1,6] = scalar(tstat_XX)
 	
-	matrix colnames aoss_vs_waoss_mat = "Diff." "SE" "LB CI" "UB CI" "pval." "t"
-    matrix rownames aoss_vs_waoss_mat = "AOSS-WAOSS"
+	matrix colnames as_vs_was_mat = "Diff." "SE" "LB CI" "UB CI" "pval." "t"
+    matrix rownames as_vs_was_mat = "AS-WAS"
+	
+	// matrix as_vs_was_mat`q' = as_vs_was_mat // Modif Felix: store as_vs_was matrix in ereturns, however still need to adapt for by etc.
 	//local myN = r(N)
 }
 
@@ -1128,12 +1195,12 @@ use "`OG_dataPathq'.dta", clear
 	forvalues p = `=2+`placebo_index''/`=max_T'{
 	
 	//i) Calling the command for each pair of time periods
-	did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weight(weight_XX) switchers(`switchers') pairwise(`p') data_1XX(${data_1plaXX}) aoss(`aoss_XX') waoss(`waoss_XX') iwaoss(`iwaoss_XX') estimation_method(`estimation_method') placebo(`placebo_index') `exact_match' cluster(`cluster')  quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation')
+	did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weights(weights_XX) switchers(`switchers') pairwise(`p') data_1XX(${data_1plaXX}) as(`as_XX') was(`was_XX') iwas(`iwas_XX') estimation_method(`estimation_method') placebo(`placebo_index') `exact_match' cluster(`cluster')  quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation')
 
 	//i) Aggregation as the loop goes
 	
-	//aoss
-	if (`aoss_XX' == 1){
+	//as
+	if (`as_XX' == 1){
 		if (scalar(delta1_`p'plaXX)!=.){
 		scalar delta1_1plaXX = scalar(delta1_1plaXX) + scalar(P_`p'plaXX)*scalar(delta1_`p'plaXX)
 		
@@ -1143,8 +1210,8 @@ use "`OG_dataPathq'.dta", clear
 		}
 	}
 	
-	//waoss
-	if (`waoss_XX' == 1){
+	//was
+	if (`was_XX' == 1){
 		if (scalar(delta2_`p'plaXX)!=.){
 		scalar delta2_1plaXX = scalar(delta2_1plaXX) + scalar(EabsdeltaD_`p'plaXX)*scalar(delta2_`p'plaXX)
 		
@@ -1154,8 +1221,8 @@ use "`OG_dataPathq'.dta", clear
 		}
 	}
 	
-	//iwaoss
-	if (`iwaoss_XX' == 1){
+	//iwas
+	if (`iwas_XX' == 1){
 		if (scalar(delta3_`p'plaXX)!=.){
 		scalar delta3_1plaXX = scalar(delta3_1plaXX) + scalar(denom_deltaIV`p'plaXX)*scalar(delta3_`p'plaXX)
 			
@@ -1170,18 +1237,18 @@ use "`OG_dataPathq'.dta", clear
 	
     //Compute the aggregated estimators (Effects and Placebos)
 	
-	//aoss
-	if (`aoss_XX' == 1)  {
+	//as
+	if (`as_XX' == 1)  {
 		scalar delta1_1plaXX = scalar(delta1_1plaXX)/scalar(PS_sum_plaXX)
 	}
 	
-	//waoss
-	if (`waoss_XX' == 1) {
+	//was
+	if (`was_XX' == 1) {
 		scalar delta2_1plaXX = scalar(delta2_1plaXX)/scalar(EabsdeltaD_sum_plaXX)
 	}
 	
-	//iwaoss
-	if (`iwaoss_XX' == 1){
+	//iwas
+	if (`iwas_XX' == 1){
 		scalar delta3_1plaXX = scalar(delta3_1plaXX)/scalar(denom_deltaIV_sum_plaXX)
 		
 	}
@@ -1197,16 +1264,16 @@ use "`OG_dataPathq'.dta", clear
 	//// aggregating IFs
 	forvalues p = 2/`=max_T'{
 		
-	//aoss: Phi1^{T>2}
-	if (`aoss_XX' == 1){
+	//as: Phi1^{T>2}
+	if (`as_XX' == 1){
 		if (`p'>`=`placebo_index'+1'){
 			replace Phi1_`p'plaXX = [scalar(P_`p'plaXX)*Phi1_`p'plaXX + (scalar(delta1_`p'plaXX) - scalar(delta1_1plaXX))*(S_`p'plaXX - scalar(P_`p'plaXX))]/scalar(PS_sum_plaXX)
 			local Phi1_ts_plaXX `Phi1_ts_plaXX' Phi1_`p'plaXX
 		}
 	}
 	
-	//waoss: Phi2^{T>2}
-	if (`waoss_XX' == 1){
+	//was: Phi2^{T>2}
+	if (`was_XX' == 1){
 
 		if (`p'>`=`placebo_index'+1'){
 			replace Phi2_`p'plaXX = [scalar(EabsdeltaD_`p'plaXX)*Phi2_`p'plaXX + (scalar(delta2_`p'plaXX) - scalar(delta2_1plaXX))*(absdeltaD_`p'plaXX - scalar(EabsdeltaD_`p'plaXX))]/scalar(EabsdeltaD_sum_plaXX)
@@ -1214,8 +1281,8 @@ use "`OG_dataPathq'.dta", clear
 		}
 	}
 		
-	//iwaoss: Phi3^{T>2}
-	if (`iwaoss_XX' == 1){
+	//iwas: Phi3^{T>2}
+	if (`iwas_XX' == 1){
 		
 		if (`p'>`=`placebo_index'+1'){
 			replace Phi3_`p'plaXX = [scalar(denom_deltaIV`p'plaXX)*Phi3_`p'plaXX + (scalar(delta3_`p'plaXX) - scalar(delta3_1plaXX))*(innerSumIV_denom_`p'plaXX - scalar(denom_deltaIV`p'plaXX))]/scalar(denom_deltaIV_sum_plaXX)
@@ -1225,8 +1292,8 @@ use "`OG_dataPathq'.dta", clear
 	} //END OF THE LOOP	
 	
 	//// Final IFs and SE
-		//aoss
-	if (`aoss_XX' == 1){
+		//as
+	if (`as_XX' == 1){
 			cap drop Phi1_plaXX
 			cap drop not_to_use1_plaXX
 			gegen Phi1_plaXX = rowtotal(`Phi1_ts_plaXX')
@@ -1241,8 +1308,8 @@ use "`OG_dataPathq'.dta", clear
 			gegen Phi1_placXX = total(Phi1_plaXX) , by(`cluster')
 			bysort `cluster': replace Phi1_placXX=. if _n!=1
 		    replace Phi1_placXX = Phi1_placXX/scalar(N_bar_c_XX)
-				if ("`weight'"!=""){
-				sum Phi1_placXX // use the weight of the cluster, which is the total of the weights of groups in that cluster.
+				if ("`weights'"!=""){
+				sum Phi1_placXX // use the weights of the cluster, which is the total of the weightss of groups in that cluster.
 				}
 				else{
 				sum Phi1_placXX 
@@ -1254,8 +1321,8 @@ use "`OG_dataPathq'.dta", clear
 			scalar LB1_1plaXX = delta1_1plaXX - 1.96*sd_delta1_1plaXX
 			scalar UB1_1plaXX = delta1_1plaXX + 1.96*sd_delta1_1plaXX	
 	}
-		//waoss	
-	if (`waoss_XX' == 1){
+		//was	
+	if (`was_XX' == 1){
 				cap drop Phi2_plaXX
 			cap drop not_to_use2_plaXX
 			gegen Phi2_plaXX = rowtotal(`Phi2_ts_plaXX')
@@ -1270,8 +1337,8 @@ use "`OG_dataPathq'.dta", clear
 		bysort `cluster': gegen Phi2_placXX = total(Phi2_plaXX)
 		bysort `cluster': replace Phi2_placXX=. if _n!=1
 		replace Phi2_placXX = Phi2_placXX/scalar(N_bar_c_XX)
-				if ("`weight'"!=""){
-				sum Phi2_placXX // use the weight of the cluster, which is the total of the weights of groups in that cluster.
+				if ("`weights'"!=""){
+				sum Phi2_placXX // use the weights of the cluster, which is the total of the weightss of groups in that cluster.
 				}
 				else{
 				sum Phi2_placXX 
@@ -1284,8 +1351,8 @@ use "`OG_dataPathq'.dta", clear
 			scalar UB2_1plaXX = delta2_1plaXX + 1.96*sd_delta2_1plaXX
 	}
 	
-		//iwaoss
-	if (`iwaoss_XX' == 1){
+		//iwas
+	if (`iwas_XX' == 1){
 		cap drop Phi3_plaXX
 			cap drop not_to_use3_plaXX
 			gegen Phi3_plaXX = rowtotal(`Phi3_ts_plaXX')
@@ -1300,8 +1367,8 @@ use "`OG_dataPathq'.dta", clear
 		bysort `cluster': egen Phi3_placXX = total(Phi3_plaXX)
 		bysort `cluster': replace Phi3_placXX=. if _n!=1
 		replace Phi3_placXX = Phi3_placXX/scalar(N_bar_c_XX)		
-				if ("`weight'"!=""){
-				sum Phi3_placXX // use the weight of the cluster, which is the total of the weights of groups in that cluster.
+				if ("`weights'"!=""){
+				sum Phi3_placXX // use the weights of the cluster, which is the total of the weightss of groups in that cluster.
 				}
 				else{
 				sum Phi3_placXX 
@@ -1324,7 +1391,7 @@ forvalues P = 1/3{
 forvalues p = 1/`=max_T'{
 	scalar P_XX = `=`P''
 	scalar index_XX = (scalar(P_XX)-1)*(scalar(max_T))
-	if (`aoss_XX' == 1&`P'==1){
+	if (`as_XX' == 1&`P'==1){
 	
 	if ((`p'==1|`p'>`=`placebo_index'+1')){
 		
@@ -1338,7 +1405,7 @@ forvalues p = 1/`=max_T'{
 	}
 	
 	}
-	if (`waoss_XX' == 1&`P'==2){
+	if (`was_XX' == 1&`P'==2){
 
 	if ((`p'==1|`p'>`=`placebo_index'+1')){
 
@@ -1353,7 +1420,7 @@ forvalues p = 1/`=max_T'{
 	}
 	
 	}
-	if (`iwaoss_XX' == 1&`P'==3){
+	if (`iwas_XX' == 1&`P'==3){
 
 	if ((`p'==1|`p'>`=`placebo_index'+1')){
 
@@ -1402,17 +1469,17 @@ matrix V`placebo_index'res_mat_plaXX = res_mat_plaXX
 if `bootstrap'>0{
 
 /*******************************************************************************
-START OF BOOTSTRAPING IF REQUESTED (WITH IV-WAOSS or with TWFE comparisons).
+START OF BOOTSTRAPING IF REQUESTED (WITH IV-WAS or with TWFE comparisons).
 *******************************************************************************/
 
-if ("`iwaoss_XX'"=="1") matrix IVeffects_bootstrap = J(`bootstrap', scalar(max_T), .)
-if ("`waoss_XX'"=="1") matrix WAOSSeffects_bootstrap = J(`bootstrap', scalar(max_T), .)
-if ("`aoss_XX'"=="1") matrix AOSSeffects_bootstrap = J(`bootstrap', scalar(max_T), .)
+if ("`iwas_XX'"=="1") matrix IVeffects_bootstrap = J(`bootstrap', scalar(max_T), .)
+if ("`was_XX'"=="1") matrix WASeffects_bootstrap = J(`bootstrap', scalar(max_T), .)
+if ("`as_XX'"=="1") matrix ASeffects_bootstrap = J(`bootstrap', scalar(max_T), .)
 
 if ("`placebo'"!="0"){
-	if ("`iwaoss_XX'"=="1") matrix IVplacebos_bootstrap = J(`bootstrap', scalar(max_T), .)
-	if ("`waoss_XX'"=="1") matrix WAOSSplacebos_bootstrap = J(`bootstrap', scalar(max_T), .)
-	if ("`aoss_XX'"=="1") matrix AOSSplacebos_bootstrap = J(`bootstrap', scalar(max_T), .)	
+	if ("`iwas_XX'"=="1") matrix IVplacebos_bootstrap = J(`bootstrap', scalar(max_T), .)
+	if ("`was_XX'"=="1") matrix WASplacebos_bootstrap = J(`bootstrap', scalar(max_T), .)
+	if ("`as_XX'"=="1") matrix ASplacebos_bootstrap = J(`bootstrap', scalar(max_T), .)	
 }
 
 if ("`twfe'"!=""){
@@ -1434,7 +1501,7 @@ matrix twfe_bootstrap = J(`bootstrap', 1, .)
 		
 	
 forvalue i=1/`bootstrap'{
-	if ("`iwaoss_XX'"=="1"){
+	if ("`iwas_XX'"=="1"){
 	scalar bt_delta3_1XX = 0
 	scalar bt_delta3_1plaXX = 0
 	
@@ -1442,7 +1509,7 @@ forvalue i=1/`bootstrap'{
 	scalar denom_deltaIV_sum_plaXX = 0
 	}
 	
-	if ("`waoss_XX'"=="1"){
+	if ("`was_XX'"=="1"){
 	scalar bt_delta2_1XX = 0
 	scalar bt_delta2_1plaXX = 0
 	
@@ -1450,7 +1517,7 @@ forvalue i=1/`bootstrap'{
 	scalar EabsdeltaD_sum_plaXX = 0
 	}
 	
-	if ("`aoss_XX'"=="1"){
+	if ("`as_XX'"=="1"){
 	scalar bt_delta1_1XX = 0
 	scalar bt_delta1_1plaXX = 0
 	
@@ -1488,10 +1555,11 @@ else{
 	//save "bsample.dta", replace
 	
 if ("`twfe'"!=""){
+cap drop T_XX_FE_* // Modif Felix: error when running with bootstrap
 tab T_XX, gen(T_XX_FE_)
 tab ID_XX, gen (ID_XX_FE_)
 
-if ("`iwaoss_XX'"=="1") ivreg Y_XX (D_XX = `IV_var_XX') T_XX_FE_* ID_XX_FE_* `if_twfe' 
+if ("`iwas_XX'"=="1") ivreg Y_XX (D_XX = `IV_var_XX') T_XX_FE_* ID_XX_FE_* `if_twfe' 
 else                      reg Y_XX D_XX T_XX_FE_* ID_XX_FE_* `if_twfe'
 
 matrix twfe_bootstrap[`i',1] = e(b)[1,1]
@@ -1503,45 +1571,45 @@ matrix bootstrap_order[`i',1] = `i'
 	
 forvalues p = 2/`=max_T'{	
 	// Calling the command for each pair of time periods
-	did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weight(weight_XX) switchers(`switchers') pairwise(`p') data_1XX($data_1XX) aoss(`aoss_XX') waoss(`waoss_XX') iwaoss(`iwaoss_XX') estimation_method(`estimation_method') `exact_match' cluster(`cluster') quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls')  bootstrap(`bootstrap') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation')
+	did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weights(weights_XX) switchers(`switchers') pairwise(`p') data_1XX($data_1XX) as(`as_XX') was(`was_XX') iwas(`iwas_XX') estimation_method(`estimation_method') `exact_match' cluster(`cluster') quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls')  bootstrap(`bootstrap') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation')
 	
 // Put results into a matrix 
-if ("`iwaoss_XX'"=="1") matrix IVeffects_bootstrap[`i',`p'] = scalar(delta3_`p'XX)
-if ("`waoss_XX'"=="1")  matrix WAOSSeffects_bootstrap[`i',`p'] = scalar(delta2_`p'XX)
-if ("`aoss_XX'"=="1")   matrix AOSSeffects_bootstrap[`i',`p'] = scalar(delta1_`p'XX)
+if ("`iwas_XX'"=="1") matrix IVeffects_bootstrap[`i',`p'] = scalar(delta3_`p'XX)
+if ("`was_XX'"=="1")  matrix WASeffects_bootstrap[`i',`p'] = scalar(delta2_`p'XX)
+if ("`as_XX'"=="1")   matrix ASeffects_bootstrap[`i',`p'] = scalar(delta1_`p'XX)
 
 
 	//denominators of the aggregated versions
-	if (`iwaoss_XX' == 1){
+	if (`iwas_XX' == 1){
 		if (scalar(delta3_`p'XX)!=.){
 			scalar bt_delta3_1XX = scalar(bt_delta3_1XX) + scalar(denom_deltaIV`p'XX)*scalar(delta3_`p'XX)
 		}
 	}
-	if (`waoss_XX' == 1){
+	if (`was_XX' == 1){
 		if (scalar(delta2_`p'XX)!=.){
 			scalar bt_delta2_1XX = scalar(bt_delta2_1XX) + scalar(EabsdeltaD_`p'XX)*scalar(delta2_`p'XX)
 		}
 	}
-	if (`aoss_XX' == 1){
+	if (`as_XX' == 1){
 		if (scalar(delta1_`p'XX)!=.){
 			scalar bt_delta1_1XX = scalar(bt_delta1_1XX) + scalar(P_`p'XX)*scalar(delta1_`p'XX)
 		}
 	}
 }
 	//final aggregations
-	if (`iwaoss_XX' == 1){
+	if (`iwas_XX' == 1){
 			scalar bt_delta3_1XX = scalar(bt_delta3_1XX)/scalar(denom_deltaIV_sum_XX)
 	}
-	if (`waoss_XX' == 1){
+	if (`was_XX' == 1){
 			scalar bt_delta2_1XX = scalar(bt_delta2_1XX)/scalar(EabsdeltaD_sum_XX)
 	}
-	if (`aoss_XX' == 1){
+	if (`as_XX' == 1){
 			scalar bt_delta1_1XX = scalar(bt_delta1_1XX)/scalar(PS_sum_XX)
 	}
 // Put results into a matrix 
 cap matrix IVeffects_bootstrap[`i',1]    = scalar(bt_delta3_1XX)
-cap matrix WAOSSeffects_bootstrap[`i',1] = scalar(bt_delta2_1XX)
-cap matrix AOSSeffects_bootstrap[`i',1]  = scalar(bt_delta1_1XX)
+cap matrix WASeffects_bootstrap[`i',1] = scalar(bt_delta2_1XX)
+cap matrix ASeffects_bootstrap[`i',1]  = scalar(bt_delta1_1XX)
 
 if ("`placebo'"!="0"){
 	forvalues p = `=2+`placebo''/`=max_T'{
@@ -1549,24 +1617,24 @@ if ("`placebo'"!="0"){
 	//scalar delta3_`p'OGplaXX = scalar(delta3_`p'plaXX)
 	
 		//i) Calling the command for each pair of time periods
-		did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weight(weight_XX) switchers(`switchers') pairwise(`p') data_1XX($data_1XX) aoss(`aoss_XX') waoss(`waoss_XX') iwaoss(`iwaoss_XX') estimation_method(`estimation_method') placebo(`placebo') `exact_match' cluster(`cluster')  quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls') bootstrap(`bootstrap') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation')
+		did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weights(weights_XX) switchers(`switchers') pairwise(`p') data_1XX($data_1XX) as(`as_XX') was(`was_XX') iwas(`iwas_XX') estimation_method(`estimation_method') placebo(`placebo') `exact_match' cluster(`cluster')  quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls') bootstrap(`bootstrap') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation')
 				
 // Put results into a matrix 
 cap matrix IVplacebos_bootstrap[`i',`p'] = scalar(delta3_`p'plaXX)\
-cap matrix WAOSSplacebos_bootstrap[`i',`p'] = scalar(delta2_`p'plaXX)
-cap matrix AOSSplacebos_bootstrap[`i',`p'] = scalar(delta1_`p'plaXX)
+cap matrix WASplacebos_bootstrap[`i',`p'] = scalar(delta2_`p'plaXX)
+cap matrix ASplacebos_bootstrap[`i',`p'] = scalar(delta1_`p'plaXX)
 
-if (`iwaoss_XX' == 1){
+if (`iwas_XX' == 1){
 	if (scalar(delta3_`p'plaXX)!=.){
 		scalar bt_delta3_1plaXX = scalar(bt_delta3_1plaXX) + scalar(denom_deltaIV`p'plaXX)*scalar(delta3_`p'plaXX)
 		}
 }
-if (`waoss_XX' == 1){
+if (`was_XX' == 1){
 	if (scalar(delta2_`p'plaXX)!=.){
 		scalar bt_delta2_1plaXX = scalar(bt_delta2_1plaXX) + scalar(EabsdeltaD_`p'plaXX)*scalar(delta2_`p'plaXX)
 		}
 }
-if (`aoss_XX' == 1){
+if (`as_XX' == 1){
 	if (scalar(delta1_`p'plaXX)!=.){
 		scalar bt_delta1_1plaXX = scalar(bt_delta1_1plaXX) + scalar(P_`p'plaXX)*scalar(delta1_`p'plaXX)
 		}
@@ -1574,19 +1642,19 @@ if (`aoss_XX' == 1){
 }
 
 	//final aggregations
-	if (`iwaoss_XX' == 1){
+	if (`iwas_XX' == 1){
 			scalar bt_delta3_1plaXX = scalar(bt_delta3_1plaXX)/scalar(denom_deltaIV_sum_plaXX)
 	}	
-	if (`waoss_XX' == 1){
+	if (`was_XX' == 1){
 			scalar bt_delta2_1plaXX = scalar(bt_delta2_1plaXX)/scalar(EabsdeltaD_sum_XX)
 	}	
-	if (`aoss_XX' == 1){
+	if (`as_XX' == 1){
 			scalar bt_delta1_1plaXX = scalar(bt_delta1_1plaXX)/scalar(PS_sum_XX)
 	}	
 // Put results into a matrix 
 cap matrix IVplacebos_bootstrap[`i',1]    = scalar(bt_delta3_1plaXX)
-cap matrix WAOSSplacebos_bootstrap[`i',1] = scalar(bt_delta2_1plaXX)
-cap matrix AOSSplacebos_bootstrap[`i',1]  = scalar(bt_delta1_1plaXX)
+cap matrix WASplacebos_bootstrap[`i',1] = scalar(bt_delta2_1plaXX)
+cap matrix ASplacebos_bootstrap[`i',1]  = scalar(bt_delta1_1plaXX)
 		
 }
 
@@ -1600,17 +1668,17 @@ use "`OG_dataPathq'.dta", clear
 END OF BOOTSTRAPING and Restore the original point estimates from estimation using the whole sanmple
 *******************************************************************************/
 	forvalues p = 1/`=max_T'{
-		if (`iwaoss_XX' == 1){
+		if (`iwas_XX' == 1){
 		scalar delta3_`p'XX = scalar(delta3_`p'OGXX)
 		if ("`placebo'"!="0"&(`p'==1|`p'>`=`placebo'+1'))  scalar delta3_`p'plaXX = scalar(delta3_`p'plaOGXX)
 		}
 		
-		if (`waoss_XX' == 1){
+		if (`was_XX' == 1){
 		scalar delta2_`p'XX = scalar(delta2_`p'OGXX)
 		if ("`placebo'"!="0"&(`p'==1|`p'>`=`placebo'+1'))  scalar delta2_`p'plaXX = scalar(delta2_`p'plaOGXX)
 		}
 		
-		if (`aoss_XX' == 1){
+		if (`as_XX' == 1){
 		scalar delta1_`p'XX = scalar(delta1_`p'OGXX)
 		if ("`placebo'"!="0"&(`p'==1|`p'>`=`placebo'+1'))  scalar delta1_`p'plaXX = scalar(delta1_`p'plaOGXX)
 		}
@@ -1621,7 +1689,7 @@ di "Completed!"
 //Percentile CIs
 quietly{
 	
-if (`iwaoss_XX' == 1){ //Only bootstrap se if iv-waoss
+if (`iwas_XX' == 1){ //Only bootstrap se if iv-was
 clear 
 svmat IVeffects_bootstrap	
 
@@ -1639,52 +1707,52 @@ svmat twfe_bootstrap
 svmat bootstrap_order
 sort bootstrap_order1
 
-cap svmat WAOSSeffects_bootstrap	
-cap svmat AOSSeffects_bootstrap	                 
+cap svmat WASeffects_bootstrap	
+cap svmat ASeffects_bootstrap	                 
                  
-cap gen diff_twfe_ivwaoss =  twfe_bootstrap1 - IVeffects_bootstrap1
-cap gen diff_twfe_ivwaoss =    twfe_bootstrap1 - WAOSSeffects_bootstrap1
+cap gen diff_twfe_ivwas =  twfe_bootstrap1 - IVeffects_bootstrap1
+cap gen diff_twfe_ivwas =    twfe_bootstrap1 - WASeffects_bootstrap1
 
-sum diff_twfe_ivwaoss
-scalar diff_twfe_ivwaoss = r(mean)
-scalar N_twfe_ivwaoss = r(N)
-scalar sd_twfe_ivwaoss   = r(sd)
-scalar tsta_twfe_ivwaoss = scalar(diff_twfe_ivwaoss)/scalar(sd_twfe_ivwaoss) //scalar(diff_twfe_ivwaoss)*sqrt(scalar(N_twfe_ivwaoss))/scalar(sd_twfe_ivwaoss)
-scalar pval_twfe_ivwaoss = 2*(1-normal(abs(tsta_twfe_ivwaoss)))
+sum diff_twfe_ivwas
+scalar diff_twfe_ivwas = r(mean)
+scalar N_twfe_ivwas = r(N)
+scalar sd_twfe_ivwas   = r(sd)
+scalar tsta_twfe_ivwas = scalar(diff_twfe_ivwas)/scalar(sd_twfe_ivwas) //scalar(diff_twfe_ivwas)*sqrt(scalar(N_twfe_ivwas))/scalar(sd_twfe_ivwas)
+scalar pval_twfe_ivwas = 2*(1-normal(abs(tsta_twfe_ivwas)))
 //save "data_twfe.dta", replace
 //Store results
-    matrix twfe_ivwaoss = J(2,6,.)
-	matrix twfe_ivwaoss[2,1] = scalar(diff_twfe_ivwaoss)
-	matrix twfe_ivwaoss[2,2] = scalar(sd_twfe_ivwaoss)
+    matrix twfe_ivwas = J(2,6,.)
+	matrix twfe_ivwas[2,1] = scalar(diff_twfe_ivwas)
+	matrix twfe_ivwas[2,2] = scalar(sd_twfe_ivwas)
 	
 	sum twfe_bootstrap1
-	matrix twfe_ivwaoss[1,1] = r(mean)
-	matrix twfe_ivwaoss[1,2] = r(sd)
+	matrix twfe_ivwas[1,1] = r(mean)
+	matrix twfe_ivwas[1,2] = r(sd)
 	scalar tsta_twfe = r(mean)/r(sd)
 	scalar pval_twfe = 2*(1-normal(abs(tsta_twfe)))
 	
 	if("percentile" == ""){
 		
-	matrix twfe_ivwaoss[1,3] = r(mean)-1.96*r(sd)
-	matrix twfe_ivwaoss[1,4] = r(mean)+1.96*r(sd)
+	matrix twfe_ivwas[1,3] = r(mean)-1.96*r(sd)
+	matrix twfe_ivwas[1,4] = r(mean)+1.96*r(sd)
 	
-	matrix twfe_ivwaoss[2,3] = scalar(diff_twfe_ivwaoss) - 1.96*scalar(sd_twfe_ivwaoss) // */sqrt(scalar(N_twfe_ivwaoss))
-	matrix twfe_ivwaoss[2,4] = scalar(diff_twfe_ivwaoss) + 1.96*scalar(sd_twfe_ivwaoss) // */sqrt(scalar(N_twfe_ivwaoss))
+	matrix twfe_ivwas[2,3] = scalar(diff_twfe_ivwas) - 1.96*scalar(sd_twfe_ivwas) // */sqrt(scalar(N_twfe_ivwas))
+	matrix twfe_ivwas[2,4] = scalar(diff_twfe_ivwas) + 1.96*scalar(sd_twfe_ivwas) // */sqrt(scalar(N_twfe_ivwas))
 	}
 	else{
-		sort diff_twfe_ivwaoss
-		cap drop cum_diff_twfe_ivwaoss
-		gen cum_diff_twfe_ivwaoss = sum(diff_twfe_ivwaoss) if diff_twfe_ivwaoss!=.
-		sum cum_diff_twfe_ivwaoss
+		sort diff_twfe_ivwas
+		cap drop cum_diff_twfe_ivwas
+		gen cum_diff_twfe_ivwas = sum(diff_twfe_ivwas) if diff_twfe_ivwas!=.
+		sum cum_diff_twfe_ivwas
 		cap drop treshold_XX
-		gen treshold_XX = _n if cum_diff_twfe_ivwaoss == r(min)
+		gen treshold_XX = _n if cum_diff_twfe_ivwas == r(min)
 		sum treshold_XX
-		scalar pval_twfe_ivwaoss = 2*min(1-r(min)/`bootstrap', r(min)/`bootstrap')
+		scalar pval_twfe_ivwas = 2*min(1-r(min)/`bootstrap', r(min)/`bootstrap')
 		
 		
-		_pctile diff_twfe_ivwaoss, nq(40)
-		matrix twfe_ivwaoss[2,3] = r(r1)
-		matrix twfe_ivwaoss[2,4] = r(r39)
+		_pctile diff_twfe_ivwas, nq(40)
+		matrix twfe_ivwas[2,3] = r(r1)
+		matrix twfe_ivwas[2,4] = r(r39)
 		
 		
 		sort twfe_bootstrap1
@@ -1698,22 +1766,22 @@ scalar pval_twfe_ivwaoss = 2*(1-normal(abs(tsta_twfe_ivwaoss)))
 		
 		
 		_pctile twfe_bootstrap1, nq(40)
-		matrix twfe_ivwaoss[1,3] = r(r1)
-		matrix twfe_ivwaoss[1,4] = r(r39)
+		matrix twfe_ivwas[1,3] = r(r1)
+		matrix twfe_ivwas[1,4] = r(r39)
 	}
 	
-	matrix twfe_ivwaoss[2,5] = scalar(pval_twfe_ivwaoss)
-	matrix twfe_ivwaoss[2,6] = scalar(tsta_twfe_ivwaoss)
+	matrix twfe_ivwas[2,5] = scalar(pval_twfe_ivwas)
+	matrix twfe_ivwas[2,6] = scalar(tsta_twfe_ivwas)
 	
-	matrix twfe_ivwaoss[1,5] = scalar(pval_twfe)
-	matrix twfe_ivwaoss[1,6] = scalar(tsta_twfe)
+	matrix twfe_ivwas[1,5] = scalar(pval_twfe)
+	matrix twfe_ivwas[1,6] = scalar(tsta_twfe)
 	
-	matrix colnames twfe_ivwaoss = "Estimate." "SE" "LB CI" "UB CI" "pval." "t"
-    if (`iwaoss_XX' == 1) matrix rownames twfe_ivwaoss = "TWFE" "TWFE-IVWAOSS" 
-    if (`waoss_XX' == 1)  matrix rownames twfe_ivwaoss = "TWFE" "TWFE-WAOSS" 
+	matrix colnames twfe_ivwas = "Estimate." "SE" "LB CI" "UB CI" "pval." "t"
+    if (`iwas_XX' == 1) matrix rownames twfe_ivwas = "TWFE" "TWFE-IVWAS" 
+    if (`was_XX' == 1)  matrix rownames twfe_ivwas = "TWFE" "TWFE-WAS" 
 }
 
-if (`iwaoss_XX' == 1){
+if (`iwas_XX' == 1){
 if ("`placebo'"!="0"){
 	clear 
 	svmat IVplacebos_bootstrap	
@@ -1754,7 +1822,7 @@ forvalues P = 1/3{
 forvalues p = 1/`=max_T'{
 	scalar P_XX = `=`P''
 	scalar index_XX = (scalar(P_XX)-1)*(scalar(max_T))
-	if (`aoss_XX' == 1&`P'==1){
+	if (`as_XX' == 1&`P'==1){
 		
 			**********************************************************	
 	matrix res_mat_XX[`=index_XX' + `p',1] = scalar(delta`P'_`p'XX)
@@ -1765,7 +1833,7 @@ forvalues p = 1/`=max_T'{
 	matrix res_mat_XX[`=index_XX' + `p',6] = Nstayers`P'_`p'XX
 	
 	}
-	if (`waoss_XX' == 1&`P'==2){
+	if (`was_XX' == 1&`P'==2){
 		
 			**********************************************************	
 	matrix res_mat_XX[`=index_XX' + `p',1] = scalar(delta`P'_`p'XX)
@@ -1776,7 +1844,7 @@ forvalues p = 1/`=max_T'{
 	matrix res_mat_XX[`=index_XX' + `p',6] = Nstayers`P'_`p'XX
 	
 	}
-	if (`iwaoss_XX' == 1&`P'==3){
+	if (`iwas_XX' == 1&`P'==3){
 		
 			**********************************************************	
 
@@ -1792,28 +1860,28 @@ forvalues p = 1/`=max_T'{
 
 if (scalar(P_XX)==1){
 	if (`p'>1){
-	local rownames_XX `rownames_XX' " aoss_`p'"
+	local rownames_XX `rownames_XX' " as_`p'"
 	}
 	else{
-	local rownames_XX `rownames_XX' "AOSS"
+	local rownames_XX `rownames_XX' "AS"
 	}
 }
 
 if (scalar(P_XX)==2){
 	if (`p'>1){
-	local rownames_XX `rownames_XX' "waoss_`p'"
+	local rownames_XX `rownames_XX' "was_`p'"
 	}
 	else{
-	local rownames_XX `rownames_XX' "WAOSS"
+	local rownames_XX `rownames_XX' "WAS"
 	}
 }
 
 if (scalar(P_XX)==3){
 	if (`p'>1){
-	local rownames_XX `rownames_XX' "iv-waoss_`p'"
+	local rownames_XX `rownames_XX' "iv-was_`p'"
 	}
 else{
-	local rownames_XX `rownames_XX' "IV-WAOSS"
+	local rownames_XX `rownames_XX' "IV-WAS"
 	}
 }
 }
@@ -1840,43 +1908,43 @@ scalar max_mT = scalar(max_T)-1
 
 di as input _skip(34)"{hline 46}"
 //Number of observations
-if (`aoss_XX'==1){
+if (`as_XX'==1){
 	local nb_obs_XX =  scalar(Nstayers1_1XX) + scalar(N_Switchers1_1XX)
 }
-if (`waoss_XX'==1){
+if (`was_XX'==1){
 	local nb_obs_XX =  scalar(Nstayers2_1XX) + scalar(N_Switchers2_1XX)
 }
-if (`iwaoss_XX'==1){
+if (`iwas_XX'==1){
 	local nb_obs_XX =  scalar(Nstayers3_1XX) + scalar(N_Switchers3_1XX)
 }
 local nb_obs_adj_XX = strlen("`nb_obs_XX'")
 	di as text _skip(34) "{it: Number of observations}"_skip(4) " =" _skip(`=17-`nb_obs_adj_XX'') "`nb_obs_XX'"
 //Estimation method
-if (`waoss_XX'==1){
+if (`was_XX'==1){
 if ("`estimation_method'" =="" | "`estimation_method'" =="ra"){
-	di as text _skip(34) "{it: WAOSS Estimation method }" "   =  {it:reg. adjustment}"
+	di as text _skip(34) "{it: WAS Estimation method }" "     =  {it:reg. adjustment}"
 }
 
 if ("`estimation_method'" =="ps"){
-di as text _skip(34) "{it: WAOSS Estimation method }" "   = {it:propensity-score}"
+di as text _skip(34) "{it: WAS Estimation method }" "     = {it:propensity-score}"
 }
 
 if ("`estimation_method'" =="dr"){
-	di as text _skip(34) "{it: WAOSS Estimation method  }" "  = {it:   doubly-robust}"
+	di as text _skip(34) "{it: WAS Estimation method  }" "    = {it:   doubly-robust}"
 }
 }
 
-if (`iwaoss_XX'==1){
+if (`iwas_XX'==1){
 if ("`estimation_method'" =="" | "`estimation_method'" =="ra"){
-	di as text _skip(34) "{it: IV-WAOSS Estimation method}" " =  {it:reg. adjustment}"
+	di as text _skip(34) "{it: IV-WAS Estimation method}" "     =  {it:reg. adjustment}"
 }
 
 if ("`estimation_method'" =="ps"){
-di as text _skip(34) "{it: IV-WAOSS Estimation method}" " = {it:propensity-score}"
+di as text _skip(34) "{it: IV-WAS Estimation method}" "   = {it:propensity-score}"
 }
 
 if ("`estimation_method'" =="dr"){
-	di as text _skip(34) "{it: IV-WAOSS Estimation method}" " = {it:   doubly-robust}"
+	di as text _skip(34) "{it: IV-WAS Estimation method}" "   = {it:   doubly-robust}"
 }
 }
 
@@ -1927,7 +1995,7 @@ local msg_XX = "{it:(Std. err. adjusted for {hi:`nb_cluster_XX'} clusters in {hi
 local adjustement_XX = strlen("`msg_XX'")
 di as text _skip(`=95-`adjustement_XX'') "`msg_XX'"
 }
-if (`bootstrap'>0&`iwaoss_XX'==1){
+if (`bootstrap'>0&`iwas_XX'==1){
 local msg_XX = "{it:(Bootstrap Std. err. from {hi:`bootstrap'} replications.)}"
 local adjustement_XX = strlen("`msg_XX'")
 di as text _skip(`=90-`adjustement_XX'') "`msg_XX'"
@@ -1935,13 +2003,13 @@ di as text _skip(`=90-`adjustement_XX'') "`msg_XX'"
 
 forvalues i = 1/3{
 	
-	if ("`i'"=="1"&`aoss_XX' == 1){
+	if ("`i'"=="1"&`as_XX' == 1){
 		//Effects
 		matrix res_mat_1XX`q' = res_mat_XX[ 1..max_T,....]
 
 		di as input "{hline 80}"
 		//di as input _skip(35) "Estimation of the `1'(s)"
-		di as input _skip(26) "Average Of Switchers' Slopes (AOSS)"
+		di as input _skip(31) "Average Slope (AS)"
 		di as input "{hline 80}"
 		if ("`disaggregate'" ==""){
 			noisily matlist res_mat_1XX`q'[1..1,....]
@@ -1951,32 +2019,44 @@ forvalues i = 1/3{
 		}
 		//Placebos
 		if ("`placebo'"!="0"){
+			
+			// Modif Felix: instead of printing many one line matrices generate one matix combining all those and outputting just one matrix (keep disaggregated as it is)
 		
 	forvalues placebo_index = 1/`placebo'{
 		matrix res_mat_1plaXX`q' = V`placebo_index'res_mat_plaXX[ 1..max_T,....]
-
-		di as input "{hline 80}"
-		di as input _skip(32) "Placebo(s) AOSS"
-		di as input "{hline 80}"
-		if ("`disaggregate'" ==""){
-			noisily matlist res_mat_1plaXX`q'[1..1,....]
+		
+		if `placebo_index'==1{
+			matrix mat_combined1_pl_`q'=res_mat_1plaXX`q'[1..1,....]
 		}
-		else{
+		if `placebo_index'>1{
+			matrix mat_combined1_pl_`q'=mat_combined1_pl_`q'\res_mat_1plaXX`q'[1..1,....]
+		}
+
+		if ("`disaggregate'" !=""){
+		di as input "{hline 80}"
+		di as input _skip(33) "Placebo(s) AS"
+		di as input "{hline 80}"
 			noisily matlist res_mat_1plaXX`q'
 		}
 		
 	}
+	if ("`disaggregate'" ==""){
+			di as input "{hline 80}"
+			di as input _skip(33) "Placebo(s) AS"
+			di as input "{hline 80}"
+			noisily matlist mat_combined1_pl_`q'
+		}
 	}
 	}
 	
-	if ("`i'"=="2"&`waoss_XX' == 1){
+	if ("`i'"=="2"&`was_XX' == 1){
 		
 		//Effects
         matrix res_mat_2XX`q' = res_mat_XX[max_T+1..2*max_T,....]
 
 		di as input "{hline 80}"
 		//di as input _skip(35) "Estimation of the `2'(s)"
-		di as input _skip(22) "Weighted Average Of Switchers' Slopes (WAOSS)"
+		di as input _skip(27) "Weighted Average Slope (WAS)"
 		di as input "{hline 80}"
 		
 		if ("`disaggregate'" ==""){
@@ -1990,29 +2070,38 @@ forvalues i = 1/3{
 		if ("`placebo'"!="0"){
 		forvalues placebo_index = 1/`placebo'{
 			matrix res_mat_2plaXX`q' = V`placebo_index'res_mat_plaXX[max_T+1..2*max_T,....]
-
-			di as input "{hline 80}"
-			di as input _skip(32) "Placebo(s) WAOSS"
-			di as input "{hline 80}"
 			
-			if ("`disaggregate'" ==""){
-				noisily matlist res_mat_2plaXX`q'[1..1,....]
-			}
-			else{
+			if `placebo_index'==1{
+			matrix mat_combined2_pl_`q'=res_mat_2plaXX`q'[1..1,....]
+		}
+		if `placebo_index'>1{
+			matrix mat_combined2_pl_`q'=mat_combined2_pl_`q'\res_mat_2plaXX`q'[1..1,....]
+		}
+
+			if ("`disaggregate'" !=""){
+				di as input "{hline 80}"
+				di as input _skip(33) "Placebo(s) WAS"
+				di as input "{hline 80}"
 				noisily matlist res_mat_2plaXX`q'
 			}	
+		}
+			if ("`disaggregate'" ==""){
+			di as input "{hline 80}"
+			di as input _skip(33) "Placebo(s) WAS"
+			di as input "{hline 80}"
+			noisily matlist mat_combined2_pl_`q'
 		}
 		}
 	}
 	
-	if ("`i'"=="3"&`iwaoss_XX' == 1){
+	if ("`i'"=="3"&`iwas_XX' == 1){
 		
 		//Effects
         matrix res_mat_3XX`q' = res_mat_XX[2*max_T+1...,....]
 
 		di as input "{hline 80}"
 		//di as input _skip(35) "Estimation of the `3'(s)"
-		di as input _skip(22) "IV-Weighted Average Of Switchers' Slopes (IWAOSS)"
+		di as input _skip(25) "IV-Weighted Average Slope (IV-WAS)"
 		di as input "{hline 80}"
 		if ("`disaggregate'" ==""){
 				noisily matlist res_mat_3XX`q'[1..1,....]
@@ -2025,16 +2114,26 @@ forvalues i = 1/3{
 		if ("`placebo'"!="0"){
 		forvalues placebo_index = 1/`placebo'{
 	    matrix res_mat_3plaXX`q' = V`placebo_index'res_mat_plaXX[2*max_T+1...,....]
-		di as input "{hline 80}"
-		di as input _skip(30) "Placebo(s) IV-WAOSS"
-		di as input "{hline 80}"
 		
-		if ("`disaggregate'" ==""){
-				noisily matlist res_mat_3plaXX`q'[1..1,....]
+		if `placebo_index'==1{
+			matrix mat_combined3_pl_`q'=res_mat_3plaXX`q'[1..1,....]
 		}
-		else{
+		if `placebo_index'>1{
+			matrix mat_combined3_pl_`q'=mat_combined3_pl_`q'\res_mat_3plaXX`q'[1..1,....]
+		}
+		
+		if ("`disaggregate'" !=""){
+				di as input "{hline 80}"
+				di as input _skip(33) "Placebo(s) IV-WAS"
+				di as input "{hline 80}"
 				noisily matlist res_mat_3plaXX`q'
-		}	
+			}	
+		}
+		if ("`disaggregate'" ==""){
+			di as input "{hline 80}"
+			di as input _skip(33) "Placebo(s) IV-WAS"
+			di as input "{hline 80}"
+			noisily matlist mat_combined3_pl_`q'
 		}
 	}
 }
@@ -2064,44 +2163,44 @@ if (scalar(N_drop_c_noextra_XX)>1){
 }
 
 //Quasi-stayers problem
-if (`aoss_XX' == 1 & `waoss_XX' == 1){
+if (`as_XX' == 1 & `was_XX' == 1){
 	scalar ratio_sd_XX = scalar(delta1_1XX)/scalar(delta2_1XX)
 	if(scalar(ratio_sd_XX)>10&scalar(ratio_sd_XX)!=.){
-		di as error "You may have quasi-stayers in your data. The aoss estimand is likely to be biased."
+		di as error "You may have quasi-stayers in your data. The as estimand is likely to be biased."
 	}
 }
 
-//Test results: WAOSS vs AOSS
-if ("`aoss_vs_waoss'"!=""&`a_vs_w'==2){
+//Test results: WAS vs AS
+if ("`as_vs_was'"!=""&`a_vs_w'==2){
 	di as input " "
 
-	di as input _skip(26) "Test of difference between AOSS and WAOSS"
-	di as text "{it:H0: AOSS = WAOSS}"
+	di as input _skip(26) "Test of difference between AS and WAS"
+	di as text "{it:H0: AS = WAS}"
 	di as input "{hline 80}"
-	noisily matlist aoss_vs_waoss_mat
+	noisily matlist as_vs_was_mat
 }
 di as input "{hline 80}"
 
 
-//Test results: TWFE  vs IVWAOSS
+//Test results: TWFE  vs IVWAS
 if ("`twfe'"!=""){
 	di as input " "
 
-	if (`iwaoss_XX' == 1 ){
-	di as input _skip(26) "Test of difference between TWFE and IV-WAOSS"
+	if (`iwas_XX' == 1 ){
+	di as input _skip(26) "Test of difference between TWFE and IV-WAS"
 		if ("`percentile'"!="") di as text _skip(32) "{it: (Percentile bootstrap method)}"
 	else di as text _skip(32) "{it: (Normal bootstrap method)}"
-	di as text "{it:H0: TWFE = IV-WAOSS}"
+	di as text "{it:H0: TWFE = IV-WAS}"
 	}
-	if (`waoss_XX' == 1 ){
-	di as input _skip(26) "Test of difference between TWFE and WAOSS"
+	if (`was_XX' == 1 ){
+	di as input _skip(26) "Test of difference between TWFE and WAS"
 	if ("`percentile'"!="") di as text _skip(32) "{it: (Percentile bootstrap method)}"
 	else di as text _skip(32) "{it: (Normal bootstrap method)}"
-	di as text "{it:H0: TWFE = WAOSS}"
+	di as text "{it:H0: TWFE = WAS}"
 	}
 	
 	di as input "{hline 80}"
-	noisily matlist twfe_ivwaoss
+	noisily matlist twfe_ivwas
 di as input "{hline 80}"
 di as text "{it:Values in Column Estimate. are means of bootstrap's point estimates.}"
 }
@@ -2129,62 +2228,62 @@ if ("`placebo'"!="0"){
 	local if_pla = 2
 }
  //local colnames : colnames b // local colnames : subinstr local colnames "c2" "Placebo1", all
-if(`aoss_XX' == 1&`waoss_XX' == 0) {
+if(`as_XX' == 1&`was_XX' == 0) {
 	if (scalar(delta1_1XX)!=.) matrix b_q[1,1] == delta1_1XX
-	local colnames "`colnames' AOSS`q_index'"
+	local colnames "`colnames' AS`q_index'"
 	if (scalar(sd_delta1_1XX)!=.) matrix V_q[1,1] = sd_delta1_1XX^2
 }
 
-if(`waoss_XX' == 1&`aoss_XX' == 0) {
+if(`was_XX' == 1&`as_XX' == 0) {
 	if (scalar(delta2_1XX)!=.) matrix b_q[1,1] = delta2_1XX
-	local colnames "`colnames' WAOSS`q_index'"
+	local colnames "`colnames' WAS`q_index'"
 	if (scalar(sd_delta2_1XX)!=.) matrix V_q[1,1] = sd_delta2_1XX^2
 }
 
-if(`=`aoss_XX' +`waoss_XX'' == 2) {
+if(`=`as_XX' +`was_XX'' == 2) {
 	
 	if (scalar(delta1_1XX)!=.) matrix b_q[1,1] == delta1_1XX
-	local colnames "`colnames' AOSS`q_index'"
+	local colnames "`colnames' AS`q_index'"
 	if (scalar(sd_delta1_1XX)!=.) matrix V_q[1,1] = sd_delta1_1XX^2
 	
 	if (scalar(delta2_1XX)!=.) matrix b_q[1,2] = delta2_1XX
-	local colnames "`colnames' WAOSS`q_index'"
+	local colnames "`colnames' WAS`q_index'"
 	if (scalar(delta2_1XX)!=.) matrix V_q[2,2] = sd_delta2_1XX^2
 }
 
-if (`iwaoss_XX'==1){
+if (`iwas_XX'==1){
 	if (scalar(delta3_1XX)!=.) matrix b_q[1,1] = delta3_1XX	
-	local colnames "`colnames' IV-WAOSS`q_index'"
+	local colnames "`colnames' IV-WAS`q_index'"
 	if (scalar(delta3_1XX)!=.) matrix V_q[1,1] = sd_delta3_1XX^2
 }
 
 //b of the placebos
 if ("`placebo'"!="0"){
 	
-	if(`aoss_XX' == 1&`waoss_XX' == 0) {
+	if(`as_XX' == 1&`was_XX' == 0) {
 	if (scalar(delta1_1plaXX)!=.) matrix b_q[1,2] == delta1_1plaXX
-	local colnames "`colnames' PlaceboAOSS`q_index'"
+	local colnames "`colnames' PlaceboAS`q_index'"
 	if (scalar(sd_delta1_1plaXX)!=.) matrix V_q[2,2] = sd_delta1_1plaXX^2
 }
 
-if(`waoss_XX' == 1&`aoss_XX' == 0) {
+if(`was_XX' == 1&`as_XX' == 0) {
 	if (scalar(delta2_1plaXX)!=.) matrix b_q[1,2] = delta2_1plaXX
-	local colnames "`colnames' PlaceboWAOSS`q_index'"
+	local colnames "`colnames' PlaceboWAS`q_index'"
 	if (scalar(sd_delta2_1plaXX)!=.) matrix V_q[2,2] = sd_delta2_1plaXX^2
 }
 
-if(`=`aoss_XX' +`waoss_XX'' == 2) {
+if(`=`as_XX' +`was_XX'' == 2) {
 	
 	if (scalar(delta1_1plaXX)!=.) matrix b_q[1,3] == delta1_1plaXX
-	local colnames "`colnames' PlaceboAOSS`q_index'"
+	local colnames "`colnames' PlaceboAS`q_index'"
 	if (scalar(sd_delta1_1plaXX)!=.) matrix V_q[3,3] = sd_delta1_1plaXX^2
 	
 	if (scalar(delta2_1plaXX)!=.) matrix b_q[1,4] = delta2_1plaXX
-	local colnames "`colnames' PlaceboWAOSS`q_index'"
+	local colnames "`colnames' PlaceboWAS`q_index'"
 	if (scalar(delta2_1plaXX)!=.) matrix V_q[4,4] = sd_delta2_1plaXX^2
 }
 
-if (`iwaoss_XX'==1){
+if (`iwas_XX'==1){
 	if (scalar(delta3_1plaXX)!=.) matrix b_q[1,2] = delta3_1plaXX	
 	local colnames "`colnames' Placebo`q_index'"
 	if (scalar(delta3_1plaXX)!=.) matrix V_q[2,2] = sd_delta3_1plaXX^2
@@ -2226,7 +2325,7 @@ ereturn post b V, obs(`nb_obs_XX') depname("`depname'")
 //ereturn matrix testt = J(5, 2, 0)
 if (`by_quantile'>1){
 forvalues q = 1/`by_quantile'{
-	return_label, by_quantile(`by_quantile') by_fd(`by_fd') q(`q') aoss(`aoss_XX') waoss(`waoss_XX') iwaoss(`iwaoss_XX')
+	return_label, by_quantile(`by_quantile') by_fd(`by_fd') q(`q') as(`as_XX') was(`was_XX') iwas(`iwas_XX')
 	ereturn local label_quantile`q'  "`s(label_quantile`q')'"
 	ereturn local nobs_quantile`q'  "`nobs_quantile`q''"
 }
@@ -2243,14 +2342,14 @@ if (_by()){
 	//if in addition by_quantile is specified
 	forvalues q=1/`by_quantile'{
 		//Store each by level results in a matrix tagged with the level
-	if (`aoss_XX'==1)   matrix  AOSS_`by_index_XX'XX`q'    = res_mat_1XX`q'
-	if (`waoss_XX'==1)  matrix  WAOSS_`by_index_XX'XX`q'   = res_mat_2XX`q'
-	if (`iwaoss_XX'==1) matrix  IWAOSS_`by_index_XX'XX`q'  = res_mat_3XX`q'
+	if (`as_XX'==1)   matrix  AS_`by_index_XX'XX`q'    = res_mat_1XX`q'
+	if (`was_XX'==1)  matrix  WAS_`by_index_XX'XX`q'   = res_mat_2XX`q'
+	if (`iwas_XX'==1) matrix  IWAS_`by_index_XX'XX`q'  = res_mat_3XX`q'
 	
 	if ("`placebo'"!="0"){
-		if (`aoss_XX'==1)   matrix  PlaceboAOSS_`by_index_XX'XX`q'   = res_mat_1plaXX`q'
-		if (`waoss_XX'==1)  matrix  PlaceboWAOSS_`by_index_XX'XX`q'  = res_mat_2plaXX`q'
-		if (`iwaoss_XX'==1) matrix  PlaceboIWAOSS_`by_index_XX'XX`q' = res_mat_3plaXX`q'
+		if (`as_XX'==1)   matrix  PlaceboAS_`by_index_XX'XX`q'   = res_mat_1plaXX`q'
+		if (`was_XX'==1)  matrix  PlaceboWAS_`by_index_XX'XX`q'  = res_mat_2plaXX`q'
+		if (`iwas_XX'==1) matrix  PlaceboIWAS_`by_index_XX'XX`q' = res_mat_3plaXX`q'
 	}
 	}
 	
@@ -2264,26 +2363,26 @@ if (_by()){
 		forvalues level=1/`nb_level_by_XX'{
 		
 		if (`by_quantile'==1){
-		if (`aoss_XX'==1)  ereturn matrix AOSS_`level'    = AOSS_`level'XX1
-		if (`waoss_XX'==1)  ereturn matrix WAOSS_`level'   = WAOSS_`level'XX1 
-		if (`iwaoss_XX'==1) ereturn matrix IWAOSS_`level'  = IWAOSS_`level'XX1
+		if (`as_XX'==1)  ereturn matrix AS_`level'    = AS_`level'XX1
+		if (`was_XX'==1)  ereturn matrix WAS_`level'   = WAS_`level'XX1 
+		if (`iwas_XX'==1) ereturn matrix IWAS_`level'  = IWAS_`level'XX1
 
 		if ("`placebo'"!="0"){
-			if (`aoss_XX'==1)   ereturn matrix  PlaceboAOSS_`level'   =   PlaceboAOSS_`level'XX1
-			if (`waoss_XX'==1)  ereturn matrix  PlaceboWAOSS_`level'  =  PlaceboWAOSS_`level'XX1
-			if (`iwaoss_XX'==1) ereturn matrix  PlaceboIWAOSS_`level' = PlaceboIWAOSS_`level'XX1
+			if (`as_XX'==1)   ereturn matrix  PlaceboAS_`level'   =   PlaceboAS_`level'XX1
+			if (`was_XX'==1)  ereturn matrix  PlaceboWAS_`level'  =  PlaceboWAS_`level'XX1
+			if (`iwas_XX'==1) ereturn matrix  PlaceboIWAS_`level' = PlaceboIWAS_`level'XX1
 		}
 		}
 		else{
 				forvalues q=1/`by_quantile'{
-						if (`aoss_XX'==1)  ereturn matrix AOSS_`level'_`q'    = AOSS_`level'XX`q'
-						if (`waoss_XX'==1)  ereturn matrix WAOSS_`level'_`q'   = WAOSS_`level'XX`q' 
-						if (`iwaoss_XX'==1) ereturn matrix IWAOSS_`level'_`q'  = IWAOSS_`level'XX`q' 
+						if (`as_XX'==1)  ereturn matrix AS_`level'_`q'    = AS_`level'XX`q'
+						if (`was_XX'==1)  ereturn matrix WAS_`level'_`q'   = WAS_`level'XX`q' 
+						if (`iwas_XX'==1) ereturn matrix IWAS_`level'_`q'  = IWAS_`level'XX`q' 
 
 						if ("`placebo'"!="0"){
-							if (`aoss_XX'==1)   ereturn matrix  PlaceboAOSS_`level'_`q'   =   PlaceboAOSS_`level'XX`q'
-							if (`waoss_XX'==1)  ereturn matrix  PlaceboWAOSS_`level'_`q'  =  PlaceboWAOSS_`level'XX`q'
-							if (`iwaoss_XX'==1) ereturn matrix  PlaceboIWAOSS_`level'_`q' = PlaceboIWAOSS_`level'XX`q'
+							if (`as_XX'==1)   ereturn matrix  PlaceboAS_`level'_`q'   =   PlaceboAS_`level'XX`q'
+							if (`was_XX'==1)  ereturn matrix  PlaceboWAS_`level'_`q'  =  PlaceboWAS_`level'XX`q'
+							if (`iwas_XX'==1) ereturn matrix  PlaceboIWAS_`level'_`q' = PlaceboIWAS_`level'XX`q'
 						}
 				}
 		}
@@ -2303,27 +2402,27 @@ else{
 if (`by_quantile'>1){
 	//ereturn clear
 			forvalues q=1/`by_quantile'{
-						if (`aoss_XX'==1)  ereturn matrix AOSS_`q'    = res_mat_1XX`q'
-						if (`waoss_XX'==1)  ereturn matrix WAOSS_`q'   = res_mat_2XX`q'
-						if (`iwaoss_XX'==1) ereturn matrix IWAOSS_`q'  = res_mat_3XX`q'
+						if (`as_XX'==1)  ereturn matrix AS_`q'    = res_mat_1XX`q'
+						if (`was_XX'==1)  ereturn matrix WAS_`q'   = res_mat_2XX`q'
+						if (`iwas_XX'==1) ereturn matrix IWAS_`q'  = res_mat_3XX`q'
 
 						if ("`placebo'"!="0"){
-							if (`aoss_XX'==1)   ereturn matrix  PlaceboAOSS_`q'   =    res_mat_1plaXX`q'
-							if (`waoss_XX'==1)  ereturn matrix  PlaceboWAOSS_`q'  =   res_mat_2plaXX`q'
-							if (`iwaoss_XX'==1) ereturn matrix  PlaceboIWAOSS_`q' =  res_mat_3plaXX`q'
+							if (`as_XX'==1)   ereturn matrix  PlaceboAS_`q'   =    res_mat_1plaXX`q'
+							if (`was_XX'==1)  ereturn matrix  PlaceboWAS_`q'  =   res_mat_2plaXX`q'
+							if (`iwas_XX'==1) ereturn matrix  PlaceboIWAS_`q' =  res_mat_3plaXX`q'
 						}
 				}	
 }
 else{
 	//ereturn clear
-if (`aoss_XX' == 1) ereturn matrix AOSS    = res_mat_1XX1
-if (`waoss_XX' == 1) ereturn matrix WAOSS  = res_mat_2XX1
-if (`iwaoss_XX' == 1) ereturn matrix WAOSS = res_mat_3XX1
+if (`as_XX' == 1) ereturn matrix AS    = res_mat_1XX1
+if (`was_XX' == 1) ereturn matrix WAS  = res_mat_2XX1
+if (`iwas_XX' == 1) ereturn matrix WAS = res_mat_3XX1
 
 		if ("`placebo'"!="0"){
-			if (`aoss_XX' == 1) ereturn matrix PlaceboAOSS    = res_mat_1plaXX1
-			if (`waoss_XX' == 1) ereturn matrix PlaceboWAOSS  = res_mat_2plaXX1
-			if (`iwaoss_XX' == 1) ereturn matrix PlaceboWAOSS = res_mat_3plaXX1			
+			if (`as_XX' == 1) ereturn matrix PlaceboAS    = res_mat_1plaXX1
+			if (`was_XX' == 1) ereturn matrix PlaceboWAS  = res_mat_2plaXX1
+			if (`iwas_XX' == 1) ereturn matrix PlaceboWAS = res_mat_3plaXX1			
 		}
 }
 
@@ -2362,15 +2461,15 @@ quietly{
         foreach e_p in "`e_p_XX'"{
 		preserve 
 		//// Storing the information we need
-		matrix `e_p'AOSS_XX = J(`nb_level_XX', 4,.)
-		matrix `e_p'WAOSS_XX = J(`nb_level_XX', 4,.)
-		matrix `e_p'IWAOSS_XX = J(`nb_level_XX', 4,.)
+		matrix `e_p'AS_XX = J(`nb_level_XX', 4,.)
+		matrix `e_p'WAS_XX = J(`nb_level_XX', 4,.)
+		matrix `e_p'IWAS_XX = J(`nb_level_XX', 4,.)
 
 		forvalues level=1/`nb_level_XX'{
 			forvalues i=1/4{
-         if (`aoss_XX'==1) matrix `e_p'AOSS_XX[`level',`i'] = e(`e_p'AOSS_`level')[1,`i']
-         if (`waoss_XX'==1) matrix `e_p'WAOSS_XX[`level',`i'] = e(`e_p'WAOSS_`level')[1,`i']
-         if (`iwaoss_XX'==1) matrix `e_p'IWAOSS_XX[`level',`i'] = e(`e_p'IWAOSS_`level')[1,`i']
+         if (`as_XX'==1) matrix `e_p'AS_XX[`level',`i'] = e(`e_p'AS_`level')[1,`i']
+         if (`was_XX'==1) matrix `e_p'WAS_XX[`level',`i'] = e(`e_p'WAS_`level')[1,`i']
+         if (`iwas_XX'==1) matrix `e_p'IWAS_XX[`level',`i'] = e(`e_p'IWAS_`level')[1,`i']
 			}	
 		}
 		//Keep only the by vars for a matter of labelling the graph
@@ -2399,37 +2498,37 @@ quietly{
 			}
 			label values by_vars_XX by_quantile_label
 			if (`by_fd'>1){
-				if (`aoss_XX'==1| `waoss_XX'==1) label var by_vars_XX "|{&Delta}D{sub:t}|"
-				if (`iwaoss_XX'==1) label var by_vars_XX "|{&Delta}Z{sub:t}|"
+				if (`as_XX'==1| `was_XX'==1) label var by_vars_XX "|{&Delta}D{sub:t}|"
+				if (`iwas_XX'==1) label var by_vars_XX "|{&Delta}Z{sub:t}|"
 			}
 			else{
-				if (`aoss_XX'==1| `waoss_XX'==1) label var by_vars_XX "D{sub:t-1}"
-				if (`iwaoss_XX'==1) label var by_vars_XX "Z{sub:t-1}"				
+				if (`as_XX'==1| `was_XX'==1) label var by_vars_XX "D{sub:t-1}"
+				if (`iwas_XX'==1) label var by_vars_XX "Z{sub:t-1}"				
 			}
 		}
 		
-		if (`aoss_XX'==1) {
-			svmat `e_p'AOSS_XX
+		if (`as_XX'==1) {
+			svmat `e_p'AS_XX
 			forvalues i=1/4{
-				rename `e_p'AOSS_XX`i' All_XX`i'_1
+				rename `e_p'AS_XX`i' All_XX`i'_1
 			}
 		}
-		if (`waoss_XX'==1){
-			svmat `e_p'WAOSS_XX
+		if (`was_XX'==1){
+			svmat `e_p'WAS_XX
 			forvalues i=1/4{
-				rename `e_p'WAOSS_XX`i' All_XX`i'_2
+				rename `e_p'WAS_XX`i' All_XX`i'_2
 			}
 		}
-		if (`iwaoss_XX'==1) {
-			svmat `e_p'IWAOSS_XX
+		if (`iwas_XX'==1) {
+			svmat `e_p'IWAS_XX
 			forvalues i=1/4{
-				rename `e_p'IWAOSS_XX`i' All_XX`i'_3
+				rename `e_p'IWAS_XX`i' All_XX`i'_3
 			}			
 		}
 		
 		reshape long All_XX1_ All_XX2_ All_XX3_ All_XX4_, i(by_vars_XX)
 		rename _j estimator
-		label define estimator 1"AOSS" 2 "WAOSS" 3 "IV-WAOSS"
+		label define estimator 1"AS" 2 "WAS" 3 "IV-WAS"
 		label values estimator estimator
 		
 		//// Setting up the graph
@@ -2510,9 +2609,9 @@ local col6 "lime"
 		//// Storing the information we need
 		local nb_level_XX = `by_quantile'
 		forvalues by_level = 1/`nb_level_by_XX'{
-		matrix `e_p'AOSS_`by_level'XX = J(`nb_level_XX', 4,.)
-		matrix `e_p'WAOSS_`by_level'XX = J(`nb_level_XX', 4,.)
-		matrix `e_p'IWAOSS_`by_level'XX = J(`nb_level_XX', 4,.)
+		matrix `e_p'AS_`by_level'XX = J(`nb_level_XX', 4,.)
+		matrix `e_p'WAS_`by_level'XX = J(`nb_level_XX', 4,.)
+		matrix `e_p'IWAS_`by_level'XX = J(`nb_level_XX', 4,.)
 		}
 		local var_names ""
 		forvalues by_level = 1/`nb_level_by_XX'{
@@ -2528,27 +2627,27 @@ local col6 "lime"
 		
 		forvalues level=1/`nb_level_XX'{
 			forvalues i=1/4{
-         if (`aoss_XX'==1) matrix `e_p'AOSS_`by_level'XX[`level',`i'] = e(`e_p'AOSS_`by_level'_`level')[1,`i']
-         if (`waoss_XX'==1) matrix `e_p'WAOSS_`by_level'XX[`level',`i'] = e(`e_p'WAOSS_`by_level'_`level')[1,`i']
-         if (`iwaoss_XX'==1) matrix `e_p'IWAOSS_`by_level'XX[`level',`i'] = e(`e_p'IWAOSS_`by_level'_`level')[1,`i']
+         if (`as_XX'==1) matrix `e_p'AS_`by_level'XX[`level',`i'] = e(`e_p'AS_`by_level'_`level')[1,`i']
+         if (`was_XX'==1) matrix `e_p'WAS_`by_level'XX[`level',`i'] = e(`e_p'WAS_`by_level'_`level')[1,`i']
+         if (`iwas_XX'==1) matrix `e_p'IWAS_`by_level'XX[`level',`i'] = e(`e_p'IWAS_`by_level'_`level')[1,`i']
 			}
 		}	
-		if (`aoss_XX'==1) {
-			svmat `e_p'AOSS_`by_level'XX
+		if (`as_XX'==1) {
+			svmat `e_p'AS_`by_level'XX
 			forvalues i=1/4{
-				rename  `e_p'AOSS_`by_level'XX`i' All_`by_level'XX`i'_1
+				rename  `e_p'AS_`by_level'XX`i' All_`by_level'XX`i'_1
 			}
 		}
-		if (`waoss_XX'==1){
-			svmat `e_p'WAOSS_`by_level'XX
+		if (`was_XX'==1){
+			svmat `e_p'WAS_`by_level'XX
 			forvalues i=1/4{
-				rename `e_p'WAOSS_`by_level'XX`i' All_`by_level'XX`i'_2
+				rename `e_p'WAS_`by_level'XX`i' All_`by_level'XX`i'_2
 			}
 		}
-		if (`iwaoss_XX'==1) {
-			svmat `e_p'IWAOSS_`by_level'XX
+		if (`iwas_XX'==1) {
+			svmat `e_p'IWAS_`by_level'XX
 			forvalues i=1/4{
-				rename `e_p'IWAOSS_`by_level'XX`i' All_`by_level'XX`i'_3
+				rename `e_p'IWAS_`by_level'XX`i' All_`by_level'XX`i'_3
 			}			
 		}
 			
@@ -2563,7 +2662,7 @@ local col6 "lime"
 		
 		reshape long `var_names' , i(by_vars_XX)
 		rename _j estimator
-		label define estimator 1"AOSS" 2 "WAOSS" 3 "IV-WAOSS"
+		label define estimator 1"AS" 2 "WAS" 3 "IV-WAS"
 		label values estimator estimator
 
 		//// Setting up the graph
@@ -2583,12 +2682,12 @@ local col6 "lime"
 	
 		cap graph drop `e_p'_graph
 		if (`by_fd'>1){
-			if (`aoss_XX'==1| `waoss_XX'==1) local xtitle =  "{&Delta}D{sub:t}" 
-			if (`iwaoss_XX'==1) local xtitle =  "{&Delta}Z{sub:t}" 
+			if (`as_XX'==1| `was_XX'==1) local xtitle =  "{&Delta}D{sub:t}" 
+			if (`iwas_XX'==1) local xtitle =  "{&Delta}Z{sub:t}" 
 		}
 		else{
-			if (`aoss_XX'==1| `waoss_XX'==1) local xtitle =  "D{sub:t-1}" 
-			if (`iwaoss_XX'==1) local xtitle =  "Z{sub:t-1}" 			
+			if (`as_XX'==1| `was_XX'==1) local xtitle =  "D{sub:t-1}" 
+			if (`iwas_XX'==1) local xtitle =  "Z{sub:t-1}" 			
 		}
 		twoway `graph_input', xlabel(1[1]`=`nb_level_XX'', valuelabel angle(45) labsize(small)  nogrid tstyle(minor_notick) ) by(estimator,  rows(1) title("`e_p's") note("", size(tiny) )  graphregion(color(white)) plotregion(color(white)))  `graph_options' name(`e_p'_graph, replace) nodraw legend(order(`leg_order') subtitle("`_byvars'")) xtitle("`xtitle'")
 		restore
@@ -2607,45 +2706,54 @@ local col6 "lime"
 
 if ("`graph_off'"==""){
 	preserve 
-	if (`aoss_XX' == 1){
+	if (`as_XX' == 1){
+		
+	quietly{ // Modif Felix: supress the gen/replace output
+		
 			clear 
-	matrix graph_inputAOSS = J(`=`placebo'+2', 6, 0)
-	mata: graph_inputAOSS = st_matrix("graph_inputAOSS")
+	matrix graph_inputAS = J(`=`placebo'+2', 6, 0)
+	mata: graph_inputAS = st_matrix("graph_inputAS")
 	mata: res_mat_XX = st_matrix("res_mat_XX")
 	mata: max_T = st_numscalar("max_T")
-	mata: graph_inputAOSS[1, ] = res_mat_XX[1, ]
+	mata: graph_inputAS[1, ] = res_mat_XX[1, ]
 
 	forvalues placebo_index = 3/`=`placebo'+2'{
 		matrix tmp = V`=`placebo_index'-2'res_mat_plaXX
 		mata: res_mat_tmpXX = st_matrix("tmp")
 		scalar p_index = `placebo_index'
 		mata: p_index = st_numscalar("p_index")
-		mata: graph_inputAOSS[p_index,.] = res_mat_tmpXX[1,.]
+		mata: graph_inputAS[p_index,.] = res_mat_tmpXX[1,.]
 		cap matrix drop tmp
 		cap scalar drop p_index
 	}
 	
-	mata: st_matrix("graph_inputAOSS", graph_inputAOSS)
-	svmat graph_inputAOSS
+	mata: st_matrix("graph_inputAS", graph_inputAS)
+	svmat graph_inputAS
 	
 	// Define fixed graph options as they are implemented as flexible locals
 	cap drop time_to_treat
-	gen time_to_treat = _n if !missing(graph_inputAOSS1)
+	gen time_to_treat = _n if !missing(graph_inputAS1)
 	replace time_to_treat = 0 if time_to_treat ==2
 	replace time_to_treat = 2 -time_to_treat if !inlist(time_to_treat, 1, 0)
 	
-local graph_input "(connected graph_inputAOSS1 time_to_treat, lpattern(solid)) (rcap graph_inputAOSS4 graph_inputAOSS3 time_to_treat)"
+local graph_input "(connected graph_inputAS1 time_to_treat, lpattern(solid)) (rcap graph_inputAS4 graph_inputAS3 time_to_treat)"
 local graph_options "legend(off)"
 
-twoway `graph_input', xlabel(`=-`placebo''[1]1) xtitle("Relative time", size(large)) title("AOSS", size(large)) graphregion(color(white)) plotregion(color(white)) `graph_options' name(aoss, replace)
+	} // end quietly	
+
+if (`was_XX' == 1& `as_XX' == 1) twoway `graph_input', xlabel(`=-`placebo''[1]1) xtitle("Relative time", size(large)) title("AS", size(large)) graphregion(color(white)) plotregion(color(white)) `graph_options' name(as, replace) nodraw
+else twoway `graph_input', xlabel(`=-`placebo''[1]1) xtitle("Relative time", size(large)) title("AS", size(large)) graphregion(color(white)) plotregion(color(white)) `graph_options' name(as, replace) 
 }
 
-	if (`waoss_XX' == 1){
-	matrix graph_inputWAOSS = J(`=`placebo'+2', 6, 0)
-	mata: graph_inputWAOSS = st_matrix("graph_inputWAOSS")
+	if (`was_XX' == 1){
+	
+	quietly{ // Modif Felix: supress the gen/replace output
+		
+	matrix graph_inputWAS = J(`=`placebo'+2', 6, 0)
+	mata: graph_inputWAS = st_matrix("graph_inputWAS")
 	mata: res_mat_XX = st_matrix("res_mat_XX")
 	mata: max_T = st_numscalar("max_T")
-	mata: graph_inputWAOSS[1,.] = res_mat_XX[max_T+1,.]
+	mata: graph_inputWAS[1,.] = res_mat_XX[max_T+1,.]
 
 
 	forvalues placebo_index = 3/`=`placebo'+2'{
@@ -2653,36 +2761,78 @@ twoway `graph_input', xlabel(`=-`placebo''[1]1) xtitle("Relative time", size(lar
 		scalar p_index = `placebo_index'
 		mata: res_mat_tmpXX = st_matrix("tmp")
 		mata: p_index = st_numscalar("p_index")
-		mata: graph_inputWAOSS[p_index,.] = res_mat_tmpXX[max_T+1,.]
+		mata: graph_inputWAS[p_index,.] = res_mat_tmpXX[max_T+1,.]
 		cap matrix drop tmp
 		cap scalar drop p_index
 	}
 	
-	mata: st_matrix("graph_inputWAOSS", graph_inputWAOSS)
-	svmat graph_inputWAOSS
+	mata: st_matrix("graph_inputWAS", graph_inputWAS)
+	svmat graph_inputWAS
 	
 	// Define fixed graph options as they are implemented as flexible locals
 	cap drop time_to_treat
-	gen time_to_treat = _n if !missing(graph_inputWAOSS1)
+	gen time_to_treat = _n if !missing(graph_inputWAS1)
 	replace time_to_treat = 0 if time_to_treat ==2
 	replace time_to_treat = 2 -time_to_treat if !inlist(time_to_treat, 1, 0)
 	
-local graph_input "(connected graph_inputWAOSS1 time_to_treat, lpattern(solid)) (rcap graph_inputWAOSS4 graph_inputWAOSS3 time_to_treat)"
+local graph_input "(connected graph_inputWAS1 time_to_treat, lpattern(solid)) (rcap graph_inputWAS4 graph_inputWAS3 time_to_treat)"
 local graph_options "legend(off)"
 
-twoway `graph_input', xlabel(`=-`placebo''[1]1) xtitle("Relative time", size(large)) title("WAOSS", size(large)) graphregion(color(white)) plotregion(color(white)) `graph_options' name(waoss, replace)
+	}
+
+if (`was_XX' == 1& `as_XX' == 1) twoway `graph_input', xlabel(`=-`placebo''[1]1) xtitle("Relative time", size(large)) title("WAS", size(large)) graphregion(color(white)) plotregion(color(white)) `graph_options' name(was, replace) nodraw
+else twoway `graph_input', xlabel(`=-`placebo''[1]1) xtitle("Relative time", size(large)) title("WAS", size(large)) graphregion(color(white)) plotregion(color(white)) `graph_options' name(was, replace) 
 }
 
+	// Modif Felix: Add graph for IV-WAS
+	if (`iwas_XX' == 1){
+	
+	quietly{ // Modif Felix: supress the gen/replace output
+		
+	matrix graph_inputIWAS = J(`=`placebo'+2', 6, 0)
+	mata: graph_inputIWAS = st_matrix("graph_inputIWAS")
+	mata: res_mat_XX = st_matrix("res_mat_XX")
+	mata: max_T = st_numscalar("max_T")
+	mata: graph_inputIWAS[1,.] = res_mat_XX[2*max_T+1,.]
+
+
+	forvalues placebo_index = 3/`=`placebo'+2'{
+		matrix tmp = V`=`placebo_index'-2'res_mat_plaXX
+		scalar p_index = `placebo_index'
+		mata: res_mat_tmpXX = st_matrix("tmp")
+		mata: p_index = st_numscalar("p_index")
+		mata: graph_inputIWAS[p_index,.] = res_mat_tmpXX[2*max_T+1,.]
+		cap matrix drop tmp
+		cap scalar drop p_index
+	}
+	
+	mata: st_matrix("graph_inputIWAS", graph_inputIWAS)
+	svmat graph_inputIWAS
+	
+	// Define fixed graph options as they are implemented as flexible locals
+	cap drop time_to_treat
+	gen time_to_treat = _n if !missing(graph_inputIWAS1)
+	replace time_to_treat = 0 if time_to_treat ==2
+	replace time_to_treat = 2 -time_to_treat if !inlist(time_to_treat, 1, 0)
+	
+local graph_input "(connected graph_inputIWAS1 time_to_treat, lpattern(solid)) (rcap graph_inputIWAS4 graph_inputIWAS3 time_to_treat)"
+local graph_options "legend(off)"
+
+	}
+
+twoway `graph_input', xlabel(`=-`placebo''[1]1) xtitle("Relative time", size(large)) title("IV-WAS", size(large)) graphregion(color(white)) plotregion(color(white)) `graph_options' name(iwas, replace)
+}
 
 	restore 
-	}
+
 	//di as error "Im here"
 	//matlist V2res_mat_plaXX
-	//matlist graph_inputAOSS
+	//matlist graph_inputAS
 	
-	if (`waoss_XX' == 1& `aoss_XX' == 1){
-	graph combine aoss waoss, cols(1) name(all, replace ) title(DID from last period before treatment changes (t=0) to t, size(medium))
+	if (`was_XX' == 1& `as_XX' == 1){
+	graph combine as was, cols(1) name(all, replace ) /*title(DID from last period before treatment changes (t=0) to t, size(medium))*/
 	}
+} // Felix: end graph_off	
 	
 	
 end
@@ -2694,7 +2844,7 @@ end
 capture program drop did_multiplegt_stat_pairwise
 program did_multiplegt_stat_pairwise, eclass
 	version 12.0
-	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) ORder(integer 1) NOEXTRApolation weight(varlist numeric) switchers(string) pairwise(integer 2) data_1XX(string) aoss(integer 0) waoss(integer 0) iwaoss(integer 0) estimation_method(string) placebo(integer 0) exact_match cluster(varlist max=1) quantile(integer 1) by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) controls(varlist numeric)  bootstrap(integer 0) reg_order(integer 1) logit_bis_order(integer 1)  logit_Plus_order(integer 1) logit_Minus_order(integer 1) cross_validation(string)]
+	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) ORder(integer 1) NOEXTRApolation weights(varlist numeric) switchers(string) pairwise(integer 2) data_1XX(string) as(integer 0) was(integer 0) iwas(integer 0) estimation_method(string) placebo(integer 0) exact_match cluster(varlist max=1) quantile(integer 1) by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) controls(varlist numeric)  bootstrap(integer 0) reg_order(integer 1) logit_bis_order(integer 1)  logit_Plus_order(integer 1) logit_Minus_order(integer 1) cross_validation(string)]
 	
 quietly{
 //> CORE preserve
@@ -2708,9 +2858,9 @@ if ("`5'"!=""&"`5'"!=","){
 local IV_feed_XX = "yes"
 }
 
-if ("`IV_feed_XX'"=="no"&(`iwaoss' == 1|"`estimator'" == "")){
-	//di as error "To compute the iwaoss you must specify the IV variable."
-	local iwaoss = 0
+if ("`IV_feed_XX'"=="no"&(`iwas' == 1|"`estimator'" == "")){
+	//di as error "To compute the iwas you must specify the IV variable."
+	local iwas = 0
 	//exit
 }
 
@@ -2777,7 +2927,7 @@ else{
 sort ID_XX T_XX
 bysort ID_XX : gen deltaD_XX = D.D_XX
 
-if ("`placebo'"!="0"&(`aoss'==1|`waoss'==1)){
+if ("`placebo'"!="0"&(`as'==1|`was'==1)){
 	cap drop inSamplePlacebo_tempXX
 	cap drop inSamplePlacebo_XX
 	gen inSamplePlacebo_tempXX = (deltaD_XX==0)&(T_XX==2) if (deltaD_XX!=.) //Units such that D_{t-2} = D_{t-1} or in general such that D_{t-placebo} - D_{t-placebo-1}
@@ -2792,7 +2942,7 @@ if ("`placebo'"!="0"&(`aoss'==1|`waoss'==1)){
 	
 }
 
-if (`iwaoss' == 1){
+if (`iwas' == 1){
 	//IV
 	cap drop deltaZ_XX
 	cap drop SI_XX
@@ -2829,7 +2979,7 @@ if (`iwaoss' == 1){
 }
 		
 if (_N == 0){ //If the placebo cannot be estimated (because the subsample {i: D_{t-2} = D_{t-1}} is empty), create the variables,and scalars and set them to .
-	if (`waoss'==1|`aoss'==1){
+	if (`was'==1|`as'==1){
 	forvalues i=1/2{
 	scalar delta`i'_`pairwise'`pla'XX  = . // 0
 	scalar sd_delta`i'_`pairwise'`pla'XX = .
@@ -2878,7 +3028,7 @@ bysort ID_XX: gegen deltaD_temp = mean(deltaD_XX)
 replace deltaD_XX = deltaD_temp
 drop deltaD_temp 
 
-if (`iwaoss'==1){
+if (`iwas'==1){
 	///>put deltaZ_t at the same level of Z_(t-1)
 	bysort ID_XX: gegen deltaZ_temp = mean(deltaZ_XX)
 	replace deltaZ_XX = deltaZ_temp
@@ -2891,7 +3041,7 @@ if (`iwaoss'==1){
 //First we need to tag observations that are used: this is related to the problem with unbalanced panel, and in a particular case I remarked when dealing with the aggregated influence functions
 cap drop used_in_`pairwise'_XX
 gen used_in_`pairwise'_XX = (deltaY_XX!=.&deltaD_XX!=.) //This variable will be used in aggreagation to set to . the influence function of the units that are not used in all the different two-periods we consider.
-if (`iwaoss' == 1){
+if (`iwas' == 1){
 	cap drop used_in_IV`pairwise'_XX
 	gen used_in_IV`pairwise'_XX = (used_in_`pairwise'_XX==1&deltaZ_XX!=.) 
 	drop if !used_in_IV`pairwise'_XX 
@@ -2905,7 +3055,7 @@ else{
 //generate Switcher : S = 1 if switcher-up, -1 if switcher-down, 0 if stayer
 gen S_XX = (deltaD_XX>0)-(deltaD_XX<0) // = S+ - S-
 
-if (`waoss'==1|`aoss'==1){
+if (`was'==1|`as'==1){
 cap drop absdeltaD_XX
 gen absdeltaD_XX = S_XX*deltaD_XX
 
@@ -2917,7 +3067,7 @@ gen absdeltaD_XX = S_XX*deltaD_XX
 	}
 }
 
-if (`iwaoss'==1){
+if (`iwas'==1){
 cap drop absdeltaZ_XX
 gen absdeltaZ_XX = SI_XX*deltaZ_XX
 
@@ -2949,16 +3099,16 @@ egen group_other_treatments_XX = group(`other_treatments')
 	}
 }
 //We have all the variable we need at the first year so we can drop the 'second' year line
-//  But before let's also take the right line of weights we need: W_{g,t} if we consider the cell (t-1,t) (Effect), and even with Plaxebo
+//  But before let's also take the right line of weightss we need: W_{g,t} if we consider the cell (t-1,t) (Effect), and even with Plaxebo
 
-replace weight_XX = F.weight_XX
-replace weight_cXX = F.weight_cXX
+replace weights_XX = F.weights_XX
+replace weights_cXX = F.weights_cXX
 
 //Do it for the quantile to consider: 
 	if (`quantile'>0){
 		if (`by_fd'>1){ //FD:
-			if (`aoss'==1|`waoss'==1)    replace Q_XX = F.Q_XX
-			if (`iwaoss'==1)             replace QZ_XX = F.QZ_XX
+			if (`as'==1|`was'==1)    replace Q_XX = F.Q_XX
+			if (`iwas'==1)             replace QZ_XX = F.QZ_XX
 		}
 	}
 
@@ -2976,19 +3126,19 @@ rename  D_XX D1_XX
 cap drop Ht_XX
 gen Ht_XX = (deltaD_XX!=.&deltaY_XX!=.)
 replace S_XX =. if Ht_XX==0 // keep defined only for units with no missing data
-if (`iwaoss'==1){
+if (`iwas'==1){
 	replace Ht_XX = 1 if Ht_XX==1&deltaZ_XX!=.
 	replace  SI_XX =. if Ht_XX==0
 }
 //If by quantile's options requested, We keep all stayers but only switchers such that Q_t = `quantile'
 if (`quantile'>0 & (`by_fd'>1|`by_baseline'>1)){
-if (`aoss'==1|`waoss'==1)  keep if (Q_XX==`quantile'&(S_XX==1|S_XX==-1))|(S_XX==0)
-if (`iwaoss'==1) keep if (QZ_XX==`quantile'&(SI_XX==1|SI_XX==-1))|(SI_XX==0)
+if (`as'==1|`was'==1)  keep if (Q_XX==`quantile'&(S_XX==1|S_XX==-1))|(S_XX==0)
+if (`iwas'==1) keep if (QZ_XX==`quantile'&(SI_XX==1|SI_XX==-1))|(SI_XX==0)
 }
 if (_N>0){ //In this section we use bysort ..: gen . If the dataset is empty (e.g, the user specified switchers(up) and there is no switcher-up for the current pair of times),  bysort ..: gen does not displays an error and does not create the variable, then if we call the variable (which was supposed to be created) the program crashes. To avoid that, I add the if  condition (_N>0) after the subsample based on the option switchers in line 1283.
 
 ***************************************************************************************/
-if(`waoss'==1|`aoss'==1){
+if(`was'==1|`as'==1){
 local vars_to_set_to_missing S_XX deltaD_XX deltaY_XX D1_XX absdeltaD_XX `cluster' `controls'	
 }
 else{
@@ -3007,7 +3157,7 @@ local vars_to_set_to_missing S_XX deltaD_XX deltaY_XX D1_XX `cluster' `controls'
 	}
 	replace Ht_XX = 0  if inSamplePlacebo_XX==0
 
-			if (`iwaoss' ==1){
+			if (`iwas' ==1){
 			replace Z1_XX = .  if inSamplePlacebo_XX==0	
 			replace SI_XX = .  if inSamplePlacebo_XX==0	
 			}
@@ -3023,7 +3173,7 @@ local vars_to_set_to_missing S_XX deltaD_XX deltaY_XX D1_XX `cluster' `controls'
 			
 			replace Ht_XX = 0  if fd_`other_treat'_XX !=0
 
-					if (`iwaoss' ==1){
+					if (`iwas' ==1){
 					replace Z1_XX = .  if fd_`other_treat'_XX !=0
 					replace SI_XX = .  if fd_`other_treat'_XX !=0
 					}
@@ -3034,7 +3184,7 @@ local vars_to_set_to_missing S_XX deltaD_XX deltaY_XX D1_XX `cluster' `controls'
 
 if("`noextrapolation'"!=""){
 	
-	if (`aoss' ==1|`waoss'==1){
+	if (`as' ==1|`was'==1){
 	sum D1_XX if S_XX==0
 	scalar max_D1_`pla'XX = r(max)
 	scalar min_D1_`pla'XX = r(min)
@@ -3048,7 +3198,7 @@ if("`noextrapolation'"!=""){
 	drop if outOfBounds_XX==1
 	}
 	
-	if(`iwaoss'==1){
+	if(`iwas'==1){
 	sum Z1_XX if SI_XX==0
 	scalar max_Z1_`pla'XX = r(max)
 	scalar min_Z1_`pla'XX = r(min)
@@ -3075,7 +3225,7 @@ if ("`exact_match'"!=""){
 		else{
 			local search_match D1_XX
 		}
-		if (`aoss' ==1|`waoss'==1){
+		if (`as' ==1|`was'==1){
 		gegen s_has_match_temp_XX = min(absdeltaD_XX)  if S_XX!=. , by(`search_match')
 		gen s_has_match_XX = (s_has_match_temp_XX==0)  if S_XX!=.
 		
@@ -3092,7 +3242,7 @@ if ("`exact_match'"!=""){
 	        scalar N_drop_c_`pairwise'`pla'XX = r(N)
 		}
 
-		if (`iwaoss' ==1){
+		if (`iwas' ==1){
 			
 		if ("`other_treatments'"!=""){
 			local search_match Z1_XX group_other_treatments_XX
@@ -3129,7 +3279,7 @@ if ("`exact_match'"!=""){
 
 	replace Ht_XX = 0  if s_has_match_XX==0|c_has_match_XX==0
 	
-			if (`iwaoss' ==1){
+			if (`iwas' ==1){
 			replace Z1_XX = .  if s_has_match_XX==0|c_has_match_XX==0		
 			replace SI_XX = .  if s_has_match_XX==0|c_has_match_XX==0		
 			}
@@ -3147,7 +3297,7 @@ if ("`exact_match'"!=""){
 
 }
 //+ Imbalanced panel adjustment : The missing value indicator: B
-sum Ht_XX [iweight = weight_XX]
+sum Ht_XX [iweight = weights_XX]
 scalar PHt`pairwise'`pla'XX = r(mean) // Compute P(H_t=1) to be used in the adjustements
 
 //di as error "`pairwise'`pla' : "scalar(PHt`pairwise'`pla'XX)
@@ -3155,7 +3305,7 @@ scalar PHt`pairwise'`pla'XX = r(mean) // Compute P(H_t=1) to be used in the adju
 /*********************************
 Some scalars we need below:
 *********************************/
-sum weight_XX
+sum weights_XX
 scalar W_`pla'XX = r(sum)
 count if S_XX!=.
 scalar N_`pla'XX = r(N)
@@ -3170,8 +3320,8 @@ scalar N_bar_c_`pairwise'`pla'XX = r(mean)
 }
 
 *******Here I handle two related problems: Panel with gaps (using tsfilled_XX) and cases where we have only switchers or only stayers (using count)
-if (`waoss'==1|`aoss'==1){
-// only switchers or only stayers: I did add the index `pairwise' since I want to use it if either aoss or waoss is requested.
+if (`was'==1|`as'==1){
+// only switchers or only stayers: I did add the index `pairwise' since I want to use it if either as or was is requested.
 
 count if S_XX!=0&S_XX!=.
 scalar n_switchers_`pla'XX = r(N) 
@@ -3187,18 +3337,18 @@ scalar Nstayers2_`pairwise'`pla'XX  = scalar(n_stayers_`pla'XX)
 scalar N_Switchers1_`pairwise'`pla'XX = scalar(n_switchers_`pla'XX)
 scalar N_Switchers2_`pairwise'`pla'XX = scalar(n_switchers_`pla'XX)
 
-//Test weighted numbers: to be added in the rest of the code.
-sum weight_XX if S_XX==0
+//Test weightsed numbers: to be added in the rest of the code.
+sum weights_XX if S_XX==0
 scalar Nstayers1_`pairwise'`pla'XX  = r(sum)
 scalar Nstayers2_`pairwise'`pla'XX  = r(sum)
 
-sum weight_XX if S_XX!=0&S_XX!=. 
+sum weights_XX if S_XX!=0&S_XX!=. 
 scalar N_Switchers1_`pairwise'`pla'XX = r(sum)
 scalar N_Switchers2_`pairwise'`pla'XX = r(sum)
 
 }
 
-if (`iwaoss'==1){
+if (`iwas'==1){
 count if SI_XX!=0&SI_XX!=.
 scalar n_switchersIV_`pla'XX = r(N) 
 
@@ -3215,14 +3365,14 @@ scalar Nstayers3_`pairwise'`pla'XX  = scalar(n_stayersIV_`pla'XX)
 		local order = r(r)
 	}
 
-	//Option weight. For interaction and covariates terms in the regressions
-	sum weight_XX
+	//Option weights. For interaction and covariates terms in the regressions
+	sum weights_XX
 if (r(sd)!=0){
- 	local controls `controls' `weight'
+ 	local controls `controls' `weights'
 }
 
 
-if (`waoss' == 1 | `aoss' == 1 ){	
+if (`was' == 1 | `as' == 1 ){	
 if (scalar(gap_`pairwise'`pla'XX)==0&scalar(n_switchers_`pla'XX)>0&scalar(n_stayers_`pla'XX)>1){ //Start of feasible estimation //I Need to do it for the IV as well.
 
 **# Bookmark #0 Preliminaries
@@ -3265,13 +3415,13 @@ polynomials_generator, order(`logit_Minus_order') prefix(logit_Minus) controls(`
 				cap drop Sbis_XX
 				cap drop SbisV_XX
 				gen Sbis_XX = (S_XX!=0) if S_XX!=. //this Sbis_XX is to be used for \delta_1, and for \delta_2 when we do not need to distinguish switchers-up from switchers-down where the only matter is being switcher or not.
-				gen SbisV_XX = Sbis_XX*weight_XX
+				gen SbisV_XX = Sbis_XX*weights_XX
 	
 /*******************************************************************************
 Perfom here the main logit regressions that are needed for the three estimators
 *******************************************************************************/
 
-	//*********************for AOSS, WAOSS
+	//*********************for AS, WAS
 
 	// Performing the regression (polynomial series) estimation to estimate \hat{E}(deltaY|D1, S=0)
 	
@@ -3281,7 +3431,7 @@ Perfom here the main logit regressions that are needed for the three estimators
 	predict mean_pred_XX , xb 
 	
 		 // deltaY_i - \hat{E}(deltaY|D_{1i}|S = 0)
-	gen inner_sumdelta12_XX  = deltaY_XX - mean_pred_XX //WILL BE USED FOR AOSS AND WAOSS AS WELL
+	gen inner_sumdelta12_XX  = deltaY_XX - mean_pred_XX //WILL BE USED FOR AS AND WAS AS WELL
 
 // 1. Estimate P(S = 0|D_1) 
 	cap drop S0_XX
@@ -3295,7 +3445,7 @@ Perfom here the main logit regressions that are needed for the three estimators
 	//Convention Logit STATA R to match
 	replace PS0D1_XX=0 if PS0D1_XX<=10^(-10)
 	}
-	else{ 		//This is for the IF and point estimate of the waoss when we have discrete treatment, instead of using logit use regressions
+	else{ 		//This is for the IF and point estimate of the was when we have discrete treatment, instead of using logit use regressions
 	
 		//Estimation of 1-E(S|D1) = P(S = 0|D_1) in exact_match case
 		reg Sbis_XX `reg_vars_pol_XX'   
@@ -3313,14 +3463,14 @@ Perfom here the main logit regressions that are needed for the three estimators
 	
 	//3. P(S+=1|D_1), P(S-=1|D_1), P(S+=1) and P(S-=1) are generated after.
 
-	//*********************for iWAOSS: It is done in Bookmark #3
+	//*********************for iWAS: It is done in Bookmark #3
 	
 
 ********************************************************************************
-**# Bookmark #1 AOSS
+**# Bookmark #1 AS
 ********************************************************************************
 
-if (`aoss' == 1){
+if (`as' == 1){
 	
 ************************************************	
 	cap drop S_over_deltaD_XX
@@ -3331,7 +3481,7 @@ if (`aoss' == 1){
 	// 0) Compute P_t = P(S_t = 1) = E(S_t) for the aggregation afterward
 	
 	// + Imbalanced panel adjustment
-	sum SbisV_XX //sum Sbis_XX changed because of weights 
+	sum SbisV_XX //sum Sbis_XX changed because of weightss 
 	//For aggregation
 	scalar P_`pairwise'`pla'XX = r(mean) // This is actually P(S_t = 1|H_t=1) (resp. E(SV|H_t=1)), we need to adjust with PHt`pairwise'`pla'XX to have  P(S_t = 1, H_t=1) (resp. E(SVH_t))
 	scalar P_`pairwise'`pla'XX = scalar(P_`pairwise'`pla'XX)*scalar(PHt`pairwise'`pla'XX)
@@ -3340,7 +3490,7 @@ if (`aoss' == 1){
 	scalar ES_`pla'XX = r(mean)  // We fo not do the adjustment here, but will do it directly in the expression of the IF.
 
 	// 1) Compute \hat{delta}_1
-	gen inner_sumdelta1_XX  = weight_XX*inner_sumdelta12_XX/deltaD_XX // =SV*(\DeltaY - E(\DeltaY|S=0, D1, V))/\DeltaD
+	gen inner_sumdelta1_XX  = weights_XX*inner_sumdelta12_XX/deltaD_XX // =SV*(\DeltaY - E(\DeltaY|S=0, D1, V))/\DeltaD
 	replace inner_sumdelta1_XX = 0 if deltaD_XX==0 //The convention 0*missing = 0.
 	sum inner_sumdelta1_XX 
 	scalar delta1_`pairwise'`pla'XX = r(mean)/scalar(ES_`pla'XX) // = E[SV*(\DeltaY - E(\DeltaY|S=0, D1, V))/\DeltaD]/E[SV]
@@ -3359,10 +3509,10 @@ if (`aoss' == 1){
 	//Doulo: The Influence function is indexed by t to ease the aggregation after the loop is over by using successive merging of datasets
 	
 	if ("`exact_match'"==""){
-	gen Phi1_`pairwise'`pla'XX  = weight_XX*(S_over_deltaD_XX - meanS_over_deltaD_XX*(1-Sbis_XX)/(PS0D1_XX))*inner_sumdelta12_XX //Here we use the prediction from a logit, if not exact_match
+	gen Phi1_`pairwise'`pla'XX  = weights_XX*(S_over_deltaD_XX - meanS_over_deltaD_XX*(1-Sbis_XX)/(PS0D1_XX))*inner_sumdelta12_XX //Here we use the prediction from a logit, if not exact_match
 	}
 	else{
-	gen Phi1_`pairwise'`pla'XX  = weight_XX*(S_over_deltaD_XX - meanS_over_deltaD_XX*(1-Sbis_XX)/(1-ESbis_XX_D1))*inner_sumdelta12_XX //Here we use the prediction from a linear regression, if exact_match
+	gen Phi1_`pairwise'`pla'XX  = weights_XX*(S_over_deltaD_XX - meanS_over_deltaD_XX*(1-Sbis_XX)/(1-ESbis_XX_D1))*inner_sumdelta12_XX //Here we use the prediction from a linear regression, if exact_match
 	}
 	// + Imbalanced panel adjustment:
 		//a.  Deviding by scalar(PHt`pairwise'`pla'XX)
@@ -3372,7 +3522,7 @@ if (`aoss' == 1){
 	
 	sum Phi1_`pairwise'`pla'XX 
 	
-	if ("`cluster'"!=""){ // Clustering the variance //CLUSTER OPTION //WEIGHT OPTION
+	if ("`cluster'"!=""){ // Clustering the variance //CLUSTER OPTION //weights OPTION
 		cap drop Phi1_`pairwise'`pla'_cXX //I create a new variable, because I need the one without clustering in the aggregation
 		bysort `cluster': egen Phi1_`pairwise'`pla'_cXX = total(Phi1_`pairwise'`pla'XX)
 		bysort `cluster': replace Phi1_`pairwise'`pla'_cXX=. if _n!=1
@@ -3391,15 +3541,15 @@ if (`aoss' == 1){
 	
 	// + Imbalanced panel adjustment: replace S_t by S_t*H_t in the aggreagation of the point estimates formula
 	replace  S_`pairwise'`pla'XX = Ht_XX if Ht_XX==0 //(=S_t*H_t)
-	replace  S_`pairwise'`pla'XX = S_`pairwise'`pla'XX*weight_XX //S_t*V_t
+	replace  S_`pairwise'`pla'XX = S_`pairwise'`pla'XX*weights_XX //S_t*V_t
 }
 
 ********************************************************************************
-**# Bookmark #2 WAOSS
+**# Bookmark #2 WAS
 ********************************************************************************
-if (`waoss' == 1){
+if (`was' == 1){
 cap drop absdeltaDV_XX
-gen absdeltaDV_XX = absdeltaD_XX*weight_XX //sgn(\DeltaD)*V
+gen absdeltaDV_XX = absdeltaD_XX*weights_XX //sgn(\DeltaD)*V
 	sum absdeltaDV_XX //absdeltaD_XX
 	scalar EabsdeltaD_`pla'XX = r(mean)
 	//For aggregation of the point estimates
@@ -3430,18 +3580,18 @@ gen absdeltaDV_XX = absdeltaD_XX*weight_XX //sgn(\DeltaD)*V
 		}
 		
 /**************************************************************************
-       i. COMPUTING THE contribution-WEIGHTS (wPlus and wMinus)
+       i. COMPUTING THE contribution-weightsS (wPlus and wMinus)
 **************************************************************************/
 		cap drop prod_sgndeltaDdeltaD_XX
 		gen prod_sgndeltaDdeltaD_XX = S_XX*deltaD_XX
 		sum prod_sgndeltaDdeltaD_XX if Ster_XX==1
 		//scalar w`suffix'_`pairwise'`pla'XX = r(sum)/scalar(N_`pla'XX)
-		scalar w`suffix'_`pairwise'`pla'XX = r(sum)/scalar(N_`pla'XX) //scalar(W_`pla'XX) // because of the weight option 
+		scalar w`suffix'_`pairwise'`pla'XX = r(sum)/scalar(N_`pla'XX) //scalar(W_`pla'XX) // because of the weights option 
 //The sum at the denominator of \hat{\delta}_2`suffix'
 
 		//use r(sum) instead of r(mean) since in case there is no observation r(mean) gives ., wheras r(sum) will give 0: this is for the r-based approach.
 		cap drop deltaDV_XX
-		gen deltaDV_XX = deltaD_XX*weight_XX
+		gen deltaDV_XX = deltaD_XX*weights_XX
 		sum deltaDV_XX  if Ster_XX==1
 		scalar denom_delta2`suffix'_`pairwise'`pla'XX = r(sum)
 		
@@ -3455,7 +3605,7 @@ gen absdeltaDV_XX = absdeltaD_XX*weight_XX //sgn(\DeltaD)*V
 			scalar denom_delta2`suffix'_`pairwise'`pla'XX = 1 //in case it is zero set it to 1 to avoid dividing by 0, in that case the numerator is also equal to 0
 		}
 		cap drop Vinner_sumdelta12_XX
-		gen Vinner_sumdelta12_XX = inner_sumdelta12_XX*weight_XX
+		gen Vinner_sumdelta12_XX = inner_sumdelta12_XX*weights_XX
 		sum  Vinner_sumdelta12_XX  if Ster_XX==1
 		scalar num_delta2`suffix'_`pairwise'`pla'XX = r(sum)
 		
@@ -3469,14 +3619,14 @@ gen absdeltaDV_XX = absdeltaD_XX*weight_XX //sgn(\DeltaD)*V
 		   
 	       //1. Estimate P(S`suffix'=1)
 		   count if Ster_XX ==1
-		   scalar nb_Switchers`suffix'`pla'XX = r(N) // I need the non-weighted number of switchers to display
+		   scalar nb_Switchers`suffix'`pla'XX = r(N) // I need the non-weightsed number of switchers to display
 		   
 		   scalar PS`suffix'1`pla'XX = scalar(nb_Switchers`suffix'`pla'XX)/scalar(N_`pla'XX)
 	
 		   
 if ("`exact_match'"==""){ //We only do the logit regression if we have continuous treatment, i.e., when exact_match is not specified	
 		   if (scalar(PS`suffix'1`pla'XX)==0){ //I do the regression iff there is at least one switcher up/down.
-		   scalar delta2`suffix'_`pairwise'`pla'XX  = 0 // the weights as well -see above-is set to 0 if {i: Ster_XX==1} = empty.
+		   scalar delta2`suffix'_`pairwise'`pla'XX  = 0 // the weightss as well -see above-is set to 0 if {i: Ster_XX==1} = empty.
 		   
 		   cap drop PS1`suffix'D1_XX //create it and set it to zero, since I will call it outside this loop for the dr method.
 		   gen PS1`suffix'D1_XX = 0
@@ -3499,12 +3649,12 @@ if ("`exact_match'"==""){ //We only do the logit regression if we have continuou
 		if ("`estimation_method'" == "ps"){
 			//3. Compute deltaY*[(PS1`suffix'D1_XX*PS0_XX)/(PS0D1_XX*PS`suffix'1XX)]
 			cap drop deltaYP_`suffix'XX
-			gen deltaYP_`suffix'XX = weight_XX*deltaY_XX*(PS1`suffix'D1_XX/PS0D1_XX)*(scalar(PS0_`pla'XX)/scalar(PS`suffix'1XX))
+			gen deltaYP_`suffix'XX = weights_XX*deltaY_XX*(PS1`suffix'D1_XX/PS0D1_XX)*(scalar(PS0_`pla'XX)/scalar(PS`suffix'1XX))
 			sum deltaYP_`suffix'XX if S_XX==0
 			scalar mean_deltaYP_`suffix'`pla'XX = r(mean)
 			
 			cap drop deltaYV_XX
-			gen deltaYV_XX = deltaY_XX*weight_XX
+			gen deltaYV_XX = deltaY_XX*weights_XX
 			sum deltaY_XX  if Ster_XX ==1
 			scalar mean_deltaY_`pla'XX = r(mean) //E(\DeltaY V)
 			
@@ -3517,7 +3667,7 @@ if ("`exact_match'"==""){ //We only do the logit regression if we have continuou
 	} //End of the suffix loop
 
 /**************************************************************************
-      ii. COMPUTING THE FINAL WEIGHTS WPLus = wPlus/(wPlus+wMinus)
+      ii. COMPUTING THE FINAL weightsS WPLus = wPlus/(wPlus+wMinus)
 **************************************************************************/
 if ("`estimation_method'" == ""|"`estimation_method'" == "ps"|"`estimation_method'" == "ra"){
 	scalar W_Plus_`pairwise'`pla'XX = scalar(wPlus_`pairwise'`pla'XX)/(scalar(wPlus_`pairwise'`pla'XX)+scalar(wMinus_`pairwise'`pla'XX))
@@ -3529,7 +3679,7 @@ if ("`estimation_method'" == ""|"`estimation_method'" == "ps"|"`estimation_metho
 **************************************************************************/
 if ("`exact_match'"==""){
 	    cap drop dr_deltaYV_XX
-	    gen dr_deltaYV_XX = weight_XX*(S_XX - [(PS1PlusD1_XX - PS1MinusD1_XX)/PS0D1_XX]*(1-Sbis_XX))*inner_sumdelta12_XX
+	    gen dr_deltaYV_XX = weights_XX*(S_XX - [(PS1PlusD1_XX - PS1MinusD1_XX)/PS0D1_XX]*(1-Sbis_XX))*inner_sumdelta12_XX
 	
 		sum dr_deltaYV_XX  //WIll use it for the dr point estimate and for the estimation of the variance!
 		scalar num_dr_delta2_`pla'XX = r(sum)
@@ -3550,7 +3700,7 @@ if ("`exact_match'"==""){
 		gen Phi2_`pairwise'`pla'XX = (dr_deltaYV_XX -scalar(delta2_`pairwise'`pla'XX)*absdeltaDV_XX)
 		}
 		else{
-		gen Phi2_`pairwise'`pla'XX = weight_XX*[(S_XX - ES_XX_D1*(1-Sbis_XX)/(1-ESbis_XX_D1))*inner_sumdelta12_XX -scalar(delta2_`pairwise'`pla'XX)*absdeltaD_XX]
+		gen Phi2_`pairwise'`pla'XX = weights_XX*[(S_XX - ES_XX_D1*(1-Sbis_XX)/(1-ESbis_XX_D1))*inner_sumdelta12_XX -scalar(delta2_`pairwise'`pla'XX)*absdeltaD_XX]
 		}
 		// + Imbalanced panel adjustment: Adjust the IF
 			//a. Adjust the denominator of the IF
@@ -3579,7 +3729,7 @@ if ("`exact_match'"==""){
 		gen absdeltaD_`pairwise'`pla'XX = absdeltaD_XX
 		// + Imbalanced panel adjustment: replace |deltaD_t| by |deltaD_t|*H_t in the aggreagation of the point estimates formula
 		replace absdeltaD_`pairwise'`pla'XX  = 0 if Ht_XX == 0
-		replace absdeltaD_`pairwise'`pla'XX =  absdeltaD_`pairwise'`pla'XX*weight_XX //AbsDelta_t*V_t
+		replace absdeltaD_`pairwise'`pla'XX =  absdeltaD_`pairwise'`pla'XX*weights_XX //AbsDelta_t*V_t
 }
 }
 //End of non-IV feasible estimation
@@ -3616,9 +3766,9 @@ else{
 }
 }
 ********************************************************************************
-**# Bookmark #3 IWAOSS
+**# Bookmark #3 IWAS
 ********************************************************************************
-if (`iwaoss' == 1){
+if (`iwas' == 1){
 if (scalar(gap_`pairwise'`pla'XX)==0&scalar(n_switchersIV_`pla'XX)>0&scalar(n_stayersIV_`pla'XX)>1){ //Start of IV feasible estimation
 ************************************************
 
@@ -3716,7 +3866,7 @@ if ("`exact_match'"==""){
 	//Convention Logit STATA R
 	replace PS_IV0Z1_XX=0 if PS_IV0Z1_XX<=10^(-10)
 }
-else{ 		//This is for the IF and point estimate of the waoss when we have discrete treatment, instead of using logit use regressions
+else{ 		//This is for the IF and point estimate of the was when we have discrete treatment, instead of using logit use regressions
 	
 		//Estimation of 1-E(SI|Z1) = P(SI = 0|Z_1) in exact_match case
 		reg SIbis_XX `varsIV_pol_XX'   
@@ -3864,7 +4014,7 @@ if ("`estimation_method'" == ""|"`estimation_method'" == "ra"){
  //For aggreagation + correcting imbalance panels
  scalar denom_deltaIV`pairwise'`pla'XX  = scalar(denom_deltaIV`pairwise'`pla'XX)*scalar(PHt`pairwise'`pla'XX)
  scalar denom_deltaIV_sum_`pla'XX = scalar(denom_deltaIV_sum_`pla'XX ) + scalar(denom_deltaIV`pairwise'`pla'XX) //denom_deltaIV_sum_`pla'XX is initialized outside of this program
- replace innerSumIV_denom_`pairwise'`pla'XX = innerSumIV_denom_`pairwise'`pla'XX*weight_XX //\hat{\pi}_{i,t}V_t
+ replace innerSumIV_denom_`pairwise'`pla'XX = innerSumIV_denom_`pairwise'`pla'XX*weights_XX //\hat{\pi}_{i,t}V_t
  replace innerSumIV_denom_`pairwise'`pla'XX = 0  if Ht_XX == 0
  /**************************************************************************
             2. COMPUTING the variance of \hat{delta}_IV: START
@@ -3916,7 +4066,7 @@ if ("`estimation_method'" == ""|"`estimation_method'" == "ra"){
 		bysort `cluster': egen Phi3_`pairwise'`pla'_cXX = total(Phi3_`pairwise'`pla'XX)
 		bysort `cluster': replace Phi3_`pairwise'`pla'_cXX=. if _n!=1
 		replace Phi3_`pairwise'`pla'_cXX = Phi3_`pairwise'`pla'_cXX/scalar(N_bar_c_`pairwise'`pla'XX)
-		sum Phi3_`pairwise'`pla'_cXX   //we use the weight of the cluster here
+		sum Phi3_`pairwise'`pla'_cXX   //we use the weights of the cluster here
 	}
 		
 	scalar sd_delta3_`pairwise'`pla'XX = r(sd)/sqrt(r(sum_w)) //sqrt(scalar(N_XX)) // Clustering change the N_XX by r(N)
@@ -3961,14 +4111,14 @@ sort ID_XX
 ///////I will merge the datasets here! This is to compute the aggregated influence function
 //di as error "Here `pairwise':`data_1XX'"
 
-cap drop absdeltaD_errorXX //This in case waoss is not requested: just to avoid doing many ifs.
+cap drop absdeltaD_errorXX //This in case was is not requested: just to avoid doing many ifs.
 gen absdeltaD_errorXX=.
 cap drop S_errorXX 
 gen S_errorXX=.
 cap drop innerSumIV_denom_errorXX
 gen innerSumIV_denom_errorXX = .
 //Keep ID_XX, Phi1_t, Phi2_t, S_t, and absdeltaD_t, P_`pairwise'XX
-keep ID_XX Phi?_*XX S_*XX absdeltaD_*XX used_in_*_XX innerSumIV_denom_*XX `cluster' weight_XX weight_cXX //Phi* //Ster_XX ESbis_XX_D1 meanS_over_deltaD_XX inner_sumdelta12_XX mean_pred_XX deltaY_XX deltaD_XX outOfBounds_XX
+keep ID_XX Phi?_*XX S_*XX absdeltaD_*XX used_in_*_XX innerSumIV_denom_*XX `cluster' weights_XX weights_cXX //Phi* //Ster_XX ESbis_XX_D1 meanS_over_deltaD_XX inner_sumdelta12_XX mean_pred_XX deltaY_XX deltaD_XX outOfBounds_XX
 drop absdeltaD_errorXX
 drop S_errorXX
 drop innerSumIV_denom_errorXX
@@ -4002,7 +4152,10 @@ end
 //.
 cap program drop parse_select_twfe_suboptions
 program parse_select_twfe_suboptions , sclass
-    syntax [, percentile same_sample]
+    syntax [, percentile normal same_sample full_sample]
+	
+	// Modif Felix: Allow the user to specify full sample which does nothing (default before was already using the full sample) but in the helpfile we advice the user to specify one of the two within the twfe() option to trigger the option
+	// Same logic with the normal for bootstrap (does not change anything with respect to the default from before so if you do not specify percentile or normal it is as if you specify normal)
     
     sreturn local percentile `percentile'
 	sreturn local same_sample `same_sample'
@@ -4058,9 +4211,11 @@ SUBPROGRAMS FOR CROSS-VALIDATION
 //1.
 cap program drop parse_select_cv_suboptions
 program parse_select_cv_suboptions , sclass
-    syntax [, ALGOrithm(string) TOLErance(real 0.01) max_k(integer 1) seed(integer 0) kfolds(integer 5)]
+    syntax [, ALGOrithm(string) TOLErance(real 0.01) max_k(integer 5) seed(integer 0) kfolds(integer 5)] // Felix: should it be max_k(integer 1) or actually max_k(integer 5) here? -> Modif: using default 5 makes it run and is consistent with what we say in the help file!
     
-    sreturn local algorithn `algorithn'
+	// Felix: In the help file now we say that algorithm has to be specified!	
+	
+    sreturn local algorithm `algorithm'
     sreturn local tolerance `tolerance'
     sreturn local max_k     `max_k'
     sreturn local seed      `seed'
@@ -4071,12 +4226,14 @@ end
 capture program drop cross_validation
 program define cross_validation, sclass
 	version 12.0
-	syntax  anything [if] [in] [, ALGOrithm(string) TOLErance(real 0.01) max_k(integer 5) seed(integer 0) kfolds(integer 5) model(string) cv_covariates(string)] // FIRST_stage  weight(varlist numeric max=1) 
+	syntax  anything [if] [in] [, ALGOrithm(string) TOLErance(real 0.01) max_k(integer 5) seed(integer 0) kfolds(integer 5) model(string) cv_covariates(string)] // FIRST_stage  weights(varlist numeric max=1) 
 	
 	scalar set_chosen_order_linear = 0
 	tokenize `anything'
 	//di as error "outcome = `1'"
 di _newline
+
+
 if ("`algorithm'"=="kfolds") _dots 0, title(`algorithm'(`kfolds'): Cross validation running) reps(`max_k')
 
 if ("`algorithm'"=="loocv") _dots 0, title(`algorithm': Cross validation running) reps(`max_k')
@@ -4093,7 +4250,7 @@ if ("`algorithm'"=="loocv") _dots 0, title(`algorithm': Cross validation running
 	
 di as input " "
 di as input "{hline 80}"
-		di as input _skip(0) "Cross-validation on `name': "
+di as input "Cross-validation on `name': "
 di as input "{hline 80}"	
 di as input "Models" _skip(18) "CV's Scores"
 quietly{
@@ -4101,6 +4258,9 @@ quietly{
 	preserve
 //mata: mata clear
 //Test
+cap drop CVs
+cap drop Order
+
 gen CVs = .
 gen Order = .
 
@@ -4121,21 +4281,59 @@ quietly{
 			}
 }	
 					local counter2 = 0
+					
+local cv_covariates0
+local PolK0 
+forvalues k=1/`max_k'{
+	
+	xtset ID_XX T_XX
+	cap drop LD_XX 
+	gen LD_XX = L.D_XX
+	
+cap drop Lag1Dt_`k'XX
+gen Lag1Dt_`k'XX = LD_XX^`k'
+local PolK`k' "`PolK`=`k'-1'' c.Lag1Dt_`k'XX"
+foreach var of varlist T_XX_FE_1-T_XX_FE_`=max_T'{
+	cap drop bis`var'_Lag1Dt_`k'XX
+	gen  bis`var'_Lag1Dt_`k'XX = `var'*Lag1Dt_`k'XX
+}
+}
+
 forvalues k=1/`max_k'{
 	//Progress Bar
 	sleep 1
     _dots `k' 0 
-		
+
+	
+*******************This block is to put inside cv subcommand, replacing `max_k' by `k' and k by smtg else********************	
+forvalues k2 =1/`k'{
+	
+	//list of covariates: loocv
+	foreach var of varlist bis*_Lag1Dt_`k2'XX{
+		local cv_covariates`k'	"`cv_covariates`=`k''' `var'"
+		}
+}
+//di as error "`PolK'"
+//local controls_cv "(c.T_XX_FE_*)#(`PolK')"
+
+//list of covariates for order k: kfolds
+local controls_cv`k' "(c.T_XX_FE_*)#(`PolK`k'')"
+
+//di as error "`controls_cv`k''"
+//di as error "`cv_covariates`k''"
+********************************************************************************
+
+
 			if ("`algorithm'"=="kfolds"){
-      quietly{
+     // quietly{
 				//Run the regressions and compute the mse, cv-scores
 				cap drop e_sq_XX
 				gen e_sq_XX = . 
 				local counter = 0
 				forvalues test_sample_id = 1/`kfolds'{
-					if ("`model'"==""|"`model'"=="reg") cap reg `anything' if fold_identifier_XX!=`test_sample_id'
+					if ("`model'"==""|"`model'"=="reg") cap reg `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id'
 					else {
-						 cap `model' `anything' if fold_identifier_XX!=`test_sample_id', asis
+						 cap `model' `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id', asis
 						//di as error "`model' `anything' if fold_identifier_XX!=`test_sample_id'"
 					}
 					if (_rc==0|_rc==430|_rc==2000){ //convergence not achieved, keep going?
@@ -4161,7 +4359,7 @@ forvalues k=1/`max_k'{
 				bysort fold_identifier_XX: replace mse_XX=. if _n!=1
 				sum mse_XX
 				scalar CV_`k' = r(mean)
-				}
+				//}
 				if (`counter' == `kfolds') {
 					local counter2 = `counter2' + 1
 					di as error "Model `k' (k=`k')"  _skip(12) scalar(CV_`k') _column(40)  "Convergence not achieved."
@@ -4182,15 +4380,14 @@ forvalues k=1/`max_k'{
 			if ("`algorithm'"=="loocv"){
 			quietly{
 			//qui capture
-			cap reg `anything'
-			
+			cap reg `anything' `controls_cv`k''
 			if _rc==0{
 			cap drop e_i 
 			cap drop id
 			predict e_i , residuals
 			gen id = _n if !missing(e_i)
 			
-			mata    A  = st_data(., "`cv_covariates'"):!= .
+			mata    A  = st_data(., "`cv_covariates`k''"):!= .
 			mata	id = st_data(., "id") :!= .
 			mata	A  = select(A, id)
 			mata	H  = (J(rows(A), 1,1) - diagonal(A * invsym(A' * A) * A')):^2
@@ -4202,6 +4399,9 @@ forvalues k=1/`max_k'{
 			gen He = e_i^2/H
 			sum He
 			scalar CV_`k' = r(mean)
+			}
+			else{
+				scalar CV_`k' = .
 			}
 			}
 			
@@ -4216,7 +4416,9 @@ forvalues k=1/`max_k'{
 					
 		if (`k'>1){
 			local diff = scalar(CV_`k')/scalar(CV_`=`k'-1')-1
-			if(`diff'>-`tolerance'&`diff'!=.&"`not_to_be_considered_`k''"!= "1"){ //If we loose so much information according to the tolerance
+			//di as error "Gain: 	`diff'"
+			//di as error "if(`diff'>-`tolerance'&`diff'!=.)"
+			if(`diff'>-`tolerance'&`diff'!=.){ //If we loose so much information according to the tolerance
 			local opt_k = `k'-1
 			//dis as red "Optimal K = `opt_k' "
 			continue, break
@@ -4227,8 +4429,17 @@ forvalues k=1/`max_k'{
 
 if (`counter2'==`max_k'){
 	di as error "Cross validation: Convergence not achieved."
-}
-//Take the minimum to avoid case where we do not take the min CV due to the tolerance
+}				
+//sort Order
+//line CVs Order
+//Display 
+if (scalar(set_chosen_order_linear)!=1){
+		if (scalar(stoper)<`max_k') di as red _skip(0) "The stop criteria is: tolerance =  `tolerance', "
+		else {
+			di as red _skip(0) "The stop criteria is: maximum order  = `max_k', "
+			//local opt_k  = `max_k'
+			
+			//Take the minimum to avoid case where we do not take the min CV due to the tolerance
 quietly{
 					sort CVs Order
 					sum CVs if _n==1
@@ -4236,17 +4447,11 @@ quietly{
 					sum Order if _n==1
 					local opt_k = r(mean)
 					//dis as red "True Optimal K = `opt_k' "
-}					
-//sort Order
-//line CVs Order
+
 	//>MAIN: Restore the inputted dataset
-quietly	restore
-//Display 
-if (scalar(set_chosen_order_linear)!=1){
-		if (scalar(stoper)<`max_k') di as red _skip(0) "The stop criteria is: tolerance =  `tolerance', "
-		else {
-			di as red _skip(0) "The stop criteria is: maximum order  = `max_k', "
-			local opt_k  = `max_k'
+	restore
+}	
+
 			}
 di as input "The first optimal order found is: k = `opt_k'"
 
@@ -4256,6 +4461,14 @@ di as input "The first optimal order found is: k = `opt_k'"
 else{
 	di as red "The command will then consider the order from the linear regression cv."
 }
+
+	sreturn local set_chosen_order_linear = scalar(set_chosen_order_linear) // Modif Felix: initialize sreturn local -> apperently overwritten when using logit
+
+	forvalues k=1/`max_k'{
+		cap scalar drop CV_`k'
+	}
+	scalar drop stoper
+
 end
 /*******************************************************************************
 SUBPROGRAM POLYNOMIALS GENERATOR
@@ -4334,27 +4547,27 @@ end
 
 cap program drop  return_label
 program define return_label, sclass
-syntax [, by_quantile(integer 1) by_fd(integer 1) q(integer 1) aoss(integer 0) waoss(integer 0) iwaoss(integer 0)  display_message]
+syntax [, by_quantile(integer 1) by_fd(integer 1) q(integer 1) as(integer 0) was(integer 0) iwas(integer 0)  display_message]
 if (`by_quantile'>1){ //I will use this to label the graph
 	local lb = scalar(r`=`q'-1'_rr)
 	local ub = scalar(r`q'_rr)
 	local label_q_`q' = "[`lb'; `ub'["
 	 if (`by_fd'>1){
-		if (`aoss'==1| `waoss'==1){	
+		if (`as'==1| `was'==1){	
 		 if ("`display_message'"!="")  di as input _skip(25) "DeltaD in `label_q_`q''"
 		 sreturn local label_quantile`q' = "DeltaD in `label_q_`q''"
 		}
-		if (`iwaoss'==1) {
+		if (`iwas'==1) {
 			if ("`display_message'"!="") di as input _skip(25) "DeltaZ in `label_q_`q''"
 			sreturn local label_quantile`q' =  "DeltaZ in `label_q_`q''"
 		}
 	 }
 	 else{
-		if (`aoss'==1| `waoss'==1){
+		if (`as'==1| `was'==1){
 			if ("`display_message'"!="")  di as input _skip(25) "Baseline D in `label_q_`q''"
 			sreturn local label_quantile`q' =  "Baseline D in `label_q_`q''"
 		}
-		if (`iwaoss'==1)  {
+		if (`iwas'==1)  {
 			if ("`display_message'"!="")  di as input _skip(25) "Baseline Z in `label_q_`q''"	 	
 			sreturn local label_quantile`q' =  "Baseline Z in `label_q_`q''"	 	
 		}
