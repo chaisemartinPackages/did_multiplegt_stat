@@ -805,6 +805,13 @@ _dots 0, title(`algorithm'(`kfolds'): Cross validation running) reps(`max_k')
 parse_select_cv_suboptions, `cross_validation'
 local cross_validation_logit = "algorithm(kfolds) tolerance(`s(tolerance)') max_k(`s(max_k)') seed(`s(seed)') kfolds(`s(kfolds)')"
 
+// Modif Felix: shut down anything in algo() that is not kfolds
+if "`s(algorithm)'"!="kfolds"{
+	di as error "The option algo() only allows kfolds as input."
+	exit
+}
+
+
 cap drop T_XX_FE_* 
 tab T_XX, gen(T_XX_FE_)
 
@@ -928,7 +935,7 @@ forvalues p = 2/`=max_T'{
 	if (`iwas_XX' == 1){
 		if (scalar(delta3_`p'XX)!=.){
 		scalar delta3_1XX = scalar(delta3_1XX) + scalar(denom_deltaIV`p'XX)*scalar(delta3_`p'XX)
-		
+	
 		//Numbers of switchers and stayers: Note that if the estimation is not feasible we do NOT add the number of switchers/stayers in the total number
 		scalar N_Switchers3_1XX = scalar(N_Switchers3_1XX) + N_Switchers3_`p'XX
 		scalar Nstayers3_1XX    = scalar(Nstayers3_1XX) + Nstayers3_`p'XX
@@ -1779,6 +1786,8 @@ scalar pval_twfe_ivwas = 2*(1-normal(abs(tsta_twfe_ivwas)))
 	matrix colnames twfe_ivwas = "Estimate." "SE" "LB CI" "UB CI" "pval." "t"
     if (`iwas_XX' == 1) matrix rownames twfe_ivwas = "TWFE" "TWFE-IVWAS" 
     if (`was_XX' == 1)  matrix rownames twfe_ivwas = "TWFE" "TWFE-WAS" 
+	// Modif Felix: Add rownames when AS is specified 
+	if (`as_XX' == 1)  matrix rownames twfe_ivwas = "TWFE" "TWFE-AS" 
 }
 
 if (`iwas_XX' == 1){
@@ -1917,6 +1926,7 @@ if (`was_XX'==1){
 if (`iwas_XX'==1){
 	local nb_obs_XX =  scalar(Nstayers3_1XX) + scalar(N_Switchers3_1XX)
 }
+local nb_obs_XX = round(`nb_obs_XX', 0.001)
 local nb_obs_adj_XX = strlen("`nb_obs_XX'")
 	di as text _skip(34) "{it: Number of observations}"_skip(4) " =" _skip(`=17-`nb_obs_adj_XX'') "`nb_obs_XX'"
 //Estimation method
@@ -2198,6 +2208,13 @@ if ("`twfe'"!=""){
 	else di as text _skip(32) "{it: (Normal bootstrap method)}"
 	di as text "{it:H0: TWFE = WAS}"
 	}
+	// Modif Felix: Add the same heading for the AS 
+	if (`as_XX' == 1 ){
+	di as input _skip(26) "Test of difference between TWFE and AS"
+	if ("`percentile'"!="") di as text _skip(32) "{it: (Percentile bootstrap method)}"
+	else di as text _skip(32) "{it: (Normal bootstrap method)}"
+	di as text "{it:H0: TWFE = AS}"
+	}
 	
 	di as input "{hline 80}"
 	noisily matlist twfe_ivwas
@@ -2321,7 +2338,11 @@ use "`OG_dataPathq'.dta", clear
 matrix colnames b = `colnames'
 matrix colnames V = `colnames'
 matrix rownames V = `colnames'
-ereturn post b V, obs(`nb_obs_XX') depname("`depname'")
+cap ereturn post b V, obs(`nb_obs_XX') depname("`depname'")
+if _rc!=0{
+	di ""
+	di as error "Some of the effects/placebos or their standard errors could not be computed so e(b)/e(V) will not be defined."
+}
 //ereturn matrix testt = J(5, 2, 0)
 if (`by_quantile'>1){
 forvalues q = 1/`by_quantile'{
@@ -3310,12 +3331,16 @@ scalar W_`pla'XX = r(sum)
 count if S_XX!=.
 scalar N_`pla'XX = r(N)
 
-if ("`cluster'"!=""){ 
+if ("`cluster'"!=""){
 	//Compute E(N_c)
 cap drop N_c_XX
 bysort `cluster': gen N_c_XX = _N if _n==1
-sum N_c_XX
-scalar N_bar_c_`pairwise'`pla'XX = r(mean)
+cap sum N_c_XX
+// MODIF FELIX NEW
+scalar N_bar_c_`pairwise'`pla'XX = 0
+if _rc==0{
+	scalar N_bar_c_`pairwise'`pla'XX = r(mean)
+}
 //di as error N_bar_c_`pairwise'`pla'XX
 }
 
@@ -3339,12 +3364,12 @@ scalar N_Switchers2_`pairwise'`pla'XX = scalar(n_switchers_`pla'XX)
 
 //Test weightsed numbers: to be added in the rest of the code.
 sum weights_XX if S_XX==0
-scalar Nstayers1_`pairwise'`pla'XX  = r(sum)
-scalar Nstayers2_`pairwise'`pla'XX  = r(sum)
+scalar Nstayers1_`pairwise'`pla'XX  = round(r(sum), 0.001)
+scalar Nstayers2_`pairwise'`pla'XX  = round(r(sum), 0.001)
 
 sum weights_XX if S_XX!=0&S_XX!=. 
-scalar N_Switchers1_`pairwise'`pla'XX = r(sum)
-scalar N_Switchers2_`pairwise'`pla'XX = r(sum)
+scalar N_Switchers1_`pairwise'`pla'XX = round(r(sum), 0.001)
+scalar N_Switchers2_`pairwise'`pla'XX = round(r(sum), 0.001)
 
 }
 
@@ -3357,6 +3382,14 @@ scalar n_stayersIV_`pla'XX = r(N)
 
 scalar N_Switchers3_`pairwise'`pla'XX = scalar(n_switchersIV_`pla'XX)
 scalar Nstayers3_`pairwise'`pla'XX  = scalar(n_stayersIV_`pla'XX)
+
+sum weights_XX if SI_XX==0
+scalar Nstayers3_`pairwise'`pla'XX  = round(r(sum), 0.001)
+
+sum weights_XX if SI_XX!=0&SI_XX!=. 
+scalar N_Switchers3_`pairwise'`pla'XX = round(r(sum), 0.001)
+
+
 
 }
 **************************************************************************	
@@ -3373,7 +3406,7 @@ if (r(sd)!=0){
 
 
 if (`was' == 1 | `as' == 1 ){	
-if (scalar(gap_`pairwise'`pla'XX)==0&scalar(n_switchers_`pla'XX)>0&scalar(n_stayers_`pla'XX)>1){ //Start of feasible estimation //I Need to do it for the IV as well.
+if (scalar(gap_`pairwise'`pla'XX)==0&scalar(n_switchers_`pla'XX)>0&scalar(n_stayers_`pla'XX)>1){ //Start of feasible estimation //I Need to do it for the IV as well. 
 
 **# Bookmark #0 Preliminaries
 	cap drop predicted_XX
@@ -3679,8 +3712,10 @@ if ("`estimation_method'" == ""|"`estimation_method'" == "ps"|"`estimation_metho
 **************************************************************************/
 if ("`exact_match'"==""){
 	    cap drop dr_deltaYV_XX
-	    gen dr_deltaYV_XX = weights_XX*(S_XX - [(PS1PlusD1_XX - PS1MinusD1_XX)/PS0D1_XX]*(1-Sbis_XX))*inner_sumdelta12_XX
-	
+	    gen dr_deltaYV_XX = weights_XX*(S_XX - [(PS1PlusD1_XX - PS1MinusD1_XX)/PS0D1_XX]*(1-Sbis_XX))*inner_sumdelta12_XX if Sbis_XX == 0
+		
+		replace dr_deltaYV_XX = weights_XX*(S_XX)*inner_sumdelta12_XX if Sbis_XX == 1 // Modif Doulo: RF or FS giving 0.
+		
 		sum dr_deltaYV_XX  //WIll use it for the dr point estimate and for the estimation of the variance!
 		scalar num_dr_delta2_`pla'XX = r(sum)
 }		
@@ -3993,14 +4028,16 @@ if ("`estimation_method'" == ""|"`estimation_method'" == "ra"){
 			
 			//1. The numerator	
 			cap drop dr_IVdeltaY_XX
-	        gen dr_IVdeltaY_XX = (SI_XX - [(PSIPlus1Z1_XX - PSIMinus1Z1_XX)/PS_IV0Z1_XX]*(1-SIbis_XX))*innerSumIV_num_XX
+	        gen dr_IVdeltaY_XX = (SI_XX - [(PSIPlus1Z1_XX - PSIMinus1Z1_XX)/PS_IV0Z1_XX]*(1-SIbis_XX))*innerSumIV_num_XX if SIbis_XX == 0
+			replace dr_IVdeltaY_XX = (SI_XX)*innerSumIV_num_XX if SIbis_XX == 1
 			
 			sum dr_IVdeltaY_XX 
 			scalar num_deltaIV`pairwise'`pla'XX = r(mean) 
-			
+
 			//2. The denominator	
 			cap drop dr_IVdeltaD_XX
-	        gen dr_IVdeltaD_XX = (SI_XX - [(PSIPlus1Z1_XX - PSIMinus1Z1_XX)/PS_IV0Z1_XX]*(1-SIbis_XX))*innerSumIV_denom_`pairwise'`pla'XX
+	        gen dr_IVdeltaD_XX = (SI_XX - [(PSIPlus1Z1_XX - PSIMinus1Z1_XX)/PS_IV0Z1_XX]*(1-SIbis_XX))*innerSumIV_denom_`pairwise'`pla'XX if SIbis_XX == 0
+			replace  dr_IVdeltaD_XX = (SI_XX)*innerSumIV_denom_`pairwise'`pla'XX if SIbis_XX == 1
 			
 			sum dr_IVdeltaD_XX 
 			scalar denom_deltaIV`pairwise'`pla'XX = r(mean)
@@ -4010,7 +4047,6 @@ if ("`estimation_method'" == ""|"`estimation_method'" == "ra"){
  
  //Compute the point estimate by scalar(num_deltaIV)/scalar(denom_deltaIV)
  scalar delta3_`pairwise'`pla'XX = scalar(num_deltaIV`pairwise'`pla'XX)/scalar(denom_deltaIV`pairwise'`pla'XX)
- 
  //For aggreagation + correcting imbalance panels
  scalar denom_deltaIV`pairwise'`pla'XX  = scalar(denom_deltaIV`pairwise'`pla'XX)*scalar(PHt`pairwise'`pla'XX)
  scalar denom_deltaIV_sum_`pla'XX = scalar(denom_deltaIV_sum_`pla'XX ) + scalar(denom_deltaIV`pairwise'`pla'XX) //denom_deltaIV_sum_`pla'XX is initialized outside of this program
@@ -4226,7 +4262,7 @@ end
 capture program drop cross_validation
 program define cross_validation, sclass
 	version 12.0
-	syntax  anything [if] [in] [, ALGOrithm(string) TOLErance(real 0.01) max_k(integer 5) seed(integer 0) kfolds(integer 5) model(string) cv_covariates(string)] // FIRST_stage  weights(varlist numeric max=1) 
+	syntax  anything [if] [in] [, ALGOrithm(string) TOLErance(real 0) max_k(integer 5) seed(integer 0) kfolds(integer 5) model(string) cv_covariates(string)] // FIRST_stage  weights(varlist numeric max=1) 
 	
 	scalar set_chosen_order_linear = 0
 	tokenize `anything'
@@ -4236,7 +4272,9 @@ di _newline
 
 if ("`algorithm'"=="kfolds") _dots 0, title(`algorithm'(`kfolds'): Cross validation running) reps(`max_k')
 
-if ("`algorithm'"=="loocv") _dots 0, title(`algorithm': Cross validation running) reps(`max_k')
+if ("`algorithm'"=="loocv") {
+	_dots 0, title(`algorithm': Cross validation running) reps(`max_k')
+}
 
 			if ("`model'" == "logit"&"`algorithm'"=="loocv") {
 				di as error "logit regression not allowed with loocv."
@@ -4256,6 +4294,11 @@ di as input "Models" _skip(18) "CV's Scores"
 quietly{
 	//>MAIN: Preserve the inputted dataset
 	preserve
+	
+	//dropping observations not included in the if condition
+	if "`if'" !=""{
+	keep `if'
+	}
 //mata: mata clear
 //Test
 cap drop CVs
@@ -4396,7 +4439,7 @@ local controls_cv`k' "(c.T_XX_FE_*)#(`PolK`k'')"
 			cap drop H1
 			svmat H
 			cap drop He
-			gen He = e_i^2/H
+			gen He = e_i^2/H1
 			sum He
 			scalar CV_`k' = r(mean)
 			}
@@ -4434,9 +4477,10 @@ if (`counter2'==`max_k'){
 //line CVs Order
 //Display 
 if (scalar(set_chosen_order_linear)!=1){
-		if (scalar(stoper)<`max_k') di as red _skip(0) "The stop criteria is: tolerance =  `tolerance', "
+		if (scalar(stoper)<`max_k') cap . //di as input _skip(0) "The stop criteria is: tolerance =  `tolerance', "
 		else {
-			di as red _skip(0) "The stop criteria is: maximum order  = `max_k', "
+			//di as red _skip(0) "The stop criteria is: maximum order  = `max_k', "
+			
 			//local opt_k  = `max_k'
 			
 			//Take the minimum to avoid case where we do not take the min CV due to the tolerance
