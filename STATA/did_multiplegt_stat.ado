@@ -63,7 +63,7 @@
 capture program drop did_multiplegt_stat
 program did_multiplegt_stat, eclass sortpreserve byable(recall)
 	version 12.0
-	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off ] 
+	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off] 
 
 	marksample touse // Felix This causes the program to crash with weightss
 	if _by() {
@@ -117,12 +117,13 @@ if "`estimator'"!="iv-was"{
 		di as input "{hline 80}"
 		//if strpos("`5'", ",") != 0 local 5 = strtrim(substr("`5'", 1, strpos("`5'", ",") - 1))
 		local estimator = "was"
-		did_multiplegt_stat2 `4' `2' `3' `5' if `touse' == 1,  estimator(`estimator') estimation_method(`estimation_method') order(`order') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `as_vs_was' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weights(`weights') cross_validation(`cross_validation') `graph_off' //twfe(`twfe')
+		did_multiplegt_stat2 `4' `2' `3' `5' if `touse' == 1,  estimator(`estimator') estimation_method(`estimation_method') order(`order') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `as_vs_was' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weights(`weights') cross_validation(`cross_validation') `graph_off' first_stage //twfe(`twfe')
 }
 
 
 //Show the main results
 		local cmd = subinstr("`0'", ",", " if `touse' == 1,", 1)
+		//di as error "`cmd'"
 		did_multiplegt_stat2 `cmd'
 				
 		//Drop scalar created by the program
@@ -138,7 +139,7 @@ end
 capture program drop did_multiplegt_stat2
 program did_multiplegt_stat2, eclass sortpreserve byable(recall)
 	version 12.0
-	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off ] // FIRST_stage   twfe(percentile same_sample)
+	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off FIRST_stage ] // FIRST_stage   twfe(percentile same_sample)
 
 	
 	// Felix: Do not show "event-study" graph with by_baseline or by_fd
@@ -450,6 +451,12 @@ if (`seed'!=0&`bootstrap'==0){
 	di as test "Warning: The seed option is only relevant when specified with bootstrap."
 }	
 
+//11.  have an error message saying that only one estimator (as was or iv-was) can be requested with twfe option, as in the help file, and then the command should stop.
+if ("`twfe'"!=""&(`nb_estimatorts_XX'>1|`as_XX'==1)){
+	di as error ""
+	di as error "Only one estimator (as was or iv-was) can be requested with twfe option."
+	exit
+}
 ********************************************************************************
 
 //Handle missing values i)
@@ -756,6 +763,7 @@ gen StPlus_XX  = deltaDt_XX>0  if  deltaDt_XX!=.
 gen StMinus_XX = deltaDt_XX<0  if  deltaDt_XX!=.
 
 if ("`iwas_XX'"=="1"){
+cap drop Z_XX
 cap drop SIt_XX
 cap drop deltaZt_XX
 cap drop SIbist_XX 
@@ -763,11 +771,13 @@ cap drop SItPlus_XX
 cap drop SItMinus_XX
 cap drop SI0bist_XX
 
-gen deltaZt_XX = D.`IV_var_XX'
+gen Z_XX = `IV_var_XX'
+gen deltaZt_XX = D.Z_XX
 gen SIbist_XX   = deltaZt_XX!=0 if deltaZt_XX!=.
 gen SI0bist_XX  = 1-SIbist_XX
 gen SItPlus_XX  = deltaZt_XX>0  if  deltaZt_XX!=.
 gen SItMinus_XX = deltaZt_XX<0  if  deltaZt_XX!=.
+
 }
 
 //This part here is to ensure that twfe is an in the same sample as the estimators. When requested by user.
@@ -796,9 +806,9 @@ else{
 
 
 /*******************************************************************************
-CROSS-VALIDATION TO SELECT THE OPTIMAL ORDER : Only with WAS
+CROSS-VALIDATION TO SELECT THE OPTIMAL ORDER : Only with WAS (DS: and with IV-WAS)
 *******************************************************************************/
-if ("`cross_validation'"!=""&`was_XX'==1){
+if ("`cross_validation'"!=""&(`was_XX'==1|`iwas_XX'==1)){
 _dots 0, title(`algorithm'(`kfolds'): Cross validation running) reps(`max_k')
 
 //Need to store the suboptions in cross_validation
@@ -810,59 +820,45 @@ if "`s(algorithm)'"!="kfolds"{
 	di as error "The option algo() only allows kfolds as input."
 	exit
 }
-
+if (`iwas_XX'==1){
+	local reduced_form = "reduced_form"
+	local IV = "I"
+}
 
 cap drop T_XX_FE_* 
 tab T_XX, gen(T_XX_FE_)
 
-cap drop St_XX
-cap drop deltaDt_XX
-cap drop Sbist_XX // Modif Felix: spelling error corrected
-cap drop StPlus_XX
-cap drop StMinus_XX
-cap drop S0bist_XX
-
-gen deltaDt_XX = D.D_XX
-gen Sbist_XX   = deltaDt_XX!=0 if deltaDt_XX!=.
-gen S0bist_XX  = 1-Sbist_XX
-gen StPlus_XX  = deltaDt_XX>0  if  deltaDt_XX!=.
-gen StMinus_XX = deltaDt_XX<0  if  deltaDt_XX!=.
 
 //1. Regression E(Y_t-Y_{t-1}|D_{t-1}) = \sum_{s=2}^{T}1{t=s}PD^{k}_{s-1} with PD^{k}_{s-1} = a_0 + a_1D{s-1} + ... + a_kD_{s-1}^k
-
 	cap drop deltaYt_XX
 	xtset ID_XX T_XX
 	gen deltaYt_XX = D.Y_XX
-
 //RUN THE CROSS-VALIDATION command
-cross_validation deltaYt_XX if Sbist_XX==0 , `cross_validation' 
-
+cross_validation deltaYt_XX if S`IV'bist_XX==0 , `cross_validation' `first_stage' `reduced_form' //`first_stage' is just for the display
 local reg_order  = `s(chosen_order)'
 //di as error "test chosen reg_order  = `reg_order'"
 
 //2. Logit P(S_{t}=0|D_{t-1}) = LOGIT[\sum_{s=2}^{T}1{t=s}PD^{k}_{s-1} with PD^{k}_{s-1} = a_0 + a_1D{s-1} + ... + a_kD_{s-1}^k]
-
-
 //RUN THE CROSS-VALIDATION command
 //di as error "`cross_validation_logit'"
 //save "data_cv.dta", replace
-cross_validation S0bist_XX , `cross_validation_logit' model(logit)
+cross_validation S`IV'0bist_XX , `cross_validation_logit' model(logit) `first_stage' `reduced_form'
 
-if (`s(set_chosen_order_linear)' == 1) local logit_bis_order  = `reg_order'
+if (`s(set_chosen_order_linear)' == 1) local logit_bis_order  = `reg_order' `reduced_form'
 else local logit_bis_order  = `s(chosen_order)'
 //di as error "test chosen logit_bis_order  = `logit_bis_order'"
 
-count if StPlus_XX==1
+count if S`IV'tPlus_XX==1
 if (r(N)>0){
-cross_validation StPlus_XX , `cross_validation_logit' model(logit)
+cross_validation S`IV'tPlus_XX , `cross_validation_logit' model(logit) `first_stage' `reduced_form'
 if (`s(set_chosen_order_linear)' == 1) local logit_Plus_order  = `reg_order'
 else local logit_Plus_order  = `s(chosen_order)'
 //di as error "test chosen logit_Plus_order  = `logit_Plus_order'"
 }
-count if StMinus_XX==1
+count if S`IV'tMinus_XX==1
 if (r(N)>0){
-cross_validation StMinus_XX , `cross_validation_logit' model(logit)
-if (`s(set_chosen_order_linear)' == 1) local logit_Minus_order  = `reg_order'
+cross_validation S`IV'tMinus_XX , `cross_validation_logit' model(logit) `first_stage' `reduced_form'
+if (`s(set_chosen_order_linear)' == 1) local logit_Minus_order  = `reg_order' 
 else local logit_Minus_order  = `s(chosen_order)'
 //di as error "test chosen logit_Minus_order  = `logit_Minus_order'"
 }
@@ -1966,7 +1962,11 @@ di as text _skip(34) "{it: Polynomial order   }"_skip(8)"=" _skip(`=17-`pol_adj_
 }
 else{
 	local pol_adj_XX = strlen("(`reg_order', `logit_bis_order',`logit_Minus_order', `logit_Plus_order')")
-di as text _skip(34) "{it: CV Polynomials' orders   }"_skip(2)"=" _skip(`=16-`pol_adj_XX'')"(`reg_order', `logit_bis_order', `logit_Plus_order', `logit_Minus_order')"
+if (`iwas_XX'==0) di as text _skip(34) "{it: CV Polynomials' orders   }"_skip(2)"=" _skip(`=16-`pol_adj_XX'')"(`reg_order', `logit_bis_order', `logit_Plus_order', `logit_Minus_order')"
+else{
+	if ("`first_stage'"!=="") di as text _skip(34) "{it: CV Polynomials' orders(RF)}"_skip(1)"=" _skip(`=16-`pol_adj_XX'')"(`reg_order', `logit_bis_order', `logit_Plus_order', `logit_Minus_order')"
+	else 	di as text _skip(34) "{it: CV Polynomials' orders(FS)}"_skip(1)"=" _skip(`=16-`pol_adj_XX'')"(`reg_order', `logit_bis_order', `logit_Plus_order', `logit_Minus_order')"
+}
 }
 }
 
@@ -3331,16 +3331,12 @@ scalar W_`pla'XX = r(sum)
 count if S_XX!=.
 scalar N_`pla'XX = r(N)
 
-if ("`cluster'"!=""){
+if ("`cluster'"!=""){ 
 	//Compute E(N_c)
 cap drop N_c_XX
 bysort `cluster': gen N_c_XX = _N if _n==1
-cap sum N_c_XX
-// MODIF FELIX NEW
-scalar N_bar_c_`pairwise'`pla'XX = 0
-if _rc==0{
-	scalar N_bar_c_`pairwise'`pla'XX = r(mean)
-}
+sum N_c_XX
+scalar N_bar_c_`pairwise'`pla'XX = r(mean)
 //di as error N_bar_c_`pairwise'`pla'XX
 }
 
@@ -3406,7 +3402,7 @@ if (r(sd)!=0){
 
 
 if (`was' == 1 | `as' == 1 ){	
-if (scalar(gap_`pairwise'`pla'XX)==0&scalar(n_switchers_`pla'XX)>0&scalar(n_stayers_`pla'XX)>1){ //Start of feasible estimation //I Need to do it for the IV as well. 
+if (scalar(gap_`pairwise'`pla'XX)==0&scalar(n_switchers_`pla'XX)>0&scalar(n_stayers_`pla'XX)>1){ //Start of feasible estimation //I Need to do it for the IV as well.
 
 **# Bookmark #0 Preliminaries
 	cap drop predicted_XX
@@ -3807,6 +3803,41 @@ if (`iwas' == 1){
 if (scalar(gap_`pairwise'`pla'XX)==0&scalar(n_switchersIV_`pla'XX)>0&scalar(n_stayersIV_`pla'XX)>1){ //Start of IV feasible estimation
 ************************************************
 
+
+/*******************************************************************
+	Call polynomials_generator here: Start
+	*******************************************************************/
+if ("`cross_validation'" == ""){
+polynomials_generator, order(`order')         prefix(reg)         controls(`controls') other_treatments(`other_treatments')	`pla'
+	local reg_vars_pol_XX        "`s(reg_pol_XX)'"
+	local logit_bis_pol_XX       "`s(reg_pol_XX)'"
+	local logit_Plus_pol_XX      "`s(reg_pol_XX)'"
+	local logit_Minus_pol_XX     "`s(reg_pol_XX)'"
+}
+else{
+	
+polynomials_generator, order(`reg_order')         prefix(reg)         controls(`controls') other_treatments(`other_treatments') `pla' reduced_form
+polynomials_generator, order(`logit_bis_order')   prefix(logit_bis)   controls(`controls') other_treatments(`other_treatments') `pla' reduced_form
+polynomials_generator, order(`logit_Plus_order')  prefix(logit_Plus)  controls(`controls') other_treatments(`other_treatments') `pla' reduced_form
+polynomials_generator, order(`logit_Minus_order') prefix(logit_Minus) controls(`controls') other_treatments(`other_treatments') `pla' reduced_form
+
+	local reg_vars_pol_XX        "`s(reg_pol_XX)'"
+	local logit_bis_pol_XX       "`s(logit_bis_pol_XX)'"
+	local logit_Plus_pol_XX      "`s(logit_Plus_pol_XX)'"
+	local logit_Minus_pol_XX     "`s(logit_Minus_pol_XX)'"
+
+	//For FS
+	local reg_order_FS = scalar(reg_order_FS)
+polynomials_generator, order(`reg_order_FS')         prefix(reg)         controls(`controls') other_treatments(`other_treatments') `pla' first_stage
+	local reg_vars_pol_FSXX        "`s(reg_pol_XX)'"
+	
+//di as red "order reg FS: " scalar(reg_order_FS)
+}
+
+	/*******************************************************************
+	Call polynomials_generator here: End
+******************************************************************************/	
+/*
 		//polynomial for Z if IV requested
 		
 			local varsIV_pol_XX = "`other_treatments'"
@@ -3864,6 +3895,7 @@ if (scalar(gap_`pairwise'`pla'XX)==0&scalar(n_switchersIV_`pla'XX)>0&scalar(n_st
 			//All controls
 			local varsIV_pol_XX = "`varsIV_pol_XX' `vars_pol_controlsXX'"
 			//di as error "`varsIV_pol_XX'"
+*/
 		
 cap drop innerSumIV_num_XX
 //cap drop absdeltaZ_XX
@@ -3893,7 +3925,7 @@ o. Preliminaries: Perform the logit regressions
 	cap drop S_IV0_XX
 	gen S_IV0_XX = 1-SIbis_XX
 if ("`exact_match'"==""){
-	cap logit S_IV0_XX `varsIV_pol_XX'    , asis
+	cap logit S_IV0_XX `logit_bis_pol_XX'     , asis // `varsIV_pol_XX'
 	if (_rc==430){
 				//di as error "Warning: convergence not achieved."
 			}
@@ -3904,10 +3936,10 @@ if ("`exact_match'"==""){
 else{ 		//This is for the IF and point estimate of the was when we have discrete treatment, instead of using logit use regressions
 	
 		//Estimation of 1-E(SI|Z1) = P(SI = 0|Z_1) in exact_match case
-		reg SIbis_XX `varsIV_pol_XX'   
+		reg SIbis_XX `reg_vars_pol_XX'   
 		predict ESIbis_XX_Z1, xb
 		//Estimation of  \hat{E}(SI+-SI-|Z1) 
-		reg SI_XX `varsIV_pol_XX'   
+		reg SI_XX `reg_vars_pol_XX'   
 		predict ESI_XX_Z1 , xb  
 	}	
 	//2. P(SI=0) //For PS and DR-BASED APPROACHES
@@ -3937,7 +3969,7 @@ else{ 		//This is for the IF and point estimate of the was when we have discrete
 		   else{ 
 			if ("`exact_match'"==""){
 			
- capture logit SI`suffix'_XX `varsIV_pol_XX'     , asis
+ capture logit SI`suffix'_XX `logit_`suffix'_pol_XX'    , asis
 			if (_rc==430){
 				//di as error "Warning: convergence not achieved."
 			}
@@ -3954,7 +3986,7 @@ else{ 		//This is for the IF and point estimate of the was when we have discrete
 **************************************************************************/
  	//i. Estimation of  \hat{E}(deltaY|Z1, SI=0)
 	cap drop meandeltaY_predIV_XX
-	reg deltaY_XX `varsIV_pol_XX'     if SI_XX==0
+	reg deltaY_XX `reg_vars_pol_XX'     if SI_XX==0
 	predict meandeltaY_predIV_XX , xb 
 	//scalar Nstayers3_`pairwise'XX  = e(N) 
 	
@@ -3963,7 +3995,7 @@ else{ 		//This is for the IF and point estimate of the was when we have discrete
 	
 	//ii. Estimation of \hat{E}(deltaD|Z1, SI=0)
 	cap drop meandeltaD_predIV_XX
-	reg deltaD_XX `varsIV_pol_XX'      if SI_XX==0
+	reg deltaD_XX `reg_vars_pol_FSXX'      if SI_XX==0
 	predict meandeltaD_predIV_XX , xb 
 	
 	cap drop innerSumIV_denom_`pairwise'`pla'XX
@@ -4062,7 +4094,7 @@ if ("`estimation_method'" == ""|"`estimation_method'" == "ra"){
 	 //scalar delta_Y_`pairwise'`pla'XX = r(mean)/scalar(EabsdeltaZ_`pairwise'`pla'XX)
 
 	 //reg deltaY_XX `vars_pol_XX' if SI_XX==0 
-	 reg deltaY_XX `varsIV_pol_XX'     if SI_XX==0 // meandeltaY_predIV_XX
+	 reg deltaY_XX `reg_vars_pol_XX'     if SI_XX==0 // meandeltaY_predIV_XX
 	 predict mean_pred_Y_IV_XX , xb 
 	 
 	 if ("`exact_match'"==""){
@@ -4079,7 +4111,7 @@ if ("`estimation_method'" == ""|"`estimation_method'" == "ra"){
 
 	 
 	 //reg deltaD_XX `vars_pol_XX' if SI_XX==0 
-	 reg deltaD_XX `varsIV_pol_XX'     if SI_XX==0 
+	 reg deltaD_XX `reg_vars_pol_FSXX'     if SI_XX==0 
 	 predict mean_pred_D_IV_XX , xb 
 	 
 	 if ("`exact_match'"==""){	 
@@ -4262,7 +4294,7 @@ end
 capture program drop cross_validation
 program define cross_validation, sclass
 	version 12.0
-	syntax  anything [if] [in] [, ALGOrithm(string) TOLErance(real 0) max_k(integer 5) seed(integer 0) kfolds(integer 5) model(string) cv_covariates(string)] // FIRST_stage  weights(varlist numeric max=1) 
+	syntax  anything [if] [in] [, ALGOrithm(string) TOLErance(real 0) max_k(integer 5) seed(integer 0) kfolds(integer 5) model(string) cv_covariates(string) FIRST_stage reduced_form] 
 	
 	scalar set_chosen_order_linear = 0
 	tokenize `anything'
@@ -4280,11 +4312,26 @@ if ("`algorithm'"=="loocv") {
 				di as error "logit regression not allowed with loocv."
 				exit
 			}
+			
 //Display 
-			if ("`1'" == "deltaYt_XX") local name = "E(Y_t - Y_{t-1}|D_{t-1})"
-			if ("`1'" == "S0bist_XX")  local name = "P(S_t = 0|D_{t-1})"
-			if ("`1'" == "StPlus_XX")  local name = "P(S+_t = 0|D_{t-1})"
-			if ("`1'" == "StMinus_XX") local name = "P(S-_t = 0|D_{t-1})"
+if ("`first_stage'"=="") {
+	local outcomeYorD = "Y"
+	local treatmentDorZ = "D"
+}
+else{
+	local outcomeYorD = "D"
+	local treatmentDorZ = "Z"
+}
+if ("`reduced_form'"!=""){
+	local outcomeYorD = "Y"
+	local treatmentDorZ = "Z"
+	local IV "I"
+}
+//di as red "`outcomeYorD' = outcome"
+			if ("`1'" == "deltaYt_XX") local name = "E(`outcomeYorD'_t - `outcomeYorD'_{t-1}|`treatmentDorZ'_{t-1})"
+			if ("`1'" == "S`IV'0bist_XX")  local name = "P(S_t = 0|`treatmentDorZ'_{t-1})"
+			if ("`1'" == "S`IV'tPlus_XX")  local name = "P(S+_t = 0|`treatmentDorZ'_{t-1})"
+			if ("`1'" == "S`IV'tMinus_XX") local name = "P(S-_t = 0|`treatmentDorZ'_{t-1})"
 	
 di as input " "
 di as input "{hline 80}"
@@ -4328,10 +4375,11 @@ quietly{
 local cv_covariates0
 local PolK0 
 forvalues k=1/`max_k'{
-	
+	if ("`reduced_form'"!="") local VAR = "Z"
+	else local VAR = "D"
 	xtset ID_XX T_XX
 	cap drop LD_XX 
-	gen LD_XX = L.D_XX
+	gen LD_XX = L.`VAR'_XX
 	
 cap drop Lag1Dt_`k'XX
 gen Lag1Dt_`k'XX = LD_XX^`k'
@@ -4374,11 +4422,16 @@ local controls_cv`k' "(c.T_XX_FE_*)#(`PolK`k'')"
 				gen e_sq_XX = . 
 				local counter = 0
 				forvalues test_sample_id = 1/`kfolds'{
-					if ("`model'"==""|"`model'"=="reg") cap reg `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id'
+					if ("`model'"==""|"`model'"=="reg") {
+						cap reg `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id'
+						//matrix first_stage_orders = J(4, 1, .) //This to initialize the matrix that will be used to store orders of FS for the IV-WAS routine, and will be use by polynomials_generator	
+						}
 					else {
 						 cap `model' `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id', asis
 						//di as error "`model' `anything' if fold_identifier_XX!=`test_sample_id'"
 					}
+					//di as error "`model' `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id'"
+					
 					if (_rc==0|_rc==430|_rc==2000){ //convergence not achieved, keep going?
 					if (_rc==430) local counter = `counter'+1
 					cap drop e_`test_sample_id'_XX
@@ -4512,6 +4565,10 @@ else{
 		cap scalar drop CV_`k'
 	}
 	scalar drop stoper
+	
+	if ("`first_stage'"!=""&("`model'"==""|"`model'"=="reg")) {
+		scalar reg_order_FS = `opt_k'
+	}
 
 end
 /*******************************************************************************
@@ -4519,16 +4576,18 @@ SUBPROGRAM POLYNOMIALS GENERATOR
 *******************************************************************************/
 cap program drop polynomials_generator
 program define polynomials_generator, sclass
-    syntax [, order(integer 1) pla prefix(string) controls(varlist numeric) other_treatments(varlist numeric)]
+    syntax [, order(integer 1) pla prefix(string) controls(varlist numeric) other_treatments(varlist numeric) FIRST_stage reduced_form]
     
-	// Generating polynomials of the baseline treatement	
+	if ("`first_stage'"!=""|"`reduced_form'"!="") local VAR = "Z"
+	else local VAR = "D"
+	// Generating polynomials of the baseline treatement/instrument	
 		//i for D
 			local vars_pol_XX =""  //"`other_treatments'" 
 			local vars_pol_controlsXX ="" 
 			forvalues pol_level = 1/`order'{
 			scalar pol_level_`pla'XX = `pol_level'
 			capture drop D1_XX_`pol_level'_XX 
-			gen D1_XX_`pol_level'_XX = D1_XX^scalar(pol_level_`pla'XX)
+			gen D1_XX_`pol_level'_XX = `VAR'1_XX^scalar(pol_level_`pla'XX)
 			local vars_pol_XX = "`vars_pol_XX' D1_XX_`pol_level'_XX"
 			
 			//Controls: Generate the polynomial order of each control
@@ -4544,7 +4603,7 @@ program define polynomials_generator, sclass
 			//Add the interaction control#D1
 			if ("`controls'"!=""&`order'>1){
 				foreach control in `controls'{
-					local vars_pol_controlsXX = "`vars_pol_controlsXX' c.`control'#c.D1_XX"
+					local vars_pol_controlsXX = "`vars_pol_controlsXX' c.`control'#c.`VAR'1_XX"
 				}
 			}
 			//Add the interaction control#control if order>=2
@@ -4569,7 +4628,7 @@ program define polynomials_generator, sclass
 			if ("`other_treatments'"!=""){
 				foreach var in `other_treatments'{
 					if ("`interact'"==""){
-						local interact  = "c.`var'##c.D1_XX"
+						local interact  = "c.`var'##c.`VAR'1_XX"
 					}
 					else{
 						local interact  = "c.`interact'##c.`var'"
@@ -4583,7 +4642,7 @@ program define polynomials_generator, sclass
 			local vars_pol_XX = "`vars_pol_XX' `vars_pol_controlsXX'"
 			
 //prefix in {logit_Plus, logit_Minus, logit_bis, reg}
-
+	
     sreturn local `prefix'_pol_XX `vars_pol_XX'
 	//di as error "`s(`prefix'_pol_XX)'"
 
