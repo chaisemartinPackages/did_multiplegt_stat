@@ -148,7 +148,7 @@ can compute the IV-WAS estimator introduced in
 {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2022)}.
 The IV-WAS estimator is equal to the WAS estimator of the instrument's reduced-form effect on the outcome controlling for D_{t-1}, divided by the
 WAS estimator of the instrument's first-stage effect on the treatment controlling for D_{t-1}. 
-See {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2022)} for some explanations as to why controlling for D_{t-1}
+See {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2024)} for some explanations as to why controlling for D_{t-1}
 is desirable in IV estimation.
 {p_end}
 
@@ -366,7 +366,7 @@ the graph is not displayed.
 {title:Examples}
 
 {p 4 4}
-These examples follow Section 7 of {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2022)}. 
+These examples follow Section 7 of {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2024)}. 
 The dataset used is an excerpt of that of {browse "https://www.aeaweb.org/articles?id=10.1257/pol.6.4.302":Li et al (2014)},
 which contains gasoline taxes, prices, and consumption for 48 US states, every year from 1966 to 2008. It can be downloaded by running:
 {p_end}
@@ -386,7 +386,7 @@ which contains gasoline taxes, prices, and consumption for 48 US states, every y
 {title:References}
 
 {p 4 4}
-de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022)
+de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Sow, D, Vazquez‐Bare, G (2024)
 {browse "https://ssrn.com/abstract=4011782":Difference-in-Differences for Continuous Treatments and Instruments with Stayers}.
 {p_end}
 {p 4 4}
