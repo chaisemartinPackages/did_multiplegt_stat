@@ -814,7 +814,7 @@ _dots 0, title(`algorithm'(`kfolds'): Cross validation running) reps(`max_k')
 //Need to store the suboptions in cross_validation
 parse_select_cv_suboptions, `cross_validation'
 local cross_validation_logit = "algorithm(kfolds) tolerance(`s(tolerance)') max_k(`s(max_k)') seed(`s(seed)') kfolds(`s(kfolds)')"
-
+local same_order_all_logits = "`s(same_order_all_logits)'"
 // Modif Felix: shut down anything in algo() that is not kfolds
 if "`s(algorithm)'"!="kfolds"{
 	di as error "The option algo() only allows kfolds as input."
@@ -840,27 +840,34 @@ local reg_order  = `s(chosen_order)'
 
 //2. Logit P(S_{t}=0|D_{t-1}) = LOGIT[\sum_{s=2}^{T}1{t=s}PD^{k}_{s-1} with PD^{k}_{s-1} = a_0 + a_1D{s-1} + ... + a_kD_{s-1}^k]
 //RUN THE CROSS-VALIDATION command
-//di as error "`cross_validation_logit'"
-//save "data_cv.dta", replace
 cross_validation S`IV'0bist_XX , `cross_validation_logit' model(logit) `first_stage' `reduced_form'
-
+//di as red "Here: `same_order_all_logits'"
 if (`s(set_chosen_order_linear)' == 1) local logit_bis_order  = `reg_order' `reduced_form'
 else local logit_bis_order  = `s(chosen_order)'
-//di as error "test chosen logit_bis_order  = `logit_bis_order'"
 
+
+if ("`same_order_all_logits'" == ""){
+//3. Logit P(S_{+t}=0|D_{t-1})
 count if S`IV'tPlus_XX==1
 if (r(N)>0){
 cross_validation S`IV'tPlus_XX , `cross_validation_logit' model(logit) `first_stage' `reduced_form'
 if (`s(set_chosen_order_linear)' == 1) local logit_Plus_order  = `reg_order'
 else local logit_Plus_order  = `s(chosen_order)'
-//di as error "test chosen logit_Plus_order  = `logit_Plus_order'"
+
 }
+
+//4. Logit P(S_{-t}=0|D_{t-1})
 count if S`IV'tMinus_XX==1
 if (r(N)>0){
 cross_validation S`IV'tMinus_XX , `cross_validation_logit' model(logit) `first_stage' `reduced_form'
 if (`s(set_chosen_order_linear)' == 1) local logit_Minus_order  = `reg_order' 
 else local logit_Minus_order  = `s(chosen_order)'
-//di as error "test chosen logit_Minus_order  = `logit_Minus_order'"
+
+}
+}
+else{
+	local logit_Minus_order = `logit_bis_order'
+	local logit_Plus_order  = `logit_bis_order'
 }
 }
 else{
@@ -3837,66 +3844,7 @@ polynomials_generator, order(`reg_order_FS')         prefix(reg)         control
 	/*******************************************************************
 	Call polynomials_generator here: End
 ******************************************************************************/	
-/*
-		//polynomial for Z if IV requested
-		
-			local varsIV_pol_XX = "`other_treatments'"
-			forvalues pol_level = 1/`order'{
-			scalar pol_level_`pla'XX = `pol_level'
-			capture drop Z1_XX_`pol_level'_XX 
-			gen Z1_XX_`pol_level'_XX = Z1_XX^scalar(pol_level_`pla'XX)
-			local varsIV_pol_XX = "`varsIV_pol_XX' Z1_XX_`pol_level'_XX"
-			
-			//Controls: Generate the polynomial order of each control
-			
-			if ("`controls'"!=""){
-				foreach control in `controls'{
-					cap drop `control'_`pol_level'_XX
-					gen `control'_`pol_level'_XX = `control'^scalar(pol_level_`pla'XX)
-					local vars_pol_controlsXX = "`vars_pol_controlsXX' `control'_`pol_level'_XX"
-				}
-			}
-			}
-					//Add the interaction control#Z1_XX
-			if ("`controls'"!=""&`order'>1){
-				foreach control in `controls'{
-					local vars_pol_controlsXX = "`vars_pol_controlsXX' c.`control'#c.Z1_XX"
-				}
-			}
-			//Add the interaction control#control only zhen order>=2
-			if (`order'>1){
-			if ("`controls'"!=""){
-				local i = 0
-				foreach control1 in `controls'{
-					local i = `i'+1
-					local j = 0
-					foreach control2 in `controls'{
-						local j = `j'+1
-						if (`j'>`i') {
-							local vars_pol_controlsXX = "`vars_pol_controlsXX' c.`control1'#c.`control2'"
-						}
-					}
-				}
-			}	
-			}
-			//// Other treatments option: More general and inclusive way of doing the interaction.
-			
-			if ("`other_treatments'"!=""){
-				foreach var in `other_treatments'{
-					if ("`interact'"==""){
-						local interact  = "c.`var'##c.Z1_XX"
-					}
-					else{
-						local interact  = "c.`interact'##c.`var'"
-					}
-			local varsIV_pol_XX = "`varsIV_pol_XX' `interact'"
-				}
-			}
-			//All controls
-			local varsIV_pol_XX = "`varsIV_pol_XX' `vars_pol_controlsXX'"
-			//di as error "`varsIV_pol_XX'"
-*/
-		
+	
 cap drop innerSumIV_num_XX
 //cap drop absdeltaZ_XX
 
@@ -4279,7 +4227,7 @@ SUBPROGRAMS FOR CROSS-VALIDATION
 //1.
 cap program drop parse_select_cv_suboptions
 program parse_select_cv_suboptions , sclass
-    syntax [, ALGOrithm(string) TOLErance(real 0.01) max_k(integer 5) seed(integer 0) kfolds(integer 5)] // Felix: should it be max_k(integer 1) or actually max_k(integer 5) here? -> Modif: using default 5 makes it run and is consistent with what we say in the help file!
+    syntax [, ALGOrithm(string) TOLErance(real 0.01) max_k(integer 5) seed(integer 0) kfolds(integer 5) same_order_all_logits] // Felix: should it be max_k(integer 1) or actually max_k(integer 5) here? -> Modif: using default 5 makes it run and is consistent with what we say in the help file!
     
 	// Felix: In the help file now we say that algorithm has to be specified!	
 	
@@ -4288,13 +4236,14 @@ program parse_select_cv_suboptions , sclass
     sreturn local max_k     `max_k'
     sreturn local seed      `seed'
 	sreturn local kfolds    `kfolds'
+	sreturn local same_order_all_logits  `same_order_all_logits'
 end
 
 
 capture program drop cross_validation
 program define cross_validation, sclass
 	version 12.0
-	syntax  anything [if] [in] [, ALGOrithm(string) TOLErance(real 0) max_k(integer 5) seed(integer 0) kfolds(integer 5) model(string) cv_covariates(string) FIRST_stage reduced_form] 
+	syntax  anything [if] [in] [, ALGOrithm(string) TOLErance(real 0) max_k(integer 5) seed(integer 0) kfolds(integer 5) model(string) cv_covariates(string) FIRST_stage reduced_form same_order_all_logits] 
 	
 	scalar set_chosen_order_linear = 0
 	tokenize `anything'
