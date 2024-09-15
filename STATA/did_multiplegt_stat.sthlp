@@ -332,6 +332,9 @@ to a polynomial of order 5 as long as the tolerance is not reached.{p_end}
 {synopt:{cmd:kfolds(#)}} If {cmd: kfolds} is specified in {cmd: algorithm()}, this option specifies the number of folds to consider.
 By default, the number of folds is set to 5.{p_end}
 
+{synopt:{cmd:same_order_all_logits}} When this option is specified, the cross-validation is done for only P(S_{t}=0|D_{t-1}), and the optimal order found is used to predict P(S_{+, t}=1|D_{t-1}) and P(S_{-, t}=1|D_{t-1}). 
+{p_end}
+
 {synopt:{cmd:seed(#)}}  This option allows to set the seed so as to ensure replicability of the results.{p_end}
 {p2colreset}{...}
 
