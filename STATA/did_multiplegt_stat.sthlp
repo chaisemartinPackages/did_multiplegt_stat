@@ -25,7 +25,7 @@ do not affect the current outcome.
 {cmd:as_vs_was}
 {cmd:exact_match}
 {cmd: estimation_method(}{it:string}{cmd:)}
-{cmd:{ul:or}der(}{it:#}{cmd:)}
+{cmd:{ul:or}der(}{it:#/####/########}{cmd:)}
 {cmd:controls({varlist}{cmd:})}
 {cmd:weights({varname}{cmd:})}
 {cmd:cluster({varlist}{cmd:})}
@@ -173,12 +173,18 @@ matched to a stayer with the exact same period-(t-1) treatment, thus restricting
 {cmd: estimation_method(}{it:string}{cmd:)}: when the {cmd:exact_match} option is not specified and estimation of the WAS or IV-WAS is requested, 
 this option can be used to specify which estimation method to use when estimating the WAS or IV-WAS. 
 The allowed arguments are: (1) {cmd:ra} (regression adjustment), (2) {cmd:ps} (propensity-based reweighting), and (3) {cmd:dr} (doubly-robust). 
-By default, a doubly-robust estimator is used.
+By default, a doubly-robust estimator is used, when  WAS or IV-WAS is requested, and the regression adjustment estimator if AS is requested.
 
 {phang}
-{cmd:{ul:or}der(}{it:#}{cmd:)}: when the exact_match option is not specified, 
-this option specifies the polynomial order to be used in the OLS regressions of Y_t-Y_{t-1} on a polynomial in D_{t-1}
+{cmd:{ul:or}der(}{it:#/####/########}{cmd:)}: when the exact_match option is not specified, 
+this option specifies the polynomial orders to be used in the OLS regressions of Y_t-Y_{t-1} on a polynomial in D_{t-1}
 and/or in the logistic regressions of an indicator for (t-1)-to-t switchers on a polynomial in D_{t-1}. 
+This option allows for either 1, 4, or 8 arguments, with 8 arguments only allowed when IV-WAS requested. 
+E.g.: order(1), order(1 4 3 2) or order(1 4 3 2 1 2 3 4) are allowed (the last one only if IV-WAS specified), but order(1 2 3) is not allowed. 
+With 4 arguments, argument 1, 2, 3 and 4, is the order used to estimate E(Y_t-Y_{t-1}|D_{t-1}), P(S_{t}=0|D_{t-1}), P(S_{+, t}=1|D_{t-1}), and P(S_{-, t}=1|D_{t-1}), respectively. 
+With 8 arguments the same logic is applied, but the first 4 arguments are for the first stage, and the next 4 for the reduced form. 
+Finally, if IV-WASis requested but {cmd:order} has 4 arguments, we apply the same orders to first stage and reduced form.
+
 By default, a polynomial of order 1 is used.
 
 {phang}

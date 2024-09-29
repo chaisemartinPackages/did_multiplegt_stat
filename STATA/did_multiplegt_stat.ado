@@ -56,14 +56,14 @@
 //Adding cross_validation ok
 
 
-//// TO DO LIST
+//// TO DO LIST (Done!)
 // 1. Different tables for each version of placebo
 // 2. Graph like in did_multiplegt_dyn showing placebos and Effect_0, with x-axis being the periods.
 
 capture program drop did_multiplegt_stat
 program did_multiplegt_stat, eclass sortpreserve byable(recall)
 	version 12.0
-	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off] 
+	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(string) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off] 
 
 	marksample touse // Felix This causes the program to crash with weightss
 	if _by() {
@@ -99,6 +99,15 @@ if ("`switchers'"!="up" & "`switchers'"!="down" & "`switchers'"!=""){
 	//tokenize the varlist
 tokenize `varlist'
 
+//Count number of arguments in order option
+local order_count: word count `order'
+//di as error  "`order_count'"
+if (`order_count'==0) {
+	local order = 1 //default
+	local order_count = 1
+	
+}
+
 if ("`5'"!=""&"`5'"!=","){
 local IV_feed_XX = "yes"
 local IV_var_XX  `5' 
@@ -112,19 +121,47 @@ if "`estimator'"!="iv-was"{
 	}
 
 //Show the First Stage
+
+		local first_stage_specification `4' `2' `3' `5'
+		
+		if (`order_count'==8){
+			//Take the first for as order of the first stage
+			tokenize `order'
+			local first_stage_orders `1' `2' `3' `4'
+			local reduced_form_orders `5' `6' `7' `8'
+		}
+		else{
+			if (`order_count'==4){
+			//Take the first for as order of the first stage
+			tokenize `order'
+			local first_stage_orders `1' `2' `3' `4'
+			local reduced_form_orders `first_stage_orders'
+			}
+			else{
+				if (`order_count'==1) {
+					local first_stage_orders `order'
+					local reduced_form_orders `order'
+					}
+					else {
+						di as error "Error with the option order: only 1, 4, or 8 (with iv-was) arguments are allowed."
+						exit
+					}
+			}
+		}
 		di as input "{hline 80}"
 		di as input _skip(30) "First stage estimation"
 		di as input "{hline 80}"
+		
 		//if strpos("`5'", ",") != 0 local 5 = strtrim(substr("`5'", 1, strpos("`5'", ",") - 1))
 		local estimator = "was"
-		did_multiplegt_stat2 `4' `2' `3' `5' if `touse' == 1,  estimator(`estimator') estimation_method(`estimation_method') order(`order') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `as_vs_was' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weights(`weights') cross_validation(`cross_validation') `graph_off' first_stage //twfe(`twfe')
+		did_multiplegt_stat2 `first_stage_specification' if `touse' == 1,  estimator(`estimator') estimation_method(`estimation_method') order(`first_stage_orders') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `as_vs_was' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weights(`weights') cross_validation(`cross_validation') `graph_off' first_stage //twfe(`twfe')
 }
 
 
 //Show the main results
 		local cmd = subinstr("`0'", ",", " if `touse' == 1,", 1)
 		//di as error "`cmd'"
-		did_multiplegt_stat2 `cmd'
+		did_multiplegt_stat2 `cmd' reduced_form_orders(`reduced_form_orders') 
 				
 		//Drop scalar created by the program
 		cap scalars_to_drop  //a subprogram dropping all scalars with the pattern _XX
@@ -139,8 +176,11 @@ end
 capture program drop did_multiplegt_stat2
 program did_multiplegt_stat2, eclass sortpreserve byable(recall)
 	version 12.0
-	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(integer 1) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off FIRST_stage ] // FIRST_stage   twfe(percentile same_sample)
+	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(string) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off FIRST_stage reduced_form_orders(string)] // FIRST_stage   twfe(percentile same_sample)
 
+	if ("`reduced_form_orders'"!="") {
+		local order = "`reduced_form_orders'"
+	}
 	
 	// Felix: Do not show "event-study" graph with by_baseline or by_fd
 	if (`by_baseline'!=1 | `by_fd'!=1){
@@ -368,9 +408,46 @@ if ("`as_vs_was'"!=""&`a_vs_w'!=2){
 	exit
 }
 
-if !(mod(`order', 1)  == 0 & `order' > 0) {
+
+//Count number of arguments in order option
+local order_count: word count `order'
+
+if (`order_count'==0) {
+	local order = 1 //default
+	local order_count = 1	
+}
+
+if (`order_count'!=4&`order_count'!=1) {
+	di as error "Error with the option order: only 1, 4, or 8 (with iv-was) arguments are allowed."
+	exit
+}
+
+if (`order_count'==1){
+if (!(mod(`order', 1)  == 0 & `order' > 0)) {
 	di as error "Order should be a positive integer"
 	exit
+}
+else{
+	forvalues num_order = 1/4{
+		local order_`num_order' = `num_order'
+	}
+}
+
+}
+
+if (`order_count'==4) {
+	local num_order = 0
+	foreach level of local order{
+		if (!(mod(`level', 1)  == 0 & `level' > 0)) {
+			di as error "Each order should be a positive integer"
+			exit
+		}
+		else{
+			local num_order = `num_order' + 1
+			local order_`num_order' = `level'
+		}
+			
+	}
 }
 
 //5.
@@ -388,11 +465,21 @@ if ("`exact_match'"!=""&"`noextrapolation'"!=""){
 }
 
 //7. Order and cross_validation
-if (`order'>1&"`cross_validation'"!=""){
-	di as error ""
-	di as error "The option order is not allowed along with cross-validation."
-	di as error "The command will ignore the option order()."
-	local order = 1
+if (`order_count'==1) {
+	if (`order'>1&"`cross_validation'"!=""){
+		di as error ""
+		di as error "The option order is not allowed along with cross-validation."
+		di as error "The command will ignore the option order()."
+		local order = 1
+		}
+}
+else{
+		if ("`cross_validation'"!=""){
+			di as error ""
+			di as error "The option order is not allowed along with cross-validation."
+			di as error "The command will ignore the option order()."
+			local order = 1
+			}		
 }
 
 //8. exact_match and [order, estimation_method, order]
@@ -402,7 +489,7 @@ if ("`exact_match'"!=""){
 		di as error "the estimation_method option is ignored."
 	}
 	
-	if (`order'!=1){ //The values are then set within the pairwise program.  To se where search local order = r(r)
+	if ("`order'"!="1"){ //The values are then set within the pairwise program.  To se where search local order = r(r)
 		di as error "As the exact_match option is specified,"
 		di as error "the order option is ignored."
 	}
@@ -871,10 +958,10 @@ else{
 }
 }
 else{
-	local reg_order         = `order'
-	local logit_bis_order   = `order'
-	local logit_Plus_order  = `order'
-	local logit_Minus_order = `order'
+	local reg_order         = `order_1'
+	local logit_bis_order   = `order_2'
+	local logit_Plus_order  = `order_3'
+	local logit_Minus_order = `order_4'
 }
 		//preserve quantile
 	tempfile OG_dataPathq
@@ -1965,7 +2052,8 @@ if ("`estimation_method'" =="dr"){
 if ("`exact_match'"==""){
 if ("`cross_validation'"==""){
 local pol_adj_XX = strlen("`reg_order'")
-di as text _skip(34) "{it: Polynomial order   }"_skip(8)"=" _skip(`=17-`pol_adj_XX'')"`reg_order'"
+local order_adjust_XX = strlen("`order'")
+di as text _skip(34) "{it: Polynomial order   }"_skip(8)"=" _skip(`=17-`pol_adj_XX' - `order_adjust_XX' -1')"(`order')"
 }
 else{
 	local pol_adj_XX = strlen("(`reg_order', `logit_bis_order',`logit_Minus_order', `logit_Plus_order')")
@@ -2872,7 +2960,7 @@ end
 capture program drop did_multiplegt_stat_pairwise
 program did_multiplegt_stat_pairwise, eclass
 	version 12.0
-	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) ORder(integer 1) NOEXTRApolation weights(varlist numeric) switchers(string) pairwise(integer 2) data_1XX(string) as(integer 0) was(integer 0) iwas(integer 0) estimation_method(string) placebo(integer 0) exact_match cluster(varlist max=1) quantile(integer 1) by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) controls(varlist numeric)  bootstrap(integer 0) reg_order(integer 1) logit_bis_order(integer 1)  logit_Plus_order(integer 1) logit_Minus_order(integer 1) cross_validation(string)]
+	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) ORder(string) NOEXTRApolation weights(varlist numeric) switchers(string) pairwise(integer 2) data_1XX(string) as(integer 0) was(integer 0) iwas(integer 0) estimation_method(string) placebo(integer 0) exact_match cluster(varlist max=1) quantile(integer 1) by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) controls(varlist numeric)  bootstrap(integer 0) reg_order(integer 1) logit_bis_order(integer 1)  logit_Plus_order(integer 1) logit_Minus_order(integer 1) cross_validation(string)]
 	
 quietly{
 //> CORE preserve
@@ -2906,7 +2994,9 @@ if ("`controls'"!=""){
 	foreach control in `controls'{
 		cap drop temp_`control'XX temp_`control'2XX
 xtset ID_XX T_XX
-		bysort ID_XX: gen temp_`control'2XX  = L.`control'
+		//bysort ID_XX: gen temp_`control'2XX  = L.`control'
+
+		gen temp_`control'2XX  = L.`control' if T_XX == `pairwise' - `placebo' - 1
 		bysort ID_XX: egen temp_`control'XX = mean(temp_`control'2XX )
 		replace `control' = temp_`control'XX
 	}
@@ -3399,6 +3489,25 @@ scalar N_Switchers3_`pairwise'`pla'XX = round(r(sum), 0.001)
 	if ("`exact_match'"!=""){ //Take the number of distinct values of the baseline treatment: ok
 		levelsof D1_XX
 		local order = r(r)
+		forvalues num_order = 1/4{
+			local order_`num_order' = `order'
+		}
+	}
+	else{
+		local order_count : word count `order'
+		if (`order_count'==1){
+		forvalues num_order = 1/4{
+			local order_`num_order' = `order'
+		}
+		}
+		else{
+			local num_order = 0
+			foreach level of local order{
+				local num_order = `num_order' + 1
+				local order_`num_order' = `level'
+			}
+		}
+		
 	}
 
 	//Option weights. For interaction and covariates terms in the regressions
@@ -3424,11 +3533,16 @@ if (scalar(gap_`pairwise'`pla'XX)==0&scalar(n_switchers_`pla'XX)>0&scalar(n_stay
 	Call polynomials_generator here: Start
 	*******************************************************************/
 if ("`cross_validation'" == ""){
-polynomials_generator, order(`order')         prefix(reg)         controls(`controls') other_treatments(`other_treatments')	`pla'
+polynomials_generator, order(`order_1')         prefix(reg)         controls(`controls') other_treatments(`other_treatments')	`pla'
 	local reg_vars_pol_XX        "`s(reg_pol_XX)'"
-	local logit_bis_pol_XX       "`s(reg_pol_XX)'"
-	local logit_Plus_pol_XX      "`s(reg_pol_XX)'"
-	local logit_Minus_pol_XX     "`s(reg_pol_XX)'"
+	
+polynomials_generator, order(`order_2')         prefix(logit_bis)         controls(`controls') other_treatments(`other_treatments')	`pla'
+	local logit_bis_pol_XX       "`s(logit_bis_pol_XX)'"
+polynomials_generator, order(`order_3')         prefix(logit_Plus)         controls(`controls') other_treatments(`other_treatments')	`pla'
+	local logit_Plus_pol_XX      "`s(logit_Plus_pol_XX)'"
+	
+polynomials_generator, order(`order_4')         prefix(logit_Minus)         controls(`controls') other_treatments(`other_treatments')	`pla'
+	local logit_Minus_pol_XX     "`s(logit_Minus_pol_XX)'"
 }
 else{
 	
@@ -3815,11 +3929,16 @@ if (scalar(gap_`pairwise'`pla'XX)==0&scalar(n_switchersIV_`pla'XX)>0&scalar(n_st
 	Call polynomials_generator here: Start
 	*******************************************************************/
 if ("`cross_validation'" == ""){
-polynomials_generator, order(`order')         prefix(reg)         controls(`controls') other_treatments(`other_treatments')	`pla'
+polynomials_generator, order(`order_1')         prefix(reg)         controls(`controls') other_treatments(`other_treatments')	`pla' reduced_form
 	local reg_vars_pol_XX        "`s(reg_pol_XX)'"
-	local logit_bis_pol_XX       "`s(reg_pol_XX)'"
-	local logit_Plus_pol_XX      "`s(reg_pol_XX)'"
-	local logit_Minus_pol_XX     "`s(reg_pol_XX)'"
+	
+polynomials_generator, order(`order_2')         prefix(logit_bis)         controls(`controls') other_treatments(`other_treatments')	`pla' reduced_form
+	local logit_bis_pol_XX       "`s(logit_bis_pol_XX)'"
+polynomials_generator, order(`order_3')         prefix(logit_Plus)         controls(`controls') other_treatments(`other_treatments')	`pla' reduced_form
+	local logit_Plus_pol_XX      "`s(logit_Plus_pol_XX)'"
+	
+polynomials_generator, order(`order_4')         prefix(logit_Minus)         controls(`controls') other_treatments(`other_treatments')	`pla' reduced_form
+	local logit_Minus_pol_XX     "`s(logit_Minus_pol_XX)'"
 }
 else{
 	
