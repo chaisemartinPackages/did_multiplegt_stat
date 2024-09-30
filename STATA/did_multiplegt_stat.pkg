@@ -1,4 +1,4 @@
-v 9.30.24
+v 12.0
 d 'did_multiplegt_stat': Estimation of heterogeneity-robust difference-in-differences (DID) estimators,
 d with a binary, discrete, or continuous treatment or instrument, in designs with stayers, assuming that
 d past treatments do not affect the current outcome.
