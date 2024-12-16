@@ -159,7 +159,9 @@ if "`estimator'"!="iv-was"{
 
 
 //Show the main results
-		local cmd = subinstr("`0'", ",", " if `touse' == 1,", 1)
+if ("`if'"!="") local if_touse = "&`touse' == 1"
+else local if_touse = "if `touse' == 1"
+		local cmd = subinstr("`0'", ",", " `if_touse',", 1) //(Dec, 2024) DS: The if here conflicts with the if of the main command, any. Corrected above.
 		//di as error "`cmd'"
 		did_multiplegt_stat2 `cmd' reduced_form_orders(`reduced_form_orders') 
 				
@@ -285,10 +287,11 @@ if scalar(aggregated_data)==0{
 */
 
 //gen main varlist
-gen Y_XX = `1'
-gen ID_XX =  `2'
-gen T_OG_XX = `3'
-gen D_XX = `4' 
+//(Dec, 2024)
+clonevar Y_XX = `1'
+clonevar ID_XX =  `2'
+clonevar T_OG_XX = `3'
+clonevar D_XX = `4' 
 local depname  = "`1'" //for estout
 local OG_nameID_XX = "`2'"
 //2. IV method:
@@ -305,7 +308,7 @@ local IV_var_XX  `5'
 
 }
 
- xtset `2'  `3' //make the quietly skip that to show the characteristics of the panel: balanced/unbalanced/w|o gaps etc.
+ xtset `2'  `3' 
 /*******************************************************************************
 //Check all the estimators that are requested - to customize the display
 *******************************************************************************/
@@ -560,7 +563,9 @@ if ("`iwas_XX'" == "1"){
 //****************************If there is gap
 gen tsfilled_XX = 0
 
+//save "C:\Users\ds0103\Dropbox (Personal)\SciencesPo\WORKING PROJECTS\DD continuous treatments\Code\GitHub\did_multiplegt_stat\STATA\dataTest.dta", replace
 xtset ID_XX T_OG_XX
+
 tsfill, full
 replace tsfilled_XX = 1 if tsfilled_XX==.
 sum tsfilled_XX
@@ -4491,7 +4496,7 @@ local controls_cv`k' "(c.T_XX_FE_*)#(`PolK`k'')"
 				local counter = 0
 				forvalues test_sample_id = 1/`kfolds'{
 					if ("`model'"==""|"`model'"=="reg") {
-						cap reg `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id'
+						 cap reg `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id'
 						//matrix first_stage_orders = J(4, 1, .) //This to initialize the matrix that will be used to store orders of FS for the IV-WAS routine, and will be use by polynomials_generator	
 						}
 					else {
@@ -4500,7 +4505,7 @@ local controls_cv`k' "(c.T_XX_FE_*)#(`PolK`k'')"
 					}
 					//di as error "`model' `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id'"
 					
-					if (_rc==0|_rc==430|_rc==2000){ //convergence not achieved, keep going?
+					if (_rc==0|_rc==430){ //convergence not achieved, keep going? |_rc==2000) (Dec, 2024)
 					if (_rc==430) local counter = `counter'+1
 					cap drop e_`test_sample_id'_XX
 					if ("`model'"==""|"`model'"=="reg") {
