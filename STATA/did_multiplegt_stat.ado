@@ -55,6 +55,7 @@
 //Add Placebo FS placebo : okay, the program shows the FS whenever IV is requested ok
 //Adding cross_validation ok
 
+//Dec 24: all placebo stored in e(); repeated time within panel error solved.
 
 //// TO DO LIST (Done!)
 // 1. Different tables for each version of placebo
@@ -2133,20 +2134,20 @@ forvalues i = 1/3{
 			// Modif Felix: instead of printing many one line matrices generate one matix combining all those and outputting just one matrix (keep disaggregated as it is)
 		
 	forvalues placebo_index = 1/`placebo'{
-		matrix res_mat_1plaXX`q' = V`placebo_index'res_mat_plaXX[ 1..max_T,....]
+		matrix V`placebo_index'res_mat_1plaXX`q' = V`placebo_index'res_mat_plaXX[ 1..max_T,....]
 		
 		if `placebo_index'==1{
-			matrix mat_combined1_pl_`q'=res_mat_1plaXX`q'[1..1,....]
+			matrix mat_combined1_pl_`q'=V`placebo_index'res_mat_1plaXX`q'[1..1,....]
 		}
 		if `placebo_index'>1{
-			matrix mat_combined1_pl_`q'=mat_combined1_pl_`q'\res_mat_1plaXX`q'[1..1,....]
+			matrix mat_combined1_pl_`q'=mat_combined1_pl_`q'\V`placebo_index'res_mat_1plaXX`q'[1..1,....]
 		}
 
 		if ("`disaggregate'" !=""){
 		di as input "{hline 80}"
 		di as input _skip(33) "Placebo(s) AS"
 		di as input "{hline 80}"
-			noisily matlist res_mat_1plaXX`q'
+			noisily matlist V`placebo_index'res_mat_1plaXX`q'
 		}
 		
 	}
@@ -2179,20 +2180,20 @@ forvalues i = 1/3{
 		//Placebos
 		if ("`placebo'"!="0"){
 		forvalues placebo_index = 1/`placebo'{
-			matrix res_mat_2plaXX`q' = V`placebo_index'res_mat_plaXX[max_T+1..2*max_T,....]
+			matrix V`placebo_index'res_mat_2plaXX`q' = V`placebo_index'res_mat_plaXX[max_T+1..2*max_T,....]
 			
 			if `placebo_index'==1{
-			matrix mat_combined2_pl_`q'=res_mat_2plaXX`q'[1..1,....]
+			matrix mat_combined2_pl_`q'=V`placebo_index'res_mat_2plaXX`q'[1..1,....]
 		}
 		if `placebo_index'>1{
-			matrix mat_combined2_pl_`q'=mat_combined2_pl_`q'\res_mat_2plaXX`q'[1..1,....]
+			matrix mat_combined2_pl_`q'=mat_combined2_pl_`q'\V`placebo_index'res_mat_2plaXX`q'[1..1,....]
 		}
 
 			if ("`disaggregate'" !=""){
 				di as input "{hline 80}"
 				di as input _skip(33) "Placebo(s) WAS"
 				di as input "{hline 80}"
-				noisily matlist res_mat_2plaXX`q'
+				noisily matlist V`placebo_index'res_mat_2plaXX`q'
 			}	
 		}
 			if ("`disaggregate'" ==""){
@@ -2223,20 +2224,20 @@ forvalues i = 1/3{
 			//Placebos
 		if ("`placebo'"!="0"){
 		forvalues placebo_index = 1/`placebo'{
-	    matrix res_mat_3plaXX`q' = V`placebo_index'res_mat_plaXX[2*max_T+1...,....]
+	    matrix V`placebo_index'res_mat_3plaXX`q' = V`placebo_index'res_mat_plaXX[2*max_T+1...,....]
 		
 		if `placebo_index'==1{
-			matrix mat_combined3_pl_`q'=res_mat_3plaXX`q'[1..1,....]
+			matrix mat_combined3_pl_`q'=V`placebo_index'res_mat_3plaXX`q'[1..1,....]
 		}
 		if `placebo_index'>1{
-			matrix mat_combined3_pl_`q'=mat_combined3_pl_`q'\res_mat_3plaXX`q'[1..1,....]
+			matrix mat_combined3_pl_`q'=mat_combined3_pl_`q'\V`placebo_index'res_mat_3plaXX`q'[1..1,....]
 		}
 		
 		if ("`disaggregate'" !=""){
 				di as input "{hline 80}"
 				di as input _skip(33) "Placebo(s) IV-WAS"
 				di as input "{hline 80}"
-				noisily matlist res_mat_3plaXX`q'
+				noisily matlist V`placebo_index'res_mat_3plaXX`q'
 			}	
 		}
 		if ("`disaggregate'" ==""){
@@ -2468,9 +2469,11 @@ if (_by()){
 	if (`iwas_XX'==1) matrix  IWAS_`by_index_XX'XX`q'  = res_mat_3XX`q'
 	
 	if ("`placebo'"!="0"){
-		if (`as_XX'==1)   matrix  PlaceboAS_`by_index_XX'XX`q'   = res_mat_1plaXX`q'
-		if (`was_XX'==1)  matrix  PlaceboWAS_`by_index_XX'XX`q'  = res_mat_2plaXX`q'
-		if (`iwas_XX'==1) matrix  PlaceboIWAS_`by_index_XX'XX`q' = res_mat_3plaXX`q'
+		forvalues placebo_index = 1/`placebo'{
+		if (`as_XX'==1)   matrix  Placebo_`placebo_index'_AS_`by_index_XX'XX`q'   = V`placebo_index'res_mat_1plaXX`q'
+		if (`was_XX'==1)  matrix  Placebo_`placebo_index'_WAS_`by_index_XX'XX`q'  = V`placebo_index'res_mat_2plaXX`q'
+		if (`iwas_XX'==1) matrix  Placebo_`placebo_index'_IWAS_`by_index_XX'XX`q' = V`placebo_index'res_mat_3plaXX`q'
+		}
 	}
 	}
 	
@@ -2489,9 +2492,11 @@ if (_by()){
 		if (`iwas_XX'==1) ereturn matrix IWAS_`level'  = IWAS_`level'XX1
 
 		if ("`placebo'"!="0"){
-			if (`as_XX'==1)   ereturn matrix  PlaceboAS_`level'   =   PlaceboAS_`level'XX1
-			if (`was_XX'==1)  ereturn matrix  PlaceboWAS_`level'  =  PlaceboWAS_`level'XX1
-			if (`iwas_XX'==1) ereturn matrix  PlaceboIWAS_`level' = PlaceboIWAS_`level'XX1
+			forvalues placebo_index = 1/`placebo'{
+			if (`as_XX'==1)   ereturn matrix  Placebo_`placebo_index'_AS_`level'   =   Placebo`placebo_index'AS_`level'XX1
+			if (`was_XX'==1)  ereturn matrix  Placebo_`placebo_index'_WAS_`level'  =  Placebo`placebo_index'WAS_`level'XX1
+			if (`iwas_XX'==1) ereturn matrix  Placebo_`placebo_index'_IWAS_`level' = Placebo`placebo_index'IWAS_`level'XX1
+			}
 		}
 		}
 		else{
@@ -2501,9 +2506,11 @@ if (_by()){
 						if (`iwas_XX'==1) ereturn matrix IWAS_`level'_`q'  = IWAS_`level'XX`q' 
 
 						if ("`placebo'"!="0"){
-							if (`as_XX'==1)   ereturn matrix  PlaceboAS_`level'_`q'   =   PlaceboAS_`level'XX`q'
-							if (`was_XX'==1)  ereturn matrix  PlaceboWAS_`level'_`q'  =  PlaceboWAS_`level'XX`q'
-							if (`iwas_XX'==1) ereturn matrix  PlaceboIWAS_`level'_`q' = PlaceboIWAS_`level'XX`q'
+							forvalues placebo_index = 1/`placebo'{
+							if (`as_XX'==1)   ereturn matrix  Placebo_`placebo_index'_AS_`level'_`q'   =   Placebo`placebo_index'AS_`level'XX`q'
+							if (`was_XX'==1)  ereturn matrix  Placebo_`placebo_index'_WAS_`level'_`q'  =  Placebo`placebo_index'WAS_`level'XX`q'
+							if (`iwas_XX'==1) ereturn matrix  Placebo_`placebo_index'_IWAS_`level'_`q' = Placebo`placebo_index'IWAS_`level'XX`q'
+							}
 						}
 				}
 		}
@@ -2528,10 +2535,13 @@ if (`by_quantile'>1){
 						if (`iwas_XX'==1) ereturn matrix IWAS_`q'  = res_mat_3XX`q'
 
 						if ("`placebo'"!="0"){
-							if (`as_XX'==1)   ereturn matrix  PlaceboAS_`q'   =    res_mat_1plaXX`q'
-							if (`was_XX'==1)  ereturn matrix  PlaceboWAS_`q'  =   res_mat_2plaXX`q'
-							if (`iwas_XX'==1) ereturn matrix  PlaceboIWAS_`q' =  res_mat_3plaXX`q'
+							forvalues placebo_index = 1/`placebo'{
+							if (`as_XX'==1)   ereturn matrix  Placebo_`placebo_index'_AS_`q'   =    V`placebo_index'res_mat_1plaXX`q'
+							if (`was_XX'==1)  ereturn matrix  Placebo_`placebo_index'_WAS_`q'  =   V`placebo_index'res_mat_2plaXX`q'
+							if (`iwas_XX'==1) ereturn matrix  Placebo_`placebo_index'_IWAS_`q' =  V`placebo_index'res_mat_3plaXX`q'
+							}
 						}
+						
 				}	
 }
 else{
@@ -2541,9 +2551,11 @@ if (`was_XX' == 1) ereturn matrix WAS  = res_mat_2XX1
 if (`iwas_XX' == 1) ereturn matrix WAS = res_mat_3XX1
 
 		if ("`placebo'"!="0"){
-			if (`as_XX' == 1) ereturn matrix PlaceboAS    = res_mat_1plaXX1
-			if (`was_XX' == 1) ereturn matrix PlaceboWAS  = res_mat_2plaXX1
-			if (`iwas_XX' == 1) ereturn matrix PlaceboWAS = res_mat_3plaXX1			
+			forvalues placebo_index = 1/`placebo'{
+			if (`as_XX' == 1) ereturn matrix Placebo_`placebo_index'_AS    = V`placebo_index'res_mat_1plaXX1
+			if (`was_XX' == 1) ereturn matrix Placebo_`placebo_index'_WAS  = V`placebo_index'res_mat_2plaXX1
+			if (`iwas_XX' == 1) ereturn matrix Placebo_`placebo_index'_WAS = V`placebo_index'res_mat_3plaXX1	
+			}
 		}
 }
 
@@ -2588,9 +2600,10 @@ quietly{
 
 		forvalues level=1/`nb_level_XX'{
 			forvalues i=1/4{
-         if (`as_XX'==1) matrix `e_p'AS_XX[`level',`i'] = e(`e_p'AS_`level')[1,`i']
-         if (`was_XX'==1) matrix `e_p'WAS_XX[`level',`i'] = e(`e_p'WAS_`level')[1,`i']
-         if (`iwas_XX'==1) matrix `e_p'IWAS_XX[`level',`i'] = e(`e_p'IWAS_`level')[1,`i']
+				///We show the last placebo version if multiple placebo requested.
+         if (`as_XX'==1) matrix `e_p'AS_XX[`level',`i'] = e(`e_p'`placebo'AS_`level')[1,`i']
+         if (`was_XX'==1) matrix `e_p'WAS_XX[`level',`i'] = e(`e_p'`placebo'WAS_`level')[1,`i']
+         if (`iwas_XX'==1) matrix `e_p'IWAS_XX[`level',`i'] = e(`e_p'`placebo'IWAS_`level')[1,`i']
 			}	
 		}
 		//Keep only the by vars for a matter of labelling the graph
@@ -2748,9 +2761,9 @@ local col6 "lime"
 		
 		forvalues level=1/`nb_level_XX'{
 			forvalues i=1/4{
-         if (`as_XX'==1) matrix `e_p'AS_`by_level'XX[`level',`i'] = e(`e_p'AS_`by_level'_`level')[1,`i']
-         if (`was_XX'==1) matrix `e_p'WAS_`by_level'XX[`level',`i'] = e(`e_p'WAS_`by_level'_`level')[1,`i']
-         if (`iwas_XX'==1) matrix `e_p'IWAS_`by_level'XX[`level',`i'] = e(`e_p'IWAS_`by_level'_`level')[1,`i']
+         if (`as_XX'==1) matrix `e_p'AS_`by_level'XX[`level',`i'] = e(`e_p'`placebo'AS_`by_level'_`level')[1,`i']
+         if (`was_XX'==1) matrix `e_p'WAS_`by_level'XX[`level',`i'] = e(`e_p'`placebo'WAS_`by_level'_`level')[1,`i']
+         if (`iwas_XX'==1) matrix `e_p'IWAS_`by_level'XX[`level',`i'] = e(`e_p'`placebo'IWAS_`by_level'_`level')[1,`i']
 			}
 		}	
 		if (`as_XX'==1) {
