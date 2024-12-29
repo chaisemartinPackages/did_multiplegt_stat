@@ -55,7 +55,6 @@
 //Add Placebo FS placebo : okay, the program shows the FS whenever IV is requested ok
 //Adding cross_validation ok
 
-//Dec 24: all placebo stored in e(); repeated time within panel error solved.
 
 //// TO DO LIST (Done!)
 // 1. Different tables for each version of placebo
@@ -66,6 +65,7 @@ program did_multiplegt_stat, eclass sortpreserve byable(recall)
 	version 12.0
 	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(string) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off] 
 
+ 
 	marksample touse // Felix This causes the program to crash with weightss
 	if _by() {
 		quietly replace `touse' = 0 if `_byindex' != _byindex()
@@ -100,6 +100,14 @@ if ("`switchers'"!="up" & "`switchers'"!="down" & "`switchers'"!=""){
 	//tokenize the varlist
 tokenize `varlist'
 
+/*******************************************************************************
+//Drop missing values to avoid errors: (Dec, 2024)
+*******************************************************************************/
+foreach var of varlist `1' `2' `3' `4' `5' `controls' `weights' `other_treatments' `cluster' {
+	cap drop if `var' == .
+	cap drop if `var' == ""
+ }
+ 
 //Count number of arguments in order option
 local order_count: word count `order'
 //di as error  "`order_count'"
@@ -155,14 +163,17 @@ if "`estimator'"!="iv-was"{
 		
 		//if strpos("`5'", ",") != 0 local 5 = strtrim(substr("`5'", 1, strpos("`5'", ",") - 1))
 		local estimator = "was"
-		did_multiplegt_stat2 `first_stage_specification' if `touse' == 1,  estimator(`estimator') estimation_method(`estimation_method') order(`first_stage_orders') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `as_vs_was' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weights(`weights') cross_validation(`cross_validation') `graph_off' first_stage //twfe(`twfe')
+		if ("`if'"!="") local if_touse = "&`touse' == 1"
+		else local if_touse = "if `touse' == 1"
+		
+		did_multiplegt_stat2 `first_stage_specification' if `if_touse',  estimator(`estimator') estimation_method(`estimation_method') order(`first_stage_orders') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `as_vs_was' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weights(`weights') cross_validation(`cross_validation') `graph_off' first_stage //twfe(`twfe')
 }
 
 
 //Show the main results
 if ("`if'"!="") local if_touse = "&`touse' == 1"
 else local if_touse = "if `touse' == 1"
-		local cmd = subinstr("`0'", ",", " `if_touse',", 1) //(Dec, 2024) DS: The if here conflicts with the if of the main command, any. Corrected above.
+		local cmd = subinstr("`0'", ",", " `if_touse',", 1) //(Dec, 2024) DS: The if here conflicts with the if of the main command, if any. Corrected above.
 		//di as error "`cmd'"
 		did_multiplegt_stat2 `cmd' reduced_form_orders(`reduced_form_orders') 
 				
@@ -228,7 +239,7 @@ if _rc{
 
 //tokenize the varlist
 tokenize `varlist'
-
+ 
 //dropping observations not included in the if condition
 	if "`if'" !=""{
 	keep `if'
@@ -310,6 +321,7 @@ local IV_var_XX  `5'
 }
 
  xtset `2'  `3' 
+
 /*******************************************************************************
 //Check all the estimators that are requested - to customize the display
 *******************************************************************************/
@@ -576,6 +588,7 @@ sum tsfilled_XX
 gegen T_XX =  group(T_OG_XX)
 //save "Tsfilled.dta"
 
+**# Bookmark #1
 // Creating the weights variable. //weights OPTION //CLUSTER OPTION 
 
 
@@ -1253,7 +1266,7 @@ if ("`as_vs_was'"!=""&`a_vs_w'==2){
 /*****************************************************************************************************/
 	if("`placebo'"!="0"){
 	
-	forvalues placebo_index = 1/`placebo'{
+forvalues placebo_index = 1/`placebo'{
 cap macro drop data_1plaXX 
 		
 use "`OG_dataPath1'.dta", clear
@@ -3002,11 +3015,10 @@ if ("`IV_feed_XX'"=="no"&(`iwas' == 1|"`estimator'" == "")){
 if ("`placebo'"=="0"){
 keep if inlist(T_XX,  `pairwise'-1, `pairwise')
 
-
 }
 else{
 	
-	//keep if inlist(T_XX,  `pairwise'-2, `pairwise'-1, `pairwise')
+keep if inlist(T_XX,  `pairwise'-`placebo' -1, `pairwise'-`placebo', `pairwise'-1, `pairwise')
 //Controls: Take X_{t-1} (automatically done since we drop if t==2) if Effect and X_{t-2} if Placebo1 and X_{t-3} if Placebo2
 if ("`controls'"!=""){
 	foreach control in `controls'{
@@ -3014,7 +3026,9 @@ if ("`controls'"!=""){
 xtset ID_XX T_XX
 		//bysort ID_XX: gen temp_`control'2XX  = L.`control'
 
-		gen temp_`control'2XX  = L.`control' if T_XX == `pairwise' - `placebo' - 1
+		//gen temp_`control'2XX  = L.`control' if T_XX == `pairwise' - `placebo' - 1
+		gen temp_`control'2XX  = `control' if T_XX == `pairwise' - `placebo' - 1 //(Dec, 2024)
+		
 		bysort ID_XX: egen temp_`control'XX = mean(temp_`control'2XX )
 		replace `control' = temp_`control'XX
 	}
@@ -3031,9 +3045,6 @@ local pla = "pla"
 bysort T_XX: gegen tsfilled_minXX = min(tsfilled_XX)
 sum tsfilled_minXX
 scalar gap_`pairwise'`pla'XX =  r(max) 
-
-
-*/
 
 sort T_XX
 gegen Tbis_XX = group(T_XX)
@@ -3594,7 +3605,7 @@ Perfom here the main logit regressions that are needed for the three estimators
 	// Performing the regression (polynomial series) estimation to estimate \hat{E}(deltaY|D1, S=0)
 	
 	     // \hat{E}(deltaY|D1, S=0): actually it is \hat{E}(deltaY|D1, S=0, H_t=1) since S_XX is only defined among {i: Hit=1}, all the expectations/probabilities that follow are conditioned on Ht=1.
-		 
+	//di as red "test_`pairwise'.dta: reg deltaY_XX `reg_vars_pol_XX'   if S_XX==0 "
 	reg deltaY_XX `reg_vars_pol_XX'   if S_XX==0 //This regression can generated an error when the polynomial order is very high and lead to values >  1e+38 (the upper bound of float in stata.).
 	predict mean_pred_XX , xb 
 	
