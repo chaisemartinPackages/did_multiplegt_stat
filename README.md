@@ -383,19 +383,19 @@ The development of this package was funded by the European Union (ERC, REALLYCRE
 
 # Authors
 
-    + Clément de Chaisemartin, Economics Department, Sciences Po, France.
++ Clément de Chaisemartin, Economics Department, Sciences Po, France.
 
-    + Diego Ciccia, Sciences Po, France.
++ Diego Ciccia, Sciences Po, France.
 
-    + Xavier D'Haultfoeuille, CREST-ENSAE, France.
++ Xavier D'Haultfoeuille, CREST-ENSAE, France.
 
-    + Felix Knau, Sciences Po, France.
++ Felix Knau, Sciences Po, France.
 
-    + Felix Pasquier, CREST-ENSAE, France.
++ Felix Pasquier, CREST-ENSAE, France.
 
-    + Doulo Sow, Sciences Po, France.
++ Doulo Sow, Sciences Po, France.
 
-    + Gonzalo Vazquez-Bare, UCSB, USA.
++ Gonzalo Vazquez-Bare, UCSB, USA.
 
 
 # Contact
