@@ -1,17 +1,91 @@
 # did_multiplegt_stat
  did_multiplegt_stat -- Estimation of heterogeneity-robust difference-in-differences (DID) estimators, with a binary, discrete, or continuous treatment or instrument, in designs with stayers, assuming that past treatments do not affect the current outcome. ([de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Sow, D, Vazquez-Bare, G, 2022](https://ssrn.com/abstract=4011782)).
 
-## Overview
+
+[Overview](#Overview) | [Setup](#Setup) |  [Syntax](#Syntax) | [Description](#Description)
+
+[FAQ](#FAQ) | [Example](#Example) | [References](#References) | [Authors](#Authors) | [Contact](#Contact) |
+
+
+# Overview
 
 **did_multiplegt_stat** estimates difference-in-differences estimators for continuous treatments with heterogeneous effects, assuming that between consecutive periods, the treatment of some units, the switchers, changes, while the treatment of other units does not change. It computes the three estimators (including an IV-related estimator) introduced in [de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Sow, D, Vazquez‐Bare, G (2024)](https://ssrn.com/abstract=4011782). The estimators computed by the command assume static effects and rely on a parallel trends assumptions.
 
-The command can be used with more than two periods. If the number of periods is greater than two, the command estimates, for each pair of two successive periods, the requested DID estimators (aoss, waoss or iwaoss) as well as their aggregated versions defined as a weighted average of the estimators of the different pairs of periods. The command can also be used when the panel data is unbalaced or presents gaps.
+ + **Data and design.** The command uses panel data at the (G,T) level to estimate
+    heterogeneity-robust DID estimators, with a binary, discrete, or continuous treatment (or
+    instrument). The command can be used in designs where there is at least one pair of
+    consecutive time periods between which the treatment of some units, the switchers,
+    changes, while the treatment of some other units, the stayers, does not change.
 
-The command also computes, when the number of periods is larger than two, the placebos versions of the different estimators  for each two successive time periods, and the aggregated versions. Thus, allowing to test for parallel trends assumptions under which the proposed estimators computed by did_multiplegt_stat are unbiased.
+ + **Target parameters.**  The command can estimate the Average Slope (AS) and the Weighted
+    Average Slope (WAS) parameters introduced in de Chaisemartin et al (2022).  The AS is the
+    average, across switchers, of (Y_t(D_t)-Y_t(D_{t-1})/(D_t-D_{t-1}), the effect on their
+    period-t outcome of moving their period-t treatment from its period-(t-1) to its period-t
+    value, scaled by the difference between these two values. The WAS is a weighted average of
+    switchers' slopes (Y_t(D_t)-Y_t(D_{t-1})/(D_t-D_{t-1}), where slopes receive a weight
+    proportional to |D_t-D_{t-1}|, switchers' absolute treatment change from period-(t-1) to
+    period-t. The variance of the WAS estimator is often smaller than that of the AS
+    estimator, especially when there are switchers that experience a small treatment change.
+    The WAS estimator is also amenable to doubly-robust estimation, unlike the AS estimator.
 
-This command can also be used when the treatment is discrete. In particular, when the treatment is discrete and takes a large number of values and the number of periods is equal to two, did_multiplegt_stat can be used as an alternative to the **did_multiplegt_dyn** command, which may not be applicable in such a design since it requires finding switchers and controls with the same period-one treatment. When the number of periods is larger than two, the two commands estimate two different models (static effects for **did_multiplegt_stat**, and dynamic effects for **did_multiplegt_dyn**).
+ + **Assumptions.**  When the data has more than two time periods, the command assumes a static
+    model: units' outcome at period t only depends on their period-t treatment, not on their
+    lagged treatments. See the did_multiplegt_dyn command for estimators allowing for dynamic
+    effects.  The command also makes a parallel trends assumption: the counterfactual outcome
+    evolution switchers would have experienced if their treatment had not changed is assumed
+    to be equal to the outcome evolution of stayers with the same baseline treatment.
+    Importantly, this parallel-trends assumption is conditional on the baseline treatment:
+    comparing switchers and stayers with different baseline treatments would implicitly amount
+    to assuming that the treatment's effect is constant over time.  To test the parallel
+    trends assumption underlying the estimators, the command can compute placebo estimators
+    comparing the outcome evolution of switchers and stayers with the same baseline treatment
+    before switchers' treatment changes.
 
-## Setup
+ + **Estimators, when the exact_match option is specified.**  With a binary or discrete
+    treatment, if the exact_match option is specified, the estimators computed by the command
+    compare the outcome evolution of switchers and stayers with the same period-(t-1)
+    treatment. Then, the WAS estimator computed by did_multiplegt_stat is numerically
+    equivalent to the DID_M estimator proposed by de Chaisemartin and D'Haultfoeuille (2020),
+    and already computed by the did_multiplegt_old command. did_multiplegt_stat uses an
+    analytic formula to compute the estimator's variance, while did_multiplegt_old uses the
+    bootstrap.  Thus, the run time of did_multiplegt_stat is typically much lower.  The
+    exact_match option can only be specified when the treatment is binary or discrete:  with a
+    continuously distributed treatment, one cannot find switchers and stayers with the exact
+    same period-(t-1) treatment.  With a discrete treatment taking a large number of values,
+    specifying this option may be undesirable:  then, there may only be few switchers that can
+    be matched to a stayer with the exact same period-(t-1) treatment, thus restricting the
+    estimation sample.
+
+ + **Estimators, when the exact_match option is not specified.**  When the exact_match option is
+    not specified, the command can use a regression adjustment to recover switchers'
+    counterfactual outcome evolution: for all t, it runs an OLS regression of Y_t-Y_{t-1} on a
+    polynomial in D_{t-1} in the sample of (t-1)-to-t stayers, and uses that regression to
+    predict switchers' counterfactual outcome evolution. Alternatively, when it estimates the
+    WAS, the command can also use propensity-score reweighting to recover switchers'
+    counterfactual outcome evolution. First, for all t it estimates a logistic regression of
+    an indicator for (t-1)-to-t switchers on a polynomial in D_{t-1}, to predict units'
+    probability of being a switcher.  Then, it computes a weighted average of stayers' outcome
+    evolution, upweighting stayers with a large probability of being switchers, and
+    downweighting stayers with a low probability of being switchers. Finally, when it
+    estimates the WAS, the command can also combine regression-adjustment and propensity-score
+    reweighting, thus yielding a doubly-robust estimator.
+
+ + **Instrumental-variable case.**  There may be instances where the parallel-trends assumption
+    fails, but one has at hand an instrument satisfying a similar parallel-trends assumption.
+    For instance, one may be interested in estimating the price-elasticity of a good's
+    consumption, but prices respond to supply and demand shocks, and the counterfactual
+    consumption evolution of units experiencing and not experiencing a price change may
+    therefore not be the same. On the other hand, taxes may not respond to supply and demand
+    shocks and may satisfy a parallel-trends assumption. In such cases, the command can
+    compute the IV-WAS estimator introduced in de Chaisemartin et al (2022).  The IV-WAS
+    estimator is equal to the WAS estimator of the instrument's reduced-form effect on the
+    outcome controlling for D_{t-1}, divided by the WAS estimator of the instrument's
+    first-stage effect on the treatment controlling for D_{t-1}.  See de Chaisemartin et al
+    (2024) for some explanations as to why controlling for D_{t-1} is desirable in IV
+    estimation.
+  
+
+# Setup
 
 ### Stata 
 ```s
@@ -24,17 +98,16 @@ library(devtools)
 install_github("chaisemartinPackages/did_multiplegt_stat/R", force = TRUE) 
 ```
 
-## Syntax 
+# Syntax 
 
-### Stata
+## Stata
  [**bysort varlist:**] **did_multiplegt_stat Y G T D** [**Z**] [*if*] [*in*] [, **estimator**(string) **as_vs_was
     exact_match estimation_method**(*string*) **order**(*#/####/########*) **controls**(*varlist*) **weights**(
     *varname*) **cluster**(*varlist*) **noextrapolation by_fd**(*#*) **by_baseline**(*#*) **other_treatments**(
     *varlist*) **switchers**(*string*) **placebo**(*#*) **disaggregate graph_off bys_graph_off bootstrap**(*#*)
     **seed**(*#*) **cross_validation**(*cv_suboptions*) **twfe**(*twfe_suboptions*)]
 
-
-### R 
+## R 
 
 
 did_multiplegt_stat(df, Y, ID, Time, D, Z = NULL, estimator = NULL, estimation_method = NULL, order = 1, 
@@ -42,7 +115,7 @@ noextrapolation = FALSE, placebo = NULL,  weight = NULL, switchers = NULL,
 disaggregate = FALSE, aoss_vs_waoss = FALSE)
 
 
-## Description
+# Description
 
 - **df**: (R only) A dataframe object.
 - **Y**: Outcome variable.
@@ -60,13 +133,13 @@ disaggregate = FALSE, aoss_vs_waoss = FALSE)
 - **noextrapolation**: This option forces the command to use only switchers whose period-(t-1) treatments (or instruments) are between the minimum and the maximum values of the period-(t-1) treatments (or instruments) of the stayers. This a less restrictive common support assumption.
 - **aoss_vs_waoss**: As highlighted in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022), the aoss and the waoss are equal if and only if switchers’ slopes are uncorrelated with $|D_t - D_{t-1}|$. When this option is specified, the command performs and displays the test of the equality between the aoss and  the waoss. Note that the use of this option requires specifying in the estimator option both aoss and waoss.
 
-## FAQ:
+# FAQ
 TBD
 
-## Example
+# Example
 In the following example, we use data from Li et al. (2014). The dataset can be downloaded from the ApplicationData GitHub Repository.We first estimate the effect of gasoline taxes on gasoline consumption and prices. Then, we estimate the price-elasticity of gasoline consumption using taxes as an instrument.
 
-### Stata
+## Stata
 ```s
 use "https://github.com/chaisemartinPackages/ApplicationData/raw/main/data_gazoline.dta", clear
 
@@ -82,7 +155,7 @@ did_multiplegt_stat lngca id year lngpinc tau, or(2) estimator(iwaoss) estimatio
 ```
 
 
-### R
+## R
 ```s
 library(haven)
 gazoline <-  haven::read_dta("https://github.com/chaisemartinPackages/ApplicationData/raw/main/data_gazoline.dta")
@@ -97,13 +170,16 @@ summary(did_multiplegt_stat(df = gazoline, Y = "lngpinc", ID = "id", T = "year",
 summary(did_multiplegt_stat(df = gazoline, Y = "lngca", ID = "id", T = "year", D = "lngpinc", Z = "tau", order = 2, estimator = "iwaoss", estimation_method = "ra", placebo = TRUE, noextrapolation = TRUE))
 ```
 
-### Disclaimer
+## Disclaimer
 The ending results may vary between R and Stata (especially for the IWAOSS estimation) due to the different conventions adopted for logistic regressions by the glm and logit functions, repsectively.
 
-## References:
+# References
 de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022). [Difference-in-Differences for Continuous Treatments and Instruments with Stayers](https://ssrn.com/abstract=4011782)
 
 The development of this package was funded by the European Union (ERC, REALLYCREDIBLE,GA N°101043899).
 
-## Contact
+# Authors
+chaisemartin.packages@gmail.com
+
+# Contact
 chaisemartin.packages@gmail.com
