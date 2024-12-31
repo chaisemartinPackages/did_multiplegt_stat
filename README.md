@@ -2,12 +2,12 @@
  did_multiplegt_stat -- Estimation of heterogeneity-robust difference-in-differences (DID) estimators, with a binary, discrete, or continuous treatment or instrument, in designs with stayers, assuming that past treatments do not affect the current outcome. ([de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Sow, D, Vazquez-Bare, G, 2022](https://ssrn.com/abstract=4011782)).
 
 
-[Overview](#Overview) | [Setup](#Setup) |  [Syntax](#Syntax) | [Description](#Description)
+[Description](#Description) | [Setup](#Setup) |  [Syntax](#Syntax) | [Options](#Options)
 
 [FAQ](#FAQ) | [Example](#Example) | [References](#References) | [Authors](#Authors) | [Contact](#Contact) |
 
 
-# Overview
+# Description
 
 **did_multiplegt_stat** estimates difference-in-differences estimators for continuous treatments with heterogeneous effects, assuming that between consecutive periods, the treatment of some units, the switchers, changes, while the treatment of other units does not change. It computes the three estimators (including an IV-related estimator) introduced in [de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Sow, D, Vazquez‐Bare, G (2024)](https://ssrn.com/abstract=4011782). The estimators computed by the command assume static effects and rely on a parallel trends assumptions.
 
@@ -115,23 +115,227 @@ noextrapolation = FALSE, placebo = NULL,  weight = NULL, switchers = NULL,
 disaggregate = FALSE, aoss_vs_waoss = FALSE)
 
 
-# Description
+# Options
 
-- **df**: (R only) A dataframe object.
-- **Y**: Outcome variable.
-- **ID**: Identifier of the unit of analysis.
-- **Time**: Time variable. The command assumes that the time variable is evenly spaced (e.g.: the panel is at the yearly level, and no year is missing for all groups). When it is not (e.g.: the panel is at the yearly level, but three consecutive years are missing for all groups), the command can still be used. For example, if the year n is missing, the command does not comuptes the DID estimators of the pairs of years (n-1,n),(n,n+1), and (n-1,n+1).
-- **D**: Treatment variable.
-- **Z**: Instrumental variable. This option is only required when the IV-related estimator (the so-called iwaoss) is requested.
-- **estimator**: Estimator(s) to be computed. The allowed arguments are: (1) "aoss", i.e the Average Of Switchers’ Slopes which is the average, across switchers, of the effect on their period-(t) outcome of moving their treatment from its period-(t-1) to its period-(t) value, scaled by the difference between these two values. (2) "waoss" which corresponds to a weighted version of "aoss" where slopes receive a weight proportional to switchers’ absolute treatment change from period-(t-1) to period-(t). (3) "iwaoss" which generalizes "waoss" to the instrumental-variable case, and is equal to the reduced-form "waoss" effect of the instrument on the outcome, divided by the first-stage "waoss" effect of the instrument on the treatment. If this option is not specified: by default, the command estimates both "aoss" and "waoss" if the instrumental-variable Z is not specified, or only iwaoss otherwise. 
-- **estimation_method**: This option allows to specify which estimation method to use when estimating the waoss or the iwaoss, as described in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022). It takes as argument "ra" (regression adjustment-based approach), or "ps" (propensity-based approach), or "dr" (double robust-based approach).
-- **order**: This option takes as argument the order of the polynomial series used to estimate the counterfactual of the variation of the outcome from period t-1 to period t  for the switchers, namely $E(Y_t - Y_{t-1} |D_{t-1}, S_t = 0)$ or $E(Y_t - Y_{t-1} |Z_{t-1}, SI_t = 0)$. 
-- **switchers**: The allowed inputs for this option are "up" and "down". If the argument "up" is specified, the command estimates the effects on switchers-up, i.e, units whose treatments (or instruments) increase from period t-1 to period t. If the argument "down" is given, the command estimates the effects on switchers-down, i.e., units whose treaments (or instruments) decrease from period t-1 to period t.
-- **disaggregate**: If this potion is specified, the command displays the estimands of the effects for each two consecutive periods as well as the aggregated estimands. Otherwise, the command only outputs the aggregated results.
-- **placebo**: This option allows to estimate the placebos versions of the estimators requested in the estimator option. If this option is combined with the option disaggregate, the command also displays the placebo version of each two consecutive time-periods.
-- **weight**: This option allows the user to specify weights for the three estimation methods.
-- **noextrapolation**: This option forces the command to use only switchers whose period-(t-1) treatments (or instruments) are between the minimum and the maximum values of the period-(t-1) treatments (or instruments) of the stayers. This a less restrictive common support assumption.
-- **aoss_vs_waoss**: As highlighted in de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022), the aoss and the waoss are equal if and only if switchers’ slopes are uncorrelated with $|D_t - D_{t-1}|$. When this option is specified, the command performs and displays the test of the equality between the aoss and  the waoss. Note that the use of this option requires specifying in the estimator option both aoss and waoss.
+ + **Main options:**
+
+    - **estimator**(*string*) gives the name(s) of the estimator(s) to be estimated. The allowed
+        arguments are: (1) as, (2) was, and (3) iv-was.
+
+    - **exact_match:** with this option, the DID estimators computed by the command compare the
+        outcome evolution of switchers and stayers with the same period-(t-1) treatment (or
+        instrument) value. This option can only be used when the treatment (or instrument)
+        is binary or discrete:  with a continuously distributed treatment (or instrument),
+        one cannot find switchers and stayers with the exact same period-(t-1) treatment (or
+        instrument).  With a discrete treatment taking a large number of values, specifying
+        this option may be undesirable: then, there may only be few switchers that can be
+        matched to a stayer with the exact same period-(t-1) treatment, thus restricting the
+        estimation sample.
+
+    - **estimation_method**(*string*): when the exact_match option is not specified and estimation
+        of the WAS or IV-WAS is requested, this option can be used to specify which
+        estimation method to use when estimating the WAS or IV-WAS.  The allowed arguments
+        are: (1) ra (regression adjustment), (2) ps (propensity-based reweighting), and (3)
+        dr (doubly-robust).  By default, a doubly-robust estimator is used, when WAS or
+        IV-WAS is requested, and the regression adjustment estimator if AS is requested.
+
+    - **order**(*#/####/########*): when the exact_match option is not specified, this option
+        specifies the polynomial orders to be used in the OLS regressions of Y_t-Y_{t-1} on
+        a polynomial in D_{t-1} and/or in the logistic regressions of an indicator for
+        (t-1)-to-t switchers on a polynomial in D_{t-1}.  This option allows for either 1,
+        4, or 8 arguments, with 8 arguments only allowed when IV-WAS requested.  E.g.:
+        order(1), order(1 4 3 2) or order(1 4 3 2 1 2 3 4) are allowed (the last one only if
+        IV-WAS specified), but order(1 2 3) is not allowed.  With 4 arguments, argument 1,
+        2, 3 and 4, is the order used to estimate E(Y_t-Y_{t-1}|D_{t-1}),
+        P(S_{t}=0|D_{t-1}), P(S_{+, t}=1|D_{t-1}), and P(S_{-, t}=1|D_{t-1}), respectively.
+        With 8 arguments the same logic is applied, but the first 4 arguments are for the
+        first stage, and the next 4 for the reduced form.  Finally, if IV-WASis requested
+        but order has 4 arguments, we apply the same orders to first stage and reduced form.
+        By default, a polynomial of order 1 is used.
+      
+    - **placebo**(#): when this option is specified, the command computes the placebo version of
+        each estimator requested. Actual estimators compare the t-1-to-t outcome evolution
+        of period t-1-to-t switchers and stayers with the same baseline treatment. When # is
+        equal to 1, placebo estimators compare the t-2-to-t-1 outcome evolution of period
+        t-1-to-t switchers and stayers with the same baseline treatment, restricting
+        attention to t-2-to-t-1 stayers. Thus, placebos assess whether switchers and stayers
+        were on parallel trends just before switchers switched treatment. When # is strictly
+        larger than 1, placebos comparing the outcome evolutions of t-1-to-t switchers and
+        stayers from t-3 to t-2, from t-4 to t-3,... , and from t-#-1 to t-# are also
+        reported, always restricting attention to stayers between those pairs of periods.
+
+    - **as_vs_was**: shows a test that the AS and WAS are equal. This option can only be used when
+        estimation of the AS and WAS is requested.
+
+    - **controls**(*varlist*): the command can compute estimators with control variables. They rely
+        on a conditional parallel trends assumption:  the counterfactual outcome evolution
+        switchers would have experienced if their treatment had not changed is assumed to be
+        equal to the outcome evolution of stayers with the same baseline treatment, and with
+        the same value of varlist. When time-varying control variables are inputted to the
+        command, the command compares the t-1-to-t outcome evolution of switchers and
+        stayers with the same baseline treatment, and with the same controls at period t-1.
+        Specifying too many control variables may lead to noisy estimators. If placebo
+        estimators are small, insignificant and precisely estimated without control
+        variables, including control variables may not be necessary.
+
+    - **weights**(*varname*) : This option allows to compute estimators weighted by varname.
+
+  + **Options to estimate heterogeneous treatment effects**
+
+     - **switchers**(*string*): if the argument up is inputted, the command estimates the AS, WAS, or
+        IV-WAS for switchers-up only, i.e for units whose treatment (or instrument)
+        increases from period (t-1) to t. If the argument down is inputted, the command
+        estimates the AS, WAS, or IV-WAS for switchers-down only, i.e. for units whose
+        treament (or instrument) decreases from period (t-1) to t. By default, the command
+        estimates those parameters for all switchers.
+
+     - **by_fd**(*#*): This option can be used if one wants to assess the heterogeneity of the effect
+        according to the absolute value of the treatment's (or instrument's) change.  For
+        example, if by_fd(5) is specified, the command splits switchers into 5 groups: the
+        20% with the lowest |Delta D_t| (or |Delta Z_t|), and then the next 20%, etc..  Then
+        the command estimates treatment effects for each subsample. If |Delta D_t| has mass
+        points, the command splits switchers into groups with as-equal-as-possible sizes.
+
+    - **by_baseline**(*#*): This option is similar to the option by_fd(#), except that switchers are
+        split into subsamples according to their values of D_{t-1} (or Z_{t-1}).
+
+    - **[bysort varlist:]** makes did_multiplegt_stat byable. See [D] by. Only time-invariant variables are allowed in varlist.
+
+
+ + **Standard-error options**
+
+    - **bootstrap**(*#*): If the number of switchers or the number of stayers is low, one may want
+        to check if the analytic standard errors produced by the command are close to
+        bootstrap standard errors. If they are not, this may indicate that the asymptotic
+        approximation underlying the analytic standard errors may not be reliable.  In that
+        case, there is of course no guarantee that bootstrap standard errors are valid: this
+        comparison is just a diagnostic check researchers may use to assess if they need to
+        resort to inference methods that do not rely on asymptotic approximations, like
+        permutation tests.  The bootstrap option takes as argument the number of
+        replications. Currently, it is only allowed when the IV-WAS is requested, as failure
+        of asymptotic approximations are more likely to arise with IV estimators, when the
+        first-stage is weak.
+
+    - **seed**(*#*): This option is only needed when one is using the bootstrap, and it allows to
+        set the seed so as to ensure replicability of the results.
+
+    - **cluster**(*varlist*) : This option allows clustering standard errors at the level of 
+        varlist.
+
+ + **Advanced options**
+
+    - **other_treatments**(*varlist*) : This option allows controlling for other treatments (in varlist ) that may also change over the panel,
+      see de Chaisemartin and D'Haultfoeuille (2021) for further details.
+
+    - **noextrapolation**: when this option is specified, the command only keeps switchers whose
+        period-(t-1) treatment (or instrument) is between the minimum and the maximum values
+        of the period-(t-1) treatment (or instrument) of stayers, thus enforcing the overlap
+        condition.
+
+ + **TWFE Comparison**
+
+    The command allows to compare the estimator specified in estimator() to a
+        TWFE-estimator, computed via a regression of Y_{i,t} on D_{i,t} and unit and year
+        fixed effects.  If the iv-was is specified in estimator(), a 2SLS-TWFE is used,
+        using Z_{i,t} as the instrument.  With the option twfe, did_multiplegt_stat, on top
+        of the main results, diplays a table showing the difference between the estimator
+        requested and the TWFE-estimator, the p-value of the test of the difference and the
+        corresponding condidence interval.  By default, the command runs the test using 100
+        bootstrap replications.  To increase the number of replications, the user can use
+        the option bootstrap(#) of did_multiplegt_stat.  Also for replicability you should
+        consider using the seed(#) option.
+
+    To use the twfe(**twfe_suboptions**) option you need to specify which sample you want to
+        estimate the TWFE regression on, so you should always specify either the full_sample
+        or the same_sample suboption.
+
+
+    - **same_sample:** Sometimes, did_multiplegt_stat might not use all time periods
+                              in the estimation.  For instance, one might have a panel data
+                              where at a particular time (say p) there is no switcher. In
+                              that case, did_multiplegt_stat does not use the pair of
+                              periods (p-1, p). Then, the ( as, was, or iv-was) estimator
+                              and the TWFE-estimator will rely on different samples.  To
+                              avoid such discrepancy, the option same_sample allows to
+                              estimate the TWFE-estimator using the same sample as
+                              did_multiplegt_stat.
+ 
+
+    - **full_sample:** Counterpart to the same_sample option. Use this in case you do
+                              not want to impose the sample restrictions described in
+                              same_sample and estimate the TWFE regression in the full
+                              sample instead.
+ 
+
+    - **percentile:**  By default, did_multiplegt_stat computes the s.e and p-value of
+                              the test of the difference between the (as, was, or iv-was)
+                              estimator and the TWFE-estimator using a t-test and a normal
+                              approximation. Instead, one may use the percentile boostrap.
+                              Then, one can specify the option percentile to compute
+                              p-values and confidence intervals using the percentile
+                              bootstrap method.
+
+ + **Cross-validation**: If the treatment is continuous (or if the option exact_match is not specified), and the
+        doubly-robust WAS estimator is used, instead of specifying the order of the
+        polynomial series that did_multiplegt_stat uses to estimate E(Y_t-Y_{t-1}|D_{t-1}),
+        P(S_{t}=0|D_{t-1}), P(S_{+, t}=1|D_{t-1}), and P(S_{-, t}=1|D_{t-1}), one may use
+        cross validation.  Then, the command will choose the polynomial order with the best
+        fit. This option can only be used to compute the doubly-robust WAS estimator:
+        cross-validation does not have proven theoretical guarantees for the other
+        estimators. This option can also not be used together with the by_fd and by_baseline
+        options.
+        
+        To use cross validation you have to specify cross_validation(algorithm(string)
+        cv_suboptions).  The algorithm(string) suboption is required for the
+        cross_validation(cv_suboptions) to function and has therefore to be specified in any
+        case.
+
+
+    - **algorithm**(*string*): This option specifies which cross-validation algorithm to use.
+                              The allowed arguments are loocv (leave-one-out) and kfolds.
+                              By default, loocv is used in linear regressions and kfolds in
+                              logit regressions. The leave-one-out method can only be used
+                              in linear regressions.
+
+    - **tolerance**(*#*): This option allows to set a stop criterion based on the gain in
+                              prediction power.  By default, tolerance is set to 0.01, i.e.,
+                              the cross-validation stops when the gain in prediction power
+                              when increasing the polynomial order is less than 1%.
+
+    - **max_k**(*#*): This is another stop criterion based on the maximum order to
+                              test (the grid-search of the hyperparameter).  By default, the
+                              value is set to 5, meaning that the algorithm will look for a
+                              best model starting from a polynomial of order 1 to a
+                              polynomial of order 5 as long as the tolerance is not reached.
+
+    - **kfolds**(*#*): If kfolds is specified in algorithm(), this option specifies
+                              the number of folds to consider.  By default, the number of
+                              folds is set to 5.
+
+    - **same_order_all_logits**: When this option is specified, the cross-validation is done for
+                              only P(S_{t}=0|D_{t-1}), and the optimal order found is used
+                              to predict P(S_{+, t}=1|D_{t-1}) and P(S_{-, t}=1|D_{t-1}).
+
+    - **seed**(*#*): This option allows to set the seed so as to ensure
+                              replicability of the results.
+
+  + **Display**
+
+    - **disaggregate**: when this option is specified, the command shows the estimated AS, WAS, or
+        IV-WAS effects for each pair of consecutive time periods, on top of the effects
+        aggregated across all time periods. By default, the command only shows effects
+        aggregated across all time periods.
+
+    - **graph_off**: The program displays by default a graph of the aggregated results
+        (coefficients, effects and placebos, and their confidence intervals). If graph_off
+        is specified, the graph is not displayed.
+
+    - **bys_graph_off**: If the program is by'd (i.e. ran with **bysort varlist:**), or used with
+        the option by_fd(#) or by_baseline(#), it automatically displays a graph of the
+        aggregated results (coefficients and confidence intervals) by level of varlist, or
+        quantiles, respectively. If **bys_graph_off** is specified, the graph is not displayed.
+
+
 
 # FAQ
 TBD
@@ -174,12 +378,20 @@ summary(did_multiplegt_stat(df = gazoline, Y = "lngca", ID = "id", T = "year", D
 The ending results may vary between R and Stata (especially for the IWAOSS estimation) due to the different conventions adopted for logistic regressions by the glm and logit functions, repsectively.
 
 # References
-de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022). [Difference-in-Differences for Continuous Treatments and Instruments with Stayers](https://ssrn.com/abstract=4011782)
+de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Sow, D, Vazquez‐Bare, G (2024). [Difference-in-Differences for Continuous Treatments and Instruments with Stayers](https://ssrn.com/abstract=4011782)
 
 The development of this package was funded by the European Union (ERC, REALLYCREDIBLE,GA N°101043899).
 
 # Authors
-chaisemartin.packages@gmail.com
+
+    - Clément de Chaisemartin, Economics Department, Sciences Po, France.
+    - Diego Ciccia, Sciences Po, France.
+    - Xavier D'Haultfoeuille, CREST-ENSAE, France.
+    - Felix Knau, Sciences Po, France.
+    - Felix Pasquier, CREST-ENSAE, France.
+    - Doulo Sow, Sciences Po, France.
+    - Gonzalo Vazquez-Bare, UCSB, USA.
+
 
 # Contact
 chaisemartin.packages@gmail.com
