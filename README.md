@@ -382,14 +382,13 @@ de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Sow, D, Vazquez‐Bare, G (
 The development of this package was funded by the European Union (ERC, REALLYCREDIBLE,GA N°101043899).
 
 # Authors
-
-    - Clément de Chaisemartin, Economics Department, Sciences Po, France.
-    - Diego Ciccia, Sciences Po, France.
-    - Xavier D'Haultfoeuille, CREST-ENSAE, France.
-    - Felix Knau, Sciences Po, France.
-    - Felix Pasquier, CREST-ENSAE, France.
-    - Doulo Sow, Sciences Po, France.
-    - Gonzalo Vazquez-Bare, UCSB, USA.
+    + Clément de Chaisemartin, Economics Department, Sciences Po, France.
+    + Diego Ciccia, Sciences Po, France.
+    + Xavier D'Haultfoeuille, CREST-ENSAE, France.
+    + Felix Knau, Sciences Po, France.
+    + Felix Pasquier, CREST-ENSAE, France.
+    + Doulo Sow, Sciences Po, France.
+    + Gonzalo Vazquez-Bare, UCSB, USA.
 
 
 # Contact
