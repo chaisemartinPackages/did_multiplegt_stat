@@ -284,11 +284,10 @@ disaggregate = FALSE, aoss_vs_waoss = FALSE)
         cross-validation does not have proven theoretical guarantees for the other
         estimators. This option can also not be used together with the by_fd and by_baseline
         options.
-        
-        To use cross validation you have to specify cross_validation(algorithm(string)
+        *To use cross validation you have to specify cross_validation(algorithm(string)
         cv_suboptions).  The algorithm(string) suboption is required for the
         cross_validation(cv_suboptions) to function and has therefore to be specified in any
-        case.
+        case.*
 
 
     - **algorithm**(*string*): This option specifies which cross-validation algorithm to use.
