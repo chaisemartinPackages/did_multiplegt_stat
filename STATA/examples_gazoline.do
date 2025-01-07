@@ -14,8 +14,8 @@ qui do "did_multiplegt_stat.ado"
 //1. Linear model
 //describe, short
 //set trace on
-gen w=100
-did_multiplegt_stat lngca id year tau, or(1 2 4 6) estimator(as) placebo(1)  disag
+gen w=100 
+did_multiplegt_stat lngca id year tau if w==10 , or(1 2 4 6) estimator(as) placebo(1)  disag
 
 //2. Quadratic model
 set trace on
@@ -34,8 +34,8 @@ did_multiplegt_stat lngpinc id year tau, or(2)  estimation_method(dr) as_vs_was 
 *******************************************************************************/
 //IV: 
 *******************************************************************************
-set trace on
-did_multiplegt_stat lngca id year lngpinc tau, or(1 2 3 4 5 6 7 8)  estimator(iv-was) estimation_method(dr) placebo(3)
+
+did_multiplegt_stat lngca id year lngpinc tau if w==100 , or(1 2 3 4 5 6 7 8)  estimator(iv-was) estimation_method(dr) placebo(3)
 	
 did_multiplegt_stat lngca id year lngpinc tau, or(1)  estimator(iv-was) estimation_method(dr) noextra placebo(3)
 

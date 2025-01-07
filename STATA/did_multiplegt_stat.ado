@@ -163,7 +163,7 @@ if "`estimator'"!="iv-was"{
 		
 		//if strpos("`5'", ",") != 0 local 5 = strtrim(substr("`5'", 1, strpos("`5'", ",") - 1))
 		local estimator = "was"
-		if ("`if'"!="") local if_touse = "&`touse' == 1"
+		if ("`if'"!="") local if_touse = "`if'&`touse' == 1"
 		else local if_touse = "if `touse' == 1"
 		
 		did_multiplegt_stat2 `first_stage_specification'  `if_touse',  estimator(`estimator') estimation_method(`estimation_method') order(`first_stage_orders') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `as_vs_was' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weights(`weights') cross_validation(`cross_validation') `graph_off' first_stage //twfe(`twfe')
