@@ -166,7 +166,7 @@ if "`estimator'"!="iv-was"{
 		if ("`if'"!="") local if_touse = "&`touse' == 1"
 		else local if_touse = "if `touse' == 1"
 		
-		did_multiplegt_stat2 `first_stage_specification' if `if_touse',  estimator(`estimator') estimation_method(`estimation_method') order(`first_stage_orders') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `as_vs_was' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weights(`weights') cross_validation(`cross_validation') `graph_off' first_stage //twfe(`twfe')
+		did_multiplegt_stat2 `first_stage_specification'  `if_touse',  estimator(`estimator') estimation_method(`estimation_method') order(`first_stage_orders') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `as_vs_was' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weights(`weights') cross_validation(`cross_validation') `graph_off' first_stage //twfe(`twfe')
 }
 
 
@@ -3510,9 +3510,6 @@ scalar Nstayers3_`pairwise'`pla'XX  = round(r(sum), 0.001)
 
 sum weights_XX if SI_XX!=0&SI_XX!=. 
 scalar N_Switchers3_`pairwise'`pla'XX = round(r(sum), 0.001)
-
-
-
 }
 **************************************************************************	
 	if ("`exact_match'"!=""){ //Take the number of distinct values of the baseline treatment: ok
@@ -3912,6 +3909,26 @@ if ("`exact_match'"==""){
 		replace absdeltaD_`pairwise'`pla'XX  = 0 if Ht_XX == 0
 		replace absdeltaD_`pairwise'`pla'XX =  absdeltaD_`pairwise'`pla'XX*weights_XX //AbsDelta_t*V_t
 }
+
+**************************************************************
+*Adjust N switchers and N stayers in cases where P(S_1 = 0|D)= 0, 1:  (Dec, 2024)
+sum Sbis_XX [w = weights_XX] if (PS0D1_XX==0|PS0D1_XX==1)&Sbis_XX==0
+local adj_nb_stayers = `r(sum_w)'
+
+sum Sbis_XX [w = weights_XX] if (PS0D1_XX==0|PS0D1_XX==1)&Sbis_XX==1
+local adj_nb_switchers = `r(sum_w)'
+
+if (`as' == 1){
+scalar Nstayers1_`pairwise'`pla'XX = scalar(Nstayers1_`pairwise'`pla'XX) - `adj_nb_stayers'
+
+scalar N_Switchers1_`pairwise'`pla'XX = scalar(N_Switchers1_`pairwise'`pla'XX) - `adj_nb_switchers'
+}
+
+if (`was' == 1){
+scalar Nstayers2_`pairwise'`pla'XX = scalar(Nstayers2_`pairwise'`pla'XX) - `adj_nb_stayers'
+scalar N_Switchers2_`pairwise'`pla'XX = scalar(N_Switchers2_`pairwise'`pla'XX) - `adj_nb_switchers'
+}
+
 }
 //End of non-IV feasible estimation
 else{
@@ -4237,6 +4254,18 @@ if ("`estimation_method'" == ""|"`estimation_method'" == "ra"){
 
 	scalar LB3_`pairwise'`pla'XX = scalar(delta3_`pairwise'`pla'XX) - 1.96*scalar(sd_delta3_`pairwise'`pla'XX)
 	scalar UB3_`pairwise'`pla'XX = scalar(delta3_`pairwise'`pla'XX) + 1.96*scalar(sd_delta3_`pairwise'`pla'XX)
+	
+**************************************************************
+*Adjust N switchers and N stayers in cases where P(S_1 = 0|D)= 0, 1:  (Dec, 2024)
+sum SIbis_XX [w = weights_XX] if (PS_IV0Z1_XX==0|PS_IV0Z1_XX==1)&SIbis_XX==0
+local adj_nb_stayers = `r(sum_w)'
+
+sum SIbis_XX [w = weights_XX] if (PS_IV0Z1_XX==0|PS_IV0Z1_XX==1)&SIbis_XX==1
+local adj_nb_switchers = `r(sum_w)'
+
+scalar Nstayers3_`pairwise'`pla'XX = scalar(Nstayers3_`pairwise'`pla'XX) - `adj_nb_stayers'
+scalar N_Switchers3_`pairwise'`pla'XX = scalar(N_Switchers3_`pairwise'`pla'XX) - `adj_nb_switchers'
+
 }
 //End of IV feasible estimation
 else{
