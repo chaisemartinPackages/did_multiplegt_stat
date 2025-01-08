@@ -1117,9 +1117,10 @@ forvalues p = 2/`=max_T'{
 if ("`cluster'"!=""){ 
 	//Compute E(N_c)
 bysort `cluster': gen N_c_XX = _N if _n==1
+replace N_c_XX = . if S_XX == . //Dec, 24
 sum N_c_XX
 scalar N_bar_c_XX = r(mean)
-//di as error N_bar_c_XX
+di as error N_bar_c_XX
 }
 	//as
 	if (`as_XX' == 1){
@@ -1172,7 +1173,7 @@ scalar N_bar_c_XX = r(mean)
 		if ("`cluster'"!=""){ // Clustering the variance //CLUSTER OPTION
 		cap drop Phi2_cXX
 		bysort `cluster': gegen Phi2_cXX = total(Phi2_XX)
-		bysort `cluster': replace Phi2_cXX=. if _n!=1
+		bysort `cluster': replace Phi2_cXX=. if _n!=1|S_XX==.
 		replace Phi2_cXX = Phi2_cXX/scalar(N_bar_c_XX)
 		
 				if ("`weights'"!=""){
@@ -1420,18 +1421,20 @@ use "`OG_dataPathq'.dta", clear
 			//scalar mean_IF1pla = r(mean) //for test 
 			
 			if ("`cluster'"!=""){ // Clustering the variance //CLUSTER OPTION
-			cap drop Phi1_cXX
+			cap drop Phi1_placXX
 			gegen Phi1_placXX = total(Phi1_plaXX) , by(`cluster')
-			bysort `cluster': replace Phi1_placXX=. if _n!=1
+			//bysort `cluster': replace Phi1_placXX=. if _n!=1
 		    replace Phi1_placXX = Phi1_placXX/scalar(N_bar_c_XX)
+			
 				if ("`weights'"!=""){
 				sum Phi1_placXX // use the weights of the cluster, which is the total of the weightss of groups in that cluster.
 				}
 				else{
 				sum Phi1_placXX 
 				}
+				
 			}
-		
+			
 			scalar sd_delta1_1plaXX = r(sd)/sqrt(r(sum_w)) 
 			
 			scalar LB1_1plaXX = delta1_1plaXX - 1.96*sd_delta1_1plaXX
@@ -3286,10 +3289,10 @@ if (_N>0){ //In this section we use bysort ..: gen . If the dataset is empty (e.
 
 ***************************************************************************************/
 if(`was'==1|`as'==1){
-local vars_to_set_to_missing S_XX deltaD_XX deltaY_XX D1_XX absdeltaD_XX `cluster' `controls'	
+local vars_to_set_to_missing S_XX deltaD_XX deltaY_XX D1_XX absdeltaD_XX  `controls'	//`cluster'
 }
 else{
-local vars_to_set_to_missing S_XX deltaD_XX deltaY_XX D1_XX `cluster' `controls'
+local vars_to_set_to_missing S_XX deltaD_XX deltaY_XX D1_XX  `controls' //`cluster'
 }
 
 /***********************************************/		
@@ -3461,9 +3464,10 @@ if ("`cluster'"!=""){
 	//Compute E(N_c)
 cap drop N_c_XX
 bysort `cluster': gen N_c_XX = _N if _n==1
-sum N_c_XX
+replace N_c_XX = . if S_XX == . //Dec, 24
+sum N_c_XX 
 scalar N_bar_c_`pairwise'`pla'XX = r(mean)
-//di as error N_bar_c_`pairwise'`pla'XX
+
 }
 
 *******Here I handle two related problems: Panel with gaps (using tsfilled_XX) and cases where we have only switchers or only stayers (using count)
@@ -3695,13 +3699,15 @@ if (`as' == 1){
 	replace Phi1_`pairwise'`pla'XX  = [Phi1_`pairwise'`pla'XX - scalar(delta1_`pairwise'`pla'XX)*Sbis_XX]/[scalar(ES_`pla'XX)*scalar(PHt`pairwise'`pla'XX)]
 		//b. Replace the IF by 0 if Ht_XX==0
 	replace Phi1_`pairwise'`pla'XX = 0 if Ht_XX==0
+	replace Phi1_`pairwise'`pla'XX = . if S_XX==.
 	
 	sum Phi1_`pairwise'`pla'XX 
 	
 	if ("`cluster'"!=""){ // Clustering the variance //CLUSTER OPTION //weights OPTION
+
 		cap drop Phi1_`pairwise'`pla'_cXX //I create a new variable, because I need the one without clustering in the aggregation
 		bysort `cluster': egen Phi1_`pairwise'`pla'_cXX = total(Phi1_`pairwise'`pla'XX)
-		bysort `cluster': replace Phi1_`pairwise'`pla'_cXX=. if _n!=1
+		bysort `cluster': replace Phi1_`pairwise'`pla'_cXX=. if _n!=1|S_XX==.
 		replace Phi1_`pairwise'`pla'_cXX = Phi1_`pairwise'`pla'_cXX/scalar(N_bar_c_`pairwise'`pla'XX)
 		sum Phi1_`pairwise'`pla'_cXX	
 	}
@@ -3885,15 +3891,15 @@ if ("`exact_match'"==""){
 		replace Phi2_`pairwise'`pla'XX = Phi2_`pairwise'`pla'XX/[scalar(PHt`pairwise'`pla'XX)*scalar(EabsdeltaD_`pla'XX)]
 			//b. Replace the IF by 0 if Ht_XX==0
 		replace Phi2_`pairwise'`pla'XX = 0 if Ht_XX==0	
-		
+		replace Phi2_`pairwise'`pla'XX = . if S_XX==.	//Jan,25: mismatach between se of placebos with and without cluster(ID)
+				
 		
 		//save "dr_`pairwise'.dta", replace
 		sum  Phi2_`pairwise'`pla'XX 
-
 		if ("`cluster'"!=""){ // Clustering the variance
 		cap drop Phi2_`pairwise'`pla'_cXX //I create a new variable, because I need the one without clustering in the aggregation
 		bysort `cluster': egen Phi2_`pairwise'`pla'_cXX = total(Phi2_`pairwise'`pla'XX)
-		bysort `cluster': replace Phi2_`pairwise'`pla'_cXX=. if _n!=1
+		bysort `cluster': replace Phi2_`pairwise'`pla'_cXX=. if _n!=1|S_XX==.
 		replace Phi2_`pairwise'`pla'_cXX = Phi2_`pairwise'`pla'_cXX/scalar(N_bar_c_`pairwise'`pla'XX)
 		sum Phi2_`pairwise'`pla'_cXX   
 		}
@@ -4238,6 +4244,7 @@ if ("`estimation_method'" == ""|"`estimation_method'" == "ra"){
 	 //iii. Now compute Phi_IV
 	 gen Phi3_`pairwise'`pla'XX = (Phi_Y_XX - scalar(delta3_`pairwise'`pla'XX)*Phi_D_XX)/scalar(delta_D_`pairwise'`pla'XX )
 	 replace Phi3_`pairwise'`pla'XX = 0 if Ht_XX == 0 
+	 replace Phi3_`pairwise'`pla'XX = . if SI_XX == . 
 	 
 	sum Phi3_`pairwise'`pla'XX 
 	scalar mean_IF3`pairwise'`pla' = r(mean) //check if the mean is close to zero when I will output the simulations (to be drop in the final version)
@@ -4245,7 +4252,7 @@ if ("`estimation_method'" == ""|"`estimation_method'" == "ra"){
 	if ("`cluster'"!=""){ // Clustering the variance //CLUSTER OPTION
 		cap drop Phi3_`pairwise'`pla'_cXX //I create a new variable, because I need the one without clustering in the aggregation
 		bysort `cluster': egen Phi3_`pairwise'`pla'_cXX = total(Phi3_`pairwise'`pla'XX)
-		bysort `cluster': replace Phi3_`pairwise'`pla'_cXX=. if _n!=1
+		bysort `cluster': replace Phi3_`pairwise'`pla'_cXX=. if _n!=1|SI_XX==.
 		replace Phi3_`pairwise'`pla'_cXX = Phi3_`pairwise'`pla'_cXX/scalar(N_bar_c_`pairwise'`pla'XX)
 		sum Phi3_`pairwise'`pla'_cXX   //we use the weights of the cluster here
 	}
