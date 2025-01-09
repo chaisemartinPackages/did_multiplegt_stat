@@ -1120,7 +1120,6 @@ bysort `cluster': gen N_c_XX = _N if _n==1
 replace N_c_XX = . if S_XX == . //Dec, 24
 sum N_c_XX
 scalar N_bar_c_XX = r(mean)
-di as error N_bar_c_XX
 }
 	//as
 	if (`as_XX' == 1){
@@ -3916,6 +3915,7 @@ if ("`exact_match'"==""){
 		replace absdeltaD_`pairwise'`pla'XX =  absdeltaD_`pairwise'`pla'XX*weights_XX //AbsDelta_t*V_t
 }
 
+if ("`exact_match'"==""){
 **************************************************************
 *Adjust N switchers and N stayers in cases where P(S_1 = 0|D)= 0, 1:  (Dec, 2024)
 sum Sbis_XX [w = weights_XX] if (PS0D1_XX==0|PS0D1_XX==1)&Sbis_XX==0
@@ -3933,6 +3933,7 @@ scalar N_Switchers1_`pairwise'`pla'XX = scalar(N_Switchers1_`pairwise'`pla'XX) -
 if (`was' == 1){
 scalar Nstayers2_`pairwise'`pla'XX = scalar(Nstayers2_`pairwise'`pla'XX) - `adj_nb_stayers'
 scalar N_Switchers2_`pairwise'`pla'XX = scalar(N_Switchers2_`pairwise'`pla'XX) - `adj_nb_switchers'
+}
 }
 
 }
@@ -4263,6 +4264,7 @@ if ("`estimation_method'" == ""|"`estimation_method'" == "ra"){
 	scalar UB3_`pairwise'`pla'XX = scalar(delta3_`pairwise'`pla'XX) + 1.96*scalar(sd_delta3_`pairwise'`pla'XX)
 	
 **************************************************************
+if ("`exact_match'"==""){
 *Adjust N switchers and N stayers in cases where P(S_1 = 0|D)= 0, 1:  (Dec, 2024)
 sum SIbis_XX [w = weights_XX] if (PS_IV0Z1_XX==0|PS_IV0Z1_XX==1)&SIbis_XX==0
 local adj_nb_stayers = `r(sum_w)'
@@ -4272,7 +4274,7 @@ local adj_nb_switchers = `r(sum_w)'
 
 scalar Nstayers3_`pairwise'`pla'XX = scalar(Nstayers3_`pairwise'`pla'XX) - `adj_nb_stayers'
 scalar N_Switchers3_`pairwise'`pla'XX = scalar(N_Switchers3_`pairwise'`pla'XX) - `adj_nb_switchers'
-
+}
 }
 //End of IV feasible estimation
 else{
