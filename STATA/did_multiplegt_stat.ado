@@ -170,7 +170,7 @@ if "`estimator'"!="iv-was"{
 }
 
 
-//Show the main results
+//Show the main results:
 if ("`if'"!="") local if_touse = "`if'&`touse' == 1"
 else local if_touse = "if `touse' == 1"
 		local cmd = subinstr("`0'", "`if'", " `if_touse'", 1) //(Dec, 2024) DS: The if here conflicts with the if of the main command, if any. Corrected above.
