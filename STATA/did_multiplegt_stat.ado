@@ -171,10 +171,9 @@ if "`estimator'"!="iv-was"{
 
 
 //Show the main results
-if ("`if'"!="") local if_touse = "&`touse' == 1"
+if ("`if'"!="") local if_touse = "`if'&`touse' == 1"
 else local if_touse = "if `touse' == 1"
-		local cmd = subinstr("`0'", ",", " `if_touse',", 1) //(Dec, 2024) DS: The if here conflicts with the if of the main command, if any. Corrected above.
-		//di as error "`cmd'"
+		local cmd = subinstr("`0'", "`if'", " `if_touse'", 1) //(Dec, 2024) DS: The if here conflicts with the if of the main command, if any. Corrected above.
 		did_multiplegt_stat2 `cmd' reduced_form_orders(`reduced_form_orders') 
 				
 		//Drop scalar created by the program
@@ -243,6 +242,10 @@ tokenize `varlist'
 //dropping observations not included in the if condition
 	if "`if'" !=""{
 	keep `if'
+	count 
+	if (r(N)==0){
+		mata: exit(error(2000))
+	}
 	}
 // dropping observations not included in the in condition
 	if "`in'" !=""{
