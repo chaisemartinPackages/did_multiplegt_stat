@@ -170,11 +170,24 @@ if "`estimator'"!="iv-was"{
 }
 
 
-//Show the main results
-if ("`if'"!="") local if_touse = "`if'&`touse' == 1"
-else local if_touse = "if `touse' == 1"
-		local cmd = subinstr("`0'", "`if'", " `if_touse'", 1) //(Dec, 2024) DS: The if here conflicts with the if of the main command, if any. Corrected above.
-		did_multiplegt_stat2 `cmd' reduced_form_orders(`reduced_form_orders') 
+//Show the main results:
+if ("`if'"!="") {
+	local if_touse = "`if'&`touse' == 1"
+	local cmd = subinstr("`0'", "`if'", " `if_touse'", 1)
+	
+	if (strpos("`0'", ",")>0)  did_multiplegt_stat2 `cmd' reduced_form_orders(`reduced_form_orders')
+	else did_multiplegt_stat2 `cmd' , reduced_form_orders(`reduced_form_orders') 
+}
+else {
+		local if_touse = "if `touse' == 1"
+		local cmd = subinstr("`0'", ",", " `if_touse' , ", 1)
+		
+		if (strpos("`0'", ",")>0) did_multiplegt_stat2 `cmd' reduced_form_orders(`reduced_form_orders') 
+		else did_multiplegt_stat2 `cmd' `if_touse' , reduced_form_orders(`reduced_form_orders') 
+} //(Dec, 2024) DS: The if here conflicts with the if of the main command, if any. Corrected above.
+		di as red "Here : `cmd'"
+		
+
 				
 		//Drop scalar created by the program
 		cap scalars_to_drop  //a subprogram dropping all scalars with the pattern _XX
