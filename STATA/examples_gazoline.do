@@ -37,7 +37,8 @@ did_multiplegt_stat lngpinc id year tau, or(2)  estimation_method(dr) as_vs_was 
 set trace on
 did_multiplegt_stat lngca id year lngpinc tau , or(1 2 3 4 5 6 7 8)  estimator(iv-was) estimation_method(dr) placebo(3) cluster(id)
 	
-did_multiplegt_stat lngca id year lngpinc tau, or(1)  estimator(iv-was) estimation_method(dr) noextra placebo(3)
+	set trace on
+did_multiplegt_stat lngca id year lngpinc tau 
 
 did_multiplegt_stat lngca id year lngpinc tau, or(2)  estimator(iv-was) estimation_method(dr) placebo(3)
 

@@ -65,7 +65,6 @@ program did_multiplegt_stat, eclass sortpreserve byable(recall)
 	version 12.0
 	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(string) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off] 
 
- 
 	marksample touse // Felix This causes the program to crash with weightss
 	if _by() {
 		quietly replace `touse' = 0 if `_byindex' != _byindex()
@@ -954,6 +953,8 @@ tab T_XX, gen(T_XX_FE_)
 	cap drop deltaYt_XX
 	xtset ID_XX T_XX
 	gen deltaYt_XX = D.Y_XX
+	
+	save "test_2.dta", replace
 //RUN THE CROSS-VALIDATION command
 cross_validation deltaYt_XX if S`IV'bist_XX==0 , `cross_validation' `first_stage' `reduced_form' //`first_stage' is just for the display
 local reg_order  = `s(chosen_order)'
@@ -966,7 +967,6 @@ cross_validation S`IV'0bist_XX , `cross_validation_logit' model(logit) `first_st
 if (`s(set_chosen_order_linear)' == 1) local logit_bis_order  = `reg_order' `reduced_form'
 else local logit_bis_order  = `s(chosen_order)'
 
-
 if ("`same_order_all_logits'" == ""){
 //3. Logit P(S_{+t}=0|D_{t-1})
 count if S`IV'tPlus_XX==1
@@ -976,15 +976,15 @@ if (`s(set_chosen_order_linear)' == 1) local logit_Plus_order  = `reg_order'
 else local logit_Plus_order  = `s(chosen_order)'
 
 }
-
+else local logit_Plus_order  = 0 //If no switcher-up
 //4. Logit P(S_{-t}=0|D_{t-1})
 count if S`IV'tMinus_XX==1
 if (r(N)>0){
 cross_validation S`IV'tMinus_XX , `cross_validation_logit' model(logit) `first_stage' `reduced_form'
 if (`s(set_chosen_order_linear)' == 1) local logit_Minus_order  = `reg_order' 
 else local logit_Minus_order  = `s(chosen_order)'
-
 }
+else local logit_Minus_order  = 0 //If no switcher-down
 }
 else{
 	local logit_Minus_order = `logit_bis_order'
@@ -4494,7 +4494,7 @@ quietly{
 	
 	//dropping observations not included in the if condition
 	if "`if'" !=""{
-	keep `if'
+	//keep `if'
 	}
 //mata: mata clear
 //Test
@@ -4573,12 +4573,14 @@ local controls_cv`k' "(c.T_XX_FE_*)#(`PolK`k'')"
 				local counter = 0
 				forvalues test_sample_id = 1/`kfolds'{
 					if ("`model'"==""|"`model'"=="reg") {
-						 cap reg `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id'
+						save "test.dta", replace
+						 cap reg `anything' `controls_cv`k'' `if'&fold_identifier_XX!=`test_sample_id'
+						 di as red "reg `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id'"
 						//matrix first_stage_orders = J(4, 1, .) //This to initialize the matrix that will be used to store orders of FS for the IV-WAS routine, and will be use by polynomials_generator	
 						}
 					else {
 						 cap `model' `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id', asis
-						//di as error "`model' `anything' if fold_identifier_XX!=`test_sample_id'"
+						di as error "`model' `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id', asis"
 					}
 					//di as error "`model' `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id'"
 					
