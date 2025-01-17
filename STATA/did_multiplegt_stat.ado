@@ -4574,12 +4574,12 @@ local controls_cv`k' "(c.T_XX_FE_*)#(`PolK`k'')"
 					if ("`model'"==""|"`model'"=="reg") {
 						
 						 cap reg `anything' `controls_cv`k'' `if'&fold_identifier_XX!=`test_sample_id'
-						 di as red "reg `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id'"
+						 
 						//matrix first_stage_orders = J(4, 1, .) //This to initialize the matrix that will be used to store orders of FS for the IV-WAS routine, and will be use by polynomials_generator	
 						}
 					else {
 						 cap `model' `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id', asis
-						di as error "`model' `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id', asis"
+						
 					}
 					//di as error "`model' `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id'"
 					
