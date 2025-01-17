@@ -954,7 +954,6 @@ tab T_XX, gen(T_XX_FE_)
 	xtset ID_XX T_XX
 	gen deltaYt_XX = D.Y_XX
 	
-	save "test_2.dta", replace
 //RUN THE CROSS-VALIDATION command
 cross_validation deltaYt_XX if S`IV'bist_XX==0 , `cross_validation' `first_stage' `reduced_form' //`first_stage' is just for the display
 local reg_order  = `s(chosen_order)'
@@ -4573,7 +4572,7 @@ local controls_cv`k' "(c.T_XX_FE_*)#(`PolK`k'')"
 				local counter = 0
 				forvalues test_sample_id = 1/`kfolds'{
 					if ("`model'"==""|"`model'"=="reg") {
-						save "test.dta", replace
+						
 						 cap reg `anything' `controls_cv`k'' `if'&fold_identifier_XX!=`test_sample_id'
 						 di as red "reg `anything' `controls_cv`k'' if fold_identifier_XX!=`test_sample_id'"
 						//matrix first_stage_orders = J(4, 1, .) //This to initialize the matrix that will be used to store orders of FS for the IV-WAS routine, and will be use by polynomials_generator	
