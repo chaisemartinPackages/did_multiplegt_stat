@@ -89,7 +89,7 @@
 
 ### Stata 
 ```s
-net install did_multiplegt_stat, from("https://raw.githubusercontent.com/chaisemartinPackages/did_multiplegt_stat/main/Stata") replace
+net install did_multiplegt_stat, from("https://raw.githubusercontent.com/chaisemartinPackages/did_multiplegt_stat/main/STATA") replace
 ```
 
 ### R
