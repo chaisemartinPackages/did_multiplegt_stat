@@ -4004,7 +4004,7 @@ if ("`exact_match'"==""){
 		replace dr_deltaYV_XX = weights_XX*(S_XX)*inner_sumdelta12_XX if Sbis_XX == 1 // Modif Doulo: RF or FS giving 0.
 		
 		sum dr_deltaYV_XX  //WIll use it for the dr point estimate and for the estimation of the variance!
-		scalar num_dr_delta2_`pla'XX = r(sum)
+		scalar num_dr_delta2_`pairwise'`pla'XX = r(sum)
 		}
 		else{
 	    gen dr_deltaYV_XX = weights_XX*(S_XX - [(cf_PS1PlusD1_XX - cf_PS1MinusD1_XX)/cf_PS0D1_XX]*(1-Sbis_XX))*cf_inner_sumdelta12_XX if Sbis_XX == 0
@@ -4013,7 +4013,7 @@ if ("`exact_match'"==""){
 		forvalues cf_id = 1/2{
 		sum dr_deltaYV_XX if cf_sample_id == `cf_id'
 		
-		scalar num_dr_delta2_`cf_id'_`pla'XX = r(sum)
+		scalar num_dr_delta2_`cf_id'_`pairwise'`pla'XX = r(sum)
 
 		sum absdeltaDV_XX if cf_sample_id == `cf_id'
 		scalar cf_deltaD_`cf_id'_`pairwise'`pla'XX = r(sum)
@@ -4021,7 +4021,8 @@ if ("`exact_match'"==""){
 			scalar cf_delta2_`cf_id'_`pairwise'`pla'XX = 0 //convention in the paper.
 		}
 		else{
-		scalar cf_delta2_`cf_id'_`pairwise'`pla'XX = scalar(num_dr_delta2_`cf_id'_`pla'XX)/scalar(cf_deltaD_`cf_id'_`pairwise'`pla'XX)
+
+		scalar cf_delta2_`cf_id'_`pairwise'`pla'XX = scalar(num_dr_delta2_`cf_id'_`pairwise'`pla'XX)/scalar(cf_deltaD_`cf_id'_`pairwise'`pla'XX)
 		}
 		}
 		}
@@ -4034,9 +4035,10 @@ if ("`exact_match'"==""){
 			if ("`cross_fitting'"==""){
 				sum absdeltaDV_XX 
 
-				scalar delta2_`pairwise'`pla'XX = scalar(num_dr_delta2_`pla'XX)/r(sum)
+				scalar delta2_`pairwise'`pla'XX = scalar(num_dr_delta2_`pairwise'`pla'XX)/r(sum)
 			}
 			else{
+				
 								
 				scalar delta2_`pairwise'`pla'XX = [scalar(cf_deltaD_1_`pairwise'`pla'XX)/(scalar(cf_deltaD_1_`pairwise'`pla'XX) + scalar(cf_deltaD_2_`pairwise'`pla'XX))]*scalar(cf_delta2_1_`pairwise'`pla'XX)  ///
 										+ [scalar(cf_deltaD_2_`pairwise'`pla'XX)/(scalar(cf_deltaD_1_`pairwise'`pla'XX) + scalar(cf_deltaD_2_`pairwise'`pla'XX))]*scalar(cf_delta2_2_`pairwise'`pla'XX)
@@ -4048,7 +4050,11 @@ if ("`exact_match'"==""){
           2. COMPUTING THE VARIANCE (The variance is not method-specific) // but we use linear regression if exact_match, and logit otherwise
 **************************************************************************/
         if ("`exact_match'"==""){
-		gen Phi2_`pairwise'`pla'XX = (dr_deltaYV_XX -scalar(delta2_`pairwise'`pla'XX)*absdeltaDV_XX)
+			
+		gen dr_deltaYV_bisXX = weights_XX*(S_XX - [(PS1PlusD1_XX - PS1MinusD1_XX)/PS0D1_XX]*(1-Sbis_XX))*inner_sumdelta12_XX if Sbis_XX == 0
+		replace dr_deltaYV_bisXX = weights_XX*(S_XX)*inner_sumdelta12_XX if Sbis_XX == 1 
+		
+		gen Phi2_`pairwise'`pla'XX = (dr_deltaYV_bisXX -scalar(delta2_`pairwise'`pla'XX)*absdeltaDV_XX)
 		}
 		else{
 		gen Phi2_`pairwise'`pla'XX = weights_XX*[(S_XX - ES_XX_D1*(1-Sbis_XX)/(1-ESbis_XX_D1))*inner_sumdelta12_XX -scalar(delta2_`pairwise'`pla'XX)*absdeltaD_XX]
