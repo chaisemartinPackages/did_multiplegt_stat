@@ -22,26 +22,29 @@ do not affect the current outcome.
 {cmd:did_multiplegt_stat Y G T D [Z]} {ifin}
 [{cmd:,}
 {cmd:estimator(}{it:string}{cmd:)}
-{cmd:as_vs_was}
 {cmd:exact_match}
-{cmd: estimation_method(}{it:string}{cmd:)}
+{cmd:as_vs_was}
 {cmd:{ul:or}der(}{it:#/####/########}{cmd:)}
+{cmd:cross_fitting({it:#})}
 {cmd:controls({varlist}{cmd:})}
 {cmd:weights({varname}{cmd:})}
 {cmd:cluster({varlist}{cmd:})}
-{cmd:{ul:noextra}polation}
-{cmd:by_fd(}{it:#}{cmd:)}
-{cmd:by_baseline(}{it:#}{cmd:)}
-{cmd:other_treatments({varlist}{cmd:})}
 {cmd: switchers(}{it:string}{cmd:)}
 {cmd:placebo(}{it:#}{cmd:)}
+{cmd:on_placebo_sample}
+{cmd:cross_validation(}{help did_multiplegt_stat##cv_suboptions:cv_suboptions}{cmd:)} 
+{cmd:twfe(}{help did_multiplegt_stat##twfe_suboptions:twfe_suboptions}{cmd:)]} 
+{cmd:{ul:noextra}polation}
+{cmd:trimming_up(#)}
+{cmd:trimming_down(#)}
+{cmd:other_treatments({varlist}{cmd:})}
+{cmd:by_fd(}{it:#}{cmd:)}
+{cmd:by_baseline(}{it:#}{cmd:)}
 {cmd:{ul:disag}gregate}
 {cmd:graph_off}
 {cmd:bys_graph_off}
 {cmd:bootstrap({it:#})}
 {cmd:seed({it:#})}
-{cmd:cross_validation(}{help did_multiplegt_stat##cv_suboptions:cv_suboptions}{cmd:)} 
-{cmd:twfe(}{help did_multiplegt_stat##twfe_suboptions:twfe_suboptions}{cmd:)]} 
 {p_end}
 
 {p 4 4}
@@ -80,7 +83,7 @@ other units, the stayers, does not change.
 {p 4 4}
 {cmd:Target parameters.}
 The command can estimate the Average Slope (AS) and the Weighted Average Slope (WAS) parameters
-introduced in {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2022)}.
+introduced in {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2025)}.
 The AS is the average, across switchers, of (Y_t(D_t)-Y_t(D_{t-1})/(D_t-D_{t-1}), the effect 
 on their period-t outcome of moving their period-t
 treatment from its period-(t-1) to its period-t value, scaled by the difference between these two values. The WAS is a weighted 
@@ -125,15 +128,12 @@ matched to a stayer with the exact same period-(t-1) treatment, thus restricting
 
 {p 4 4}
 {cmd:Estimators, when the exact_match option is not specified.}
-When the {cmd:exact_match} option is not specified, the command can use a regression adjustment to recover switchers' 
-counterfactual outcome evolution: for all t, it runs an OLS regression of Y_t-Y_{t-1} on a polynomial in D_{t-1} in the sample of (t-1)-to-t stayers, 
-and uses that regression
-to predict switchers' counterfactual outcome evolution. Alternatively, when it estimates the WAS, the command can also use propensity-score 
-reweighting to recover switchers' counterfactual outcome evolution. First, for all t it estimates a logistic regression of an indicator 
+When the {cmd:exact_match} option is not specified, the command estimates a doubly-robust estimator resulting from
+ a combination of regression adjustment and propensity-score reweighting. 
+Firts, it uses a regression adjustment to recover switchers' counterfactual outcome evolution: for all t, it runs an OLS regression of Y_t-Y_{t-1} on a polynomial in D_{t-1} in the sample of (t-1)-to-t stayers. Second, for all t it estimates a logistic regression of an indicator 
 for (t-1)-to-t switchers on a polynomial in D_{t-1}, to predict units' probability of being a switcher. 
 Then, it computes a weighted average of stayers' outcome evolution, upweighting stayers with a large probability of being switchers, 
-and downweighting stayers with a low probability of being switchers. Finally, when it estimates the WAS, the command can also combine 
-regression-adjustment and propensity-score reweighting, thus yielding a doubly-robust estimator.
+and downweighting stayers with a low probability of being switchers.
 {p_end}
 
 {p 4 4}
@@ -145,10 +145,10 @@ supply and demand shocks, and the counterfactual consumption evolution of units 
 change may therefore not be the same. On the other hand, taxes
 may not respond to supply and demand shocks and may satisfy a parallel-trends assumption. In such cases, the command
 can compute the IV-WAS estimator introduced in 
-{browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2022)}.
+{browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2025)} using doubly-robust estimators.
 The IV-WAS estimator is equal to the WAS estimator of the instrument's reduced-form effect on the outcome controlling for D_{t-1}, divided by the
 WAS estimator of the instrument's first-stage effect on the treatment controlling for D_{t-1}. 
-See {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2024)} for some explanations as to why controlling for D_{t-1}
+See {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2025)} for some explanations as to why controlling for D_{t-1}
 is desirable in IV estimation.
 {p_end}
 
@@ -159,7 +159,7 @@ is desirable in IV estimation.
 
 {phang}
 {cmd:estimator(}{it:string}{cmd:)} gives the name(s) of the estimator(s) to be estimated. The allowed arguments are: (1) {cmd:as}, (2) {cmd:was}, 
-and (3) {cmd:iv-was}.
+and (3) {cmd:iv-was}. If multiple estimators are requested, e.g., {cmd:as} and {cmd:was}, they must be seperated by a single space. 
 
 {phang}
 {cmd:exact_match}: with this option, the DID estimators computed by the command compare the outcome evolution of switchers and stayers 
@@ -170,12 +170,6 @@ With a discrete treatment taking a large number of values, specifying this optio
 matched to a stayer with the exact same period-(t-1) treatment, thus restricting the estimation sample.
 
 {phang}
-{cmd: estimation_method(}{it:string}{cmd:)}: when the {cmd:exact_match} option is not specified and estimation of the WAS or IV-WAS is requested, 
-this option can be used to specify which estimation method to use when estimating the WAS or IV-WAS. 
-The allowed arguments are: (1) {cmd:ra} (regression adjustment), (2) {cmd:ps} (propensity-based reweighting), and (3) {cmd:dr} (doubly-robust). 
-By default, a doubly-robust estimator is used, when  WAS or IV-WAS is requested, and the regression adjustment estimator if AS is requested.
-
-{phang}
 {cmd:{ul:or}der(}{it:#/####/########}{cmd:)}: when the exact_match option is not specified, 
 this option specifies the polynomial orders to be used in the OLS regressions of Y_t-Y_{t-1} on a polynomial in D_{t-1}
 and/or in the logistic regressions of an indicator for (t-1)-to-t switchers on a polynomial in D_{t-1}. 
@@ -183,9 +177,7 @@ This option allows for either 1, 4, or 8 arguments, with 8 arguments only allowe
 E.g.: order(1), order(1 4 3 2) or order(1 4 3 2 1 2 3 4) are allowed (the last one only if IV-WAS specified), but order(1 2 3) is not allowed. 
 With 4 arguments, argument 1, 2, 3 and 4, is the order used to estimate E(Y_t-Y_{t-1}|D_{t-1}), P(S_{t}=0|D_{t-1}), P(S_{+, t}=1|D_{t-1}), and P(S_{-, t}=1|D_{t-1}), respectively. 
 With 8 arguments the same logic is applied, but the first 4 arguments are for the first stage, and the next 4 for the reduced form. 
-Finally, if IV-WASis requested but {cmd:order} has 4 arguments, we apply the same orders to first stage and reduced form.
-
-By default, a polynomial of order 1 is used.
+Finally, if IV-WASis requested but {cmd:order} has 4 arguments, we apply the same orders to first stage and reduced form. By default, a polynomial of order 1 is used.
 
 {phang}
 {cmd:placebo(}{it:#}{cmd:)}: when this option is specified, the command computes the 
@@ -199,7 +191,7 @@ t-3 to t-2, from t-4 to t-3,... , and from t-{it:#}-1 to t-{it:#} are also repor
 of periods.
 
 {phang}
-{cmd:as_vs_was}: shows a test that the AS and WAS are equal. This option can only be used when estimation of the AS and WAS is requested.
+{cmd:as_vs_was}: shows a test that the AS and WAS are equal. This option can only be used when estimation of the both AS and WAS is requested, using {cmd:estimator(as was)}.
 
 {phang}
 {cmd:controls({varlist}{cmd:})}: the command can compute estimators with control variables. They rely on a conditional parallel trends assumption:
@@ -213,6 +205,12 @@ control variables, including control variables may not be necessary.
 
 {phang}
 {cmd:weights({varname}{cmd:})} : This option allows to compute estimators weighted by {varname}{cmd:}.
+
+{phang}
+{cmd:trimming_up(#)} : This option takes as argument an integer between 0 and 100. If # is input as argument, the command proceeds as follows. If the estimator {cmd:as} is requested, the command trims observations such that the probability P(S_{t}=0|D_{t-1}) is higher than #. If the estimator {cmd:was} is requested, the command trims observations such that at least one of the probabilities estimated by the logit models (P(S_{t}=0|D_{t-1}), P(S_{+, t}=1|D_{t-1}) or P(S_{-, t}=1|D_{t-1})) is higher than #. If the estimator {cmd:iv-was} is requested, the command trims observations such that at least one of the probabilities estimated by the logit models (P(SI_{t}=0|Z_{t-1}, D_{t-1}), P(SI_{+, t}=1|Z_{t-1}, D_{t-1}) or P(SI_{-, t}=1|Z_{t-1}, D_{t-1})) is higher than #. This option is only relevant when the probabilities are estimated using logit models thus the option is not compatible with the option {cmd:exact_match}. 
+
+{phang}
+{cmd:trimming_down(#)} : This option takes as argument an integer between 0 and 100, and follows the same logic as {cmd:trimming_up(#)} but trims observations with probabilities lower than #. 
 
 {dlgtab:Options to estimate heterogeneous treatment effects}
 
@@ -264,6 +262,12 @@ for further details.
 {phang}
 {cmd:{ul:noextra}polation}: when this option is specified, the command only keeps switchers whose period-(t-1) treatment (or instrument) 
 is between the minimum and the maximum values of the period-(t-1) treatment (or instrument) of stayers, thus enforcing the overlap condition.
+
+{phang}
+{cmd:cross_fitting(#)}: when this option is specified, the command performs a cross-fitting (with # splits) to estimate the requested doubly-robust estimator. For instance, if you specify {cmd:cross_fitting(2)}, the command splits randomly the sample into two subsample (I_1 and I_2) and proceeds as follows. It uses the subsample I_1 as a training sample to predict the nuisance functions' values of observations in the subsample I_2, and estimates the parameter of interest using only the subsample I_2. Then, the command redoes the same procedure by reversing the role of the two subsampple i.e.,using I_2 as training sampple and estimating the parameter of interest only by using the subsample I_1. The final point estimate is then a weughted average of the two point estimates. See Section 3.3 of {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2025)} for details.
+
+{phang}
+{cmd:on_placebo_sample}: This options allows to estimate the estimators using the placebo subsample, i.e., for each t, restricting attention to t-2-to-t-1 stayers. This option is not compatible with the option {cmd:placebo(#)}.
 
 {marker twfe_suboptions}{...}
 {dlgtab:TWFE Comparison}
@@ -320,10 +324,8 @@ and has therefore to be specified in any case.
 
 {synopthdr:cv_suboptions}
 {synoptline}
-{synopt:{cmd:{ul: algo}rithm(string)}} This option specifies which cross-validation algorithm to use. 
-The allowed arguments are {cmd:loocv} (leave-one-out) and {cmd:kfolds}.
-By default, {cmd:loocv} is used in linear regressions and {cmd:kfolds} in logit regressions. The leave-one-out method 
-can only be used in linear regressions.
+{synopt:{cmd:{ul: algo}rithm(string)}} This option specifies which cross-validation algorithm to use (leave-one-out or kfolds). 
+The current version only allows {cmd:kfolds} as argument.
 {p_end}
 
 {synopt:{cmd:{ul: tole}rance(#)}} This option allows to set a stop criterion based on the gain in prediction power. 
@@ -388,9 +390,21 @@ which contains gasoline taxes, prices, and consumption for 48 US states, every y
 
 {phang2}{stata did_multiplegt_stat lngpinc id year tau, or(1) estimator(as was)  placebo(3)  as_vs_was}{p_end}
 
+
+
 {title:Example 2: Estimating the effect of gasoline taxes (tau) on log gasoline consumption (lngca)}
 
 {phang2}{stata did_multiplegt_stat lngca id year tau, or(1) estimator(as was)  placebo(3)  as_vs_was}{p_end}
+
+{title:Example 3: IV estimate of the price-elasticity of gasoline consumption}
+
+{phang2}{stata did_multiplegt_stat lngca id year lngpinc tau, or(1) estimator(iv-was)  placebo(3) }{p_end}
+
+{title:Example 4: Some advanced options}
+
+{phang2}{stata did_multiplegt_stat lngpinc id year tau, or(1) estimator(was)  placebo(3)  as_vs_was cross_fitting(2) cluster(id) controls(lngpinc) twfe(same_sample percentile) seed(123) bootstrap(5)}{p_end}
+
+{phang2}{stata did_multiplegt_stat lngca id year tau, estimator(was) switchers(down)  cross_validation(algorithm(kfolds) kfolds(10)) }{p_end}
 
 {title:References}
 
