@@ -162,7 +162,7 @@ program did_multiplegt_stat2, eclass sortpreserve byable(recall)
 	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(string) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off FIRST_stage reduced_form_orders(string) cross_fitting(integer 0)  trimming_up(integer 100) trimming_down(integer 0)  on_placebo_sample ] // FIRST_stage   twfe(percentile same_sample)
 
 	if ("`reduced_form_orders'"!="") {
-		//local order = "`reduced_form_orders'"
+		local order = "`reduced_form_orders'"
 	}
 	
 	// Felix: Do not show "event-study" graph with by_baseline or by_fd
@@ -361,6 +361,7 @@ if (`total_estimator'!=`nb_estimatorts_XX'){ // Modif Felix, see above
 }
 //1. Estimation method:
 
+/*
 if ("`estimation_method'" == "ps"|"`estimation_method'" == "dr"){
 	if ("`was_XX'"=="0"&"`iwas_XX'"=="0"){
 		di as error "The propensity/doubly-robust -based approach is only available for the was and the iv-was."
@@ -375,6 +376,8 @@ if (`req_est_method' == 0){
 		exit
 
 }
+*/
+if ("`exact_match'" =="") local estimation_method = "dr" //By default, the command estimates now the doubly-robust estimator for all estimators.
 
 //2. IV
 if ("`IV_feed_XX'"=="no"&("`iwas_XX'" == "1")){
@@ -583,6 +586,20 @@ if (`placebo' != 0&"`on_placebo_sample'"!=""){
 	exit
 }
 
+//14.
+if(`trimming_down'<0|`trimming_down'>100) {
+	di as error "Error (trimming_down) : This option takes an integer between 0 and 100."
+	exit
+}
+if(`trimming_up'<0|`trimming_up'>100) {
+	di as error "Error (trimming_up) : This option takes an integer between 0 and 100."
+	exit
+}
+
+if(`trimming_down'>=`trimming_up') {
+	di as error "Error (trimming) : The option trimming_down takes an integer lower than the argument in trimming_up."
+	exit
+}
 
 //****************************If there is gap
 gen tsfilled_XX = 0
@@ -1150,6 +1167,8 @@ scalar N_bar_c_XX = r(mean)
 		replace Phi1_XX=. if not_to_use1_XX==0
 		
 		sum Phi1_XX 
+		di as red "Mean = `r(mean)'"
+		di as red "SD = `r(sd)'"
 		//scalar mean_IF1 = r(mean) //for test 
 		
 		if ("`cluster'"!=""){ // Clustering the variance //CLUSTER OPTION
@@ -1158,15 +1177,9 @@ scalar N_bar_c_XX = r(mean)
 		bysort `cluster': replace Phi1_cXX=. if _n!=1
 		replace Phi1_cXX = Phi1_cXX/scalar(N_bar_c_XX)
 		
-			if ("`weights'"!=""){
-			sum Phi1_cXX  // use the weights of the cluster, which is the total of the weightss of groups in that cluster.
-			}
-			else{
-			sum Phi1_cXX 
-			}
+		sum Phi1_cXX 
 
 		}
-		
 		scalar sd_delta1_1XX = r(sd)/sqrt(r(sum_w)) //Doulo: In case of unbalanced panel, some units do not contribute to the influence function at some dates, what about the N, in the asymptotic normal distribution?
 		
 		scalar LB1_1XX = delta1_1XX - 1.96*sd_delta1_1XX
@@ -2070,23 +2083,23 @@ local nb_obs_XX = round(`nb_obs_XX', 0.001)
 local nb_obs_adj_XX = strlen("`nb_obs_XX'")
 	di as text _skip(34) "{it: Number of observations}"_skip(4) " =" _skip(`=17-`nb_obs_adj_XX'') "`nb_obs_XX'"
 //Estimation method
-if (`was_XX'==1){
+if (`was_XX'==1|`as_XX'==1){
 if ("`estimation_method'" =="" | "`estimation_method'" =="ra"){
-	di as text _skip(34) "{it: WAS Estimation method }" "     =  {it:reg. adjustment}"
+	di as text _skip(35) "{it:Estimation method     }" "     =  {it:reg. adjustment}"
 }
 
 if ("`estimation_method'" =="ps"){
-di as text _skip(34) "{it: WAS Estimation method }" "     = {it:propensity-score}"
+di as text _skip(35) "{it:Estimation method     }" "     = {it:propensity-score}"
 }
 
 if ("`estimation_method'" =="dr"){
-	di as text _skip(34) "{it: WAS Estimation method  }" "    = {it:   doubly-robust}"
+	di as text _skip(35) "{it:Estimation method      }" "    = {it:   doubly-robust}"
 }
 }
 
 if (`iwas_XX'==1){
 if ("`estimation_method'" =="" | "`estimation_method'" =="ra"){
-	di as text _skip(34) "{it: IV-WAS Estimation method}" "     =  {it:reg. adjustment}"
+	di as text _skip(35) "{it: IV-WAS Estimation method}" "     =  {it:reg. adjustment}"
 }
 
 if ("`estimation_method'" =="ps"){
@@ -3806,15 +3819,16 @@ if (`as' == 1){
 	
 	
 	//Adding cross-fitting
-	if ("`cross_fitting'"=="0"&"`estimation_method'"!="dr"){
+	if ("`estimation_method'"=="ra"){ //deprecated but keep it here for internal test. 
 	
 
 		// 1) Compute \hat{delta}_1
-		gen inner_sumdelta1_XX  = weights_XX*inner_sumdelta12_XX/deltaD_XX // =SV*(\DeltaY - E(\DeltaY|S=0, D1, V))/\DeltaD
+		gen inner_sumdelta1_XX  = inner_sumdelta12_XX/deltaD_XX // =SV*(\DeltaY - E(\DeltaY|S=0, D1, V))/\DeltaD
 		replace inner_sumdelta1_XX = 0 if deltaD_XX==0 //The convention 0*missing = 0.
 
-		sum inner_sumdelta1_XX 
-		scalar delta1_`pairwise'`pla'XX = r(mean)/scalar(ES_`pairwise'`pla'XX) // = E[SV*(\DeltaY - E(\DeltaY|S=0, D1, V))/\DeltaD]/E[SV]
+		sum inner_sumdelta1_XX [iw = weights_XX]
+		scalar delta1_`pairwise'`pla'XX = r(mean) 
+		//scalar(ES_`pairwise'`pla'XX) // = E[SV*(\DeltaY - E(\DeltaY|S=0, D1, V))/\DeltaD]/E[SV]
 	}
 	else{
 
@@ -3834,8 +3848,8 @@ if (`as' == 1){
 		//di as red "cf_inner_sumdelta12_XX = `r(mean)'"
 		
 		//gen cf_delta1_DR_XX = weights_XX*[S_over_deltaD_XX - (cf_meanS_over_deltaD_XX/cf_PS0D1_XX)*(1-Sbis_XX)]*cf_inner_sumdelta12_XX
-		gen      cf_delta1_DR_XX = weights_XX*[0 - (cf_meanS_over_deltaD_XX/cf_PS0D1_XX)]*cf_inner_sumdelta12_XX if Sbis_XX==0
-		replace  cf_delta1_DR_XX = weights_XX*[S_over_deltaD_XX]*cf_inner_sumdelta12_XX if Sbis_XX==1		
+		gen      cf_delta1_DR_XX = [0 - (cf_meanS_over_deltaD_XX/cf_PS0D1_XX)]*cf_inner_sumdelta12_XX if Sbis_XX==0
+		replace  cf_delta1_DR_XX = [S_over_deltaD_XX]*cf_inner_sumdelta12_XX if Sbis_XX==1		
 		
 		//Initialize the point estimate's components
 		scalar cf_sum_w_delta1_`pairwise'`pla'XX = 0
@@ -3849,7 +3863,7 @@ if (`as' == 1){
 			scalar cf_delta1_`pairwise'`pla'`cf_id'_XX = 0 //convention in the paper.
 		}
 		else{
-		sum cf_delta1_DR_XX if cf_sample_id == `cf_id' //&  Sbis_XX==1		
+		sum cf_delta1_DR_XX [iw = weights_XX] if cf_sample_id == `cf_id' //&  Sbis_XX==1		
 		scalar cf_delta1_`pairwise'`pla'`cf_id'_XX = r(sum)/scalar(cf_N_`pairwise'`pla'`cf_id'XX)
 		}
 		scalar cf_sum_w_delta1_`pairwise'`pla'XX = scalar(cf_sum_w_delta1_`pairwise'`pla'XX) + scalar(cf_N_`pairwise'`pla'`cf_id'XX)
@@ -3864,12 +3878,10 @@ if (`as' == 1){
 		predict dr_meanS_over_deltaD_XX , xb
 		
 		//gen dr_delta1_DR_XX = weights_XX*[S_over_deltaD_XX - (meanS_over_deltaD_XX/PS0D1_XX)*(1-Sbis_XX)]*inner_sumdelta12_XX
-		gen dr_delta1_DR_XX = weights_XX*[0 - (meanS_over_deltaD_XX/PS0D1_XX)]*inner_sumdelta12_XX if Sbis_XX==0
-		replace dr_delta1_DR_XX = weights_XX*[S_over_deltaD_XX]*inner_sumdelta12_XX if Sbis_XX==1
-		sum dr_delta1_DR_XX //if Sbis_XX==1	
+		gen dr_delta1_DR_XX = [0 - (meanS_over_deltaD_XX/PS0D1_XX)]*inner_sumdelta12_XX if Sbis_XX==0
+		replace dr_delta1_DR_XX = [S_over_deltaD_XX]*inner_sumdelta12_XX if Sbis_XX==1
+		sum dr_delta1_DR_XX [iw = weights_XX] //if Sbis_XX==1	
 		scalar delta1_`pairwise'`pla'XX = r(mean) //scalar(ES_`pairwise'`pla'XX)
-		sum inner_sumdelta12_XX
-		
 	}
 	}
 
@@ -3888,23 +3900,22 @@ if (`as' == 1){
 	}
 	// + Imbalanced panel adjustment:
 		//a.  Deviding by scalar(PHt`pairwise'`pla'XX)
-	replace Phi1_`pairwise'`pla'XX  = [Phi1_`pairwise'`pla'XX - scalar(delta1_`pairwise'`pla'XX)*Sbis_XX]/[scalar(ES_`pairwise'`pla'XX)*scalar(PHt`pairwise'`pla'XX)]
+	replace Phi1_`pairwise'`pla'XX  = [Phi1_`pairwise'`pla'XX - scalar(delta1_`pairwise'`pla'XX)*SbisV_XX]/[scalar(ES_`pairwise'`pla'XX)*scalar(PHt`pairwise'`pla'XX)]
 		//b. Replace the IF by 0 if Ht_XX==0
 	replace Phi1_`pairwise'`pla'XX = 0 if Ht_XX==0
 	replace Phi1_`pairwise'`pla'XX = . if S_XX==.
 	
 	sum Phi1_`pairwise'`pla'XX 
-	
 	if ("`cluster'"!=""){ // Clustering the variance //CLUSTER OPTION //weights OPTION
 
 		cap drop Phi1_`pairwise'`pla'_cXX //I create a new variable, because I need the one without clustering in the aggregation
 		bysort `cluster': egen Phi1_`pairwise'`pla'_cXX = total(Phi1_`pairwise'`pla'XX)
 		bysort `cluster': replace Phi1_`pairwise'`pla'_cXX=. if _n!=1|S_XX==.
 		replace Phi1_`pairwise'`pla'_cXX = Phi1_`pairwise'`pla'_cXX/scalar(N_bar_c_`pairwise'`pla'XX)
-		sum Phi1_`pairwise'`pla'_cXX	
+		sum Phi1_`pairwise'`pla'_cXX [iw = weights_cXX] 	
 	}
 
-	scalar sd_delta1_`pairwise'`pla'XX = r(sd)/sqrt(r(sum_w))  //sqrt(r(N)) same
+	scalar sd_delta1_`pairwise'`pla'XX = r(sd)/sqrt(r(N)) 
 	
 	scalar LB1_`pairwise'`pla'XX = scalar(delta1_`pairwise'`pla'XX) - 1.96*scalar(sd_delta1_`pairwise'`pla'XX)
 	scalar UB1_`pairwise'`pla'XX = scalar(delta1_`pairwise'`pla'XX) + 1.96*scalar(sd_delta1_`pairwise'`pla'XX)
@@ -3915,7 +3926,7 @@ if (`as' == 1){
 	
 	// + Imbalanced panel adjustment: replace S_t by S_t*H_t in the aggreagation of the point estimates formula
 	replace  S_`pairwise'`pla'XX = Ht_XX if Ht_XX==0 //(=S_t*H_t)
-	replace  S_`pairwise'`pla'XX = S_`pairwise'`pla'XX*weights_XX //S_t*V_t
+	replace  S_`pairwise'`pla'XX = S_`pairwise'`pla'XX //S_t*V_t
 }
 
 ********************************************************************************
@@ -4131,7 +4142,7 @@ if ("`exact_match'"==""){
           2. COMPUTING THE VARIANCE (The variance is not method-specific) // but we use linear regression if exact_match, and logit otherwise
 **************************************************************************/
         if ("`exact_match'"==""){
-		gen Phi2_`pairwise'`pla'XX = (dr_deltaYV_XX -scalar(delta2_`pairwise'`pla'XX)*absdeltaDV_XX)
+		gen Phi2_`pairwise'`pla'XX = weights_XX*(dr_deltaYV_XX -scalar(delta2_`pairwise'`pla'XX)*absdeltaDV_XX)
 		}
 		else{
 		gen Phi2_`pairwise'`pla'XX = weights_XX*[(S_XX - ES_XX_D1*(1-Sbis_XX)/(1-ESbis_XX_D1))*inner_sumdelta12_XX -scalar(delta2_`pairwise'`pla'XX)*absdeltaD_XX]
@@ -4141,7 +4152,7 @@ if ("`exact_match'"==""){
 		replace Phi2_`pairwise'`pla'XX = Phi2_`pairwise'`pla'XX/[scalar(PHt`pairwise'`pla'XX)*scalar(EabsdeltaD_`pla'XX)]
 			//b. Replace the IF by 0 if Ht_XX==0
 		replace Phi2_`pairwise'`pla'XX = 0 if Ht_XX==0	
-		replace Phi2_`pairwise'`pla'XX = . if S_XX==.	//Jan,25: mismatach between se of placebos with and without cluster(ID)
+		replace Phi2_`pairwise'`pla'XX = . if S_XX==.	//Jan,25: mismatch between se of placebos with and without cluster(ID) solved.
 				
 		
 		//save "dr_`pairwise'.dta", replace
@@ -4414,7 +4425,7 @@ else{ 		//This is for the IF and point estimate of the was when we have discrete
 			replace  cf_PSI`suffix'1Z1_XX = . if trimmed_out2_XX == 1
 			}
 			else{
-			gen trimmed_out2_XX = 1 if ( cf_PSI`suffix'1Z1_XX<`trimming_down'| cf_PSI`suffix'1Z1_XX>`trimming_up')& cf_PSI`suffix'1Z1_XXX!=.
+			gen trimmed_out2_XX = 1 if (PSI`suffix'1Z1_XX<`trimming_down'| PSI`suffix'1Z1_XX>`trimming_up')& PSI`suffix'1Z1_XX!=.
 			replace  PSI`suffix'1Z1_XX = . if trimmed_out2_XX == 1
 			}
 			} //end of if exact_match
@@ -4663,7 +4674,7 @@ if ("`estimation_method'" == ""|"`estimation_method'" == "ra"){
 	 replace Phi_D_XX = Phi_D_XX/scalar(EabsdeltaZ_`pairwise'`pla'XX)*scalar(PHt`pairwise'`pla'XX )
 	 
 	 //iii. Now compute Phi_IV
-	 gen Phi3_`pairwise'`pla'XX = (Phi_Y_XX - scalar(delta3_`pairwise'`pla'XX)*Phi_D_XX)/scalar(delta_D_`pairwise'`pla'XX )
+	 gen Phi3_`pairwise'`pla'XX = weights_XX*(Phi_Y_XX - scalar(delta3_`pairwise'`pla'XX)*Phi_D_XX)/scalar(delta_D_`pairwise'`pla'XX )
 	 replace Phi3_`pairwise'`pla'XX = 0 if Ht_XX == 0 
 	 replace Phi3_`pairwise'`pla'XX = . if SI_XX == . 
 	 
@@ -4678,7 +4689,7 @@ if ("`estimation_method'" == ""|"`estimation_method'" == "ra"){
 		sum Phi3_`pairwise'`pla'_cXX   //we use the weights of the cluster here
 	}
 		
-	scalar sd_delta3_`pairwise'`pla'XX = r(sd)/sqrt(r(sum_w)) //sqrt(scalar(N_XX)) // Clustering change the N_XX by r(N)
+	scalar sd_delta3_`pairwise'`pla'XX = r(sd)/sqrt(r(sum_w))
 
 	scalar LB3_`pairwise'`pla'XX = scalar(delta3_`pairwise'`pla'XX) - 1.96*scalar(sd_delta3_`pairwise'`pla'XX)
 	scalar UB3_`pairwise'`pla'XX = scalar(delta3_`pairwise'`pla'XX) + 1.96*scalar(sd_delta3_`pairwise'`pla'XX)
