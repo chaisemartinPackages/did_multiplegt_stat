@@ -390,8 +390,6 @@ which contains gasoline taxes, prices, and consumption for 48 US states, every y
 
 {phang2}{stata did_multiplegt_stat lngpinc id year tau, or(1) estimator(as was)  placebo(3)  as_vs_was}{p_end}
 
-
-
 {title:Example 2: Estimating the effect of gasoline taxes (tau) on log gasoline consumption (lngca)}
 
 {phang2}{stata did_multiplegt_stat lngca id year tau, or(1) estimator(as was)  placebo(3)  as_vs_was}{p_end}
@@ -401,8 +399,6 @@ which contains gasoline taxes, prices, and consumption for 48 US states, every y
 {phang2}{stata did_multiplegt_stat lngca id year lngpinc tau, or(1) estimator(iv-was)  placebo(3) }{p_end}
 
 {title:Example 4: Some advanced options}
-
-{phang2}{stata did_multiplegt_stat lngpinc id year tau, or(1) estimator(was)  placebo(3)  as_vs_was cross_fitting(2) cluster(id) controls(lngpinc) twfe(same_sample percentile) seed(123) bootstrap(5)}{p_end}
 
 {phang2}{stata did_multiplegt_stat lngca id year tau, estimator(was) switchers(down)  cross_validation(algorithm(kfolds) kfolds(10)) }{p_end}
 
