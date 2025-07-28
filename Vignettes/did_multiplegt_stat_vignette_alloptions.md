@@ -10,46 +10,57 @@
 Before running any examples, make sure to load the program and dataset:
 
 ```stata
-cd "C:\path\to\your\working\directory"
-cap prog drop did_multiplegt_stat
-qui do "did_multiplegt_stat.ado"
 
-use "gazoline_did_multiplegt_stat.dta", clear
+        ssc install did_multiplegt_stat
+        net get did_multiplegt_stat
+        use gazoline_did_multiplegt_stat.dta, clear
+
 ```
 
 ---
 
-## I. 🔢 `or()` Option with Multiple Inputs
+## I. 🔢 Option order: `or()` 
 
-This option allows you to specify multiple treatment intensities.
+This option allows you to specify the polynomial orders to be used in the OLS regressions of Y_t-Y_{t-1} on a polynomial in D_{t-1} and/or in the logistic regressions of an indicator for (t-1)-to-t switchers on a polynomial in D_{t-1}.
 
-### Example 1: Basic `or()` usage
+
+### Example 1: For WAS and AS
 ```stata
 did_multiplegt_stat lngca id year tau, or(1 2 3 4)
 ```
 
-<img src="images/or_basic_output.png" alt="Basic or() output" width="600"/>
+<img src="images/or_wasas_output.png" alt="Basic or() output" width="600"/>
 
 ---
 
-### Example 2: Including Controls
+### Example 2: For IV-WAS
 ```stata
-did_multiplegt_stat lngca id year lngpinc tau, or(1 2 3 4 5 6 7 8)
+did_multiplegt_stat lngca id year lngpinc tau, or(1 2 3 3 2 1 1 1) 
 ```
 
-<img src="images/or_with_controls.png" alt="or() with controls output" width="600"/>
+<img src="images/or_ivwas_output.png" alt="or() with controls output" width="600"/>
 
 ---
 
 ## II. 🧪 Placebo Tests
 
-Placebo test allows checking pre-trend violations or spurious effects.
+Placebo test allows checking pre-trend violations or spurious effects. This option computes the placebo version of each requested estimator. Actual estimators compare the t-1-to-t outcome evolution of period t-1-to-t switchers and stayers with the same baseline treatment. When # is equal to 1, placebo estimators (first-order placebos) compare the t-2-to-t-1 outcome evolution of period t-1-to-t switchers and stayers with the same baseline treatment, restricting attention to t-2-to-t-1 stayers. Thus, placebos assess whether switchers and stayers were on parallel trends just before switchers switched treatment. When # is strictly larger than 1, placebos comparing the outcome evolutions of t-1-to-t switchers and stayers from t-3 to t-2, from t-4 to t-3,... , and from t-#-1 to t-# are also reported, always restricting attention to stayers between those pairs of periods.
+
+### Example 1: First-order placebos
 
 ```stata
-did_multiplegt_stat lngca id year tau, placebo
+did_multiplegt_stat lngca id year tau, placebo(1)
 ```
 
-<img src="images/placebo_test.png" alt="Placebo test results" width="600"/>
+<img src="images/placebo_test1.png" alt="Placebo test results" width="600"/>
+
+### Example 1: #-order placebos
+
+```stata
+did_multiplegt_stat lngca id year tau, placebo(3)
+```
+
+<img src="images/placebo_test2.png" alt="Placebo test results" width="600"/>
 
 ---
 
