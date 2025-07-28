@@ -11,7 +11,7 @@
 capture program drop did_multiplegt_stat
 program did_multiplegt_stat, eclass sortpreserve byable(recall)
 	version 12.0
-	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(string) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) cross_fitting(integer 0) graph_off trimming_up(integer 100) trimming_down(integer 0) on_placebo_sample] 
+	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(string) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) cross_fitting(integer 0) graph_off trimming(integer 0) on_placebo_sample] 
 
 	marksample touse 
 	if _by() {
@@ -119,7 +119,7 @@ if "`estimator'"!="iv-was"{
 		if ("`if'"!="") local if_touse = "`if'&`touse' == 1"
 		else local if_touse = "if `touse' == 1"
 		
-		did_multiplegt_stat2 `first_stage_specification'  `if_touse',  estimator(`estimator') estimation_method(`estimation_method') order(`first_stage_orders') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `as_vs_was' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weights(`weights') cross_validation(`cross_validation') `graph_off' `disaggregate' first_stage  cross_fitting(`cross_fitting') trimming_up(`trimming_up') trimming_down(`trimming_down') 
+		did_multiplegt_stat2 `first_stage_specification'  `if_touse',  estimator(`estimator') estimation_method(`estimation_method') order(`first_stage_orders') `noextrapolation' placebo(`placebo') switchers(`switchers') `disagregate' `as_vs_was' `exact_match' `bys_graph_off' by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') cluster(`cluster') controls(`controls') weights(`weights') cross_validation(`cross_validation') `graph_off' `disaggregate' first_stage  cross_fitting(`cross_fitting') trimming(`trimming')
 }
 
 
@@ -159,7 +159,7 @@ end
 capture program drop did_multiplegt_stat2
 program did_multiplegt_stat2, eclass sortpreserve byable(recall)
 	version 12.0
-	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(string) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off FIRST_stage reduced_form_orders(string) cross_fitting(integer 0)  trimming_up(integer 100) trimming_down(integer 0)  on_placebo_sample ] // FIRST_stage   twfe(percentile same_sample)
+	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) estimation_method(string) ORder(string) NOEXTRApolation placebo(integer 0) switchers(string) DISAGgregate as_vs_was exact_match bys_graph_off by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) cluster(varlist max=1) controls(varlist numeric) weights(varlist numeric max=1)  bootstrap(integer 0) seed(integer 0) twfe(string) cross_validation(string) graph_off FIRST_stage reduced_form_orders(string) cross_fitting(integer 0)  trimming(integer 0) on_placebo_sample ] // FIRST_stage   twfe(percentile same_sample)
 
 	if ("`reduced_form_orders'"!="") {
 		local order = "`reduced_form_orders'"
@@ -587,19 +587,11 @@ if (`placebo' != 0&"`on_placebo_sample'"!=""){
 }
 
 //14.
-if(`trimming_down'<0|`trimming_down'>100) {
-	di as error "Error (trimming_down) : This option takes an integer between 0 and 100."
-	exit
-}
-if(`trimming_up'<0|`trimming_up'>100) {
-	di as error "Error (trimming_up) : This option takes an integer between 0 and 100."
+if(`trimming'<0|`trimming'>100) {
+	di as error "Error (trimming) : This option takes an integer between 0 and 100."
 	exit
 }
 
-if(`trimming_down'>=`trimming_up') {
-	di as error "Error (trimming) : The option trimming_down takes an integer lower than the argument in trimming_up."
-	exit
-}
 
 //****************************If there is gap
 gen tsfilled_XX = 0
@@ -1048,7 +1040,7 @@ else{
 forvalues p = 2/`=max_T'{
 	
 	//i) Calling the command for each pair of time periods
-	did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weights(weights_XX) switchers(`switchers') pairwise(`p') data_1XX($data_1XX) as(`as_XX') was(`was_XX') iwas(`iwas_XX') estimation_method(`estimation_method') `exact_match' cluster(`cluster') quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation') cross_fitting(`cross_fitting')  trimming_up(`trimming_up')  trimming_down(`trimming_down') `on_placebo_sample'
+	did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weights(weights_XX) switchers(`switchers') pairwise(`p') data_1XX($data_1XX) as(`as_XX') was(`was_XX') iwas(`iwas_XX') estimation_method(`estimation_method') `exact_match' cluster(`cluster') quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation') cross_fitting(`cross_fitting')  trimming(`trimming') `on_placebo_sample'
 
 	//i) Aggregation as the loop goes
 	
@@ -1167,8 +1159,7 @@ scalar N_bar_c_XX = r(mean)
 		replace Phi1_XX=. if not_to_use1_XX==0
 		
 		sum Phi1_XX 
-		di as red "Mean = `r(mean)'"
-		di as red "SD = `r(sd)'"
+
 		//scalar mean_IF1 = r(mean) //for test 
 		
 		if ("`cluster'"!=""){ // Clustering the variance //CLUSTER OPTION
@@ -1341,7 +1332,7 @@ use "`OG_dataPathq'.dta", clear
 	forvalues p = `=2+`placebo_index''/`=max_T'{
 	
 	//i) Calling the command for each pair of time periods
-	did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weights(weights_XX) switchers(`switchers') pairwise(`p') data_1XX(${data_1plaXX}) as(`as_XX') was(`was_XX') iwas(`iwas_XX') estimation_method(`estimation_method') placebo(`placebo_index') `exact_match' cluster(`cluster')  quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation') cross_fitting(`cross_fitting')  trimming_up(`trimming_up') trimming_down(`trimming_down') 
+	did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weights(weights_XX) switchers(`switchers') pairwise(`p') data_1XX(${data_1plaXX}) as(`as_XX') was(`was_XX') iwas(`iwas_XX') estimation_method(`estimation_method') placebo(`placebo_index') `exact_match' cluster(`cluster')  quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation') cross_fitting(`cross_fitting')  trimming(`trimming') 
 
 	//i) Aggregation as the loop goes
 	
@@ -1722,7 +1713,7 @@ matrix bootstrap_order[`i',1] = `i'
 	
 forvalues p = 2/`=max_T'{	
 	// Calling the command for each pair of time periods
-	did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weights(weights_XX) switchers(`switchers') pairwise(`p') data_1XX($data_1XX) as(`as_XX') was(`was_XX') iwas(`iwas_XX') estimation_method(`estimation_method') `exact_match' cluster(`cluster') quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls')  bootstrap(`bootstrap') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation') cross_fitting(`cross_fitting')  trimming_up(`trimming_up') trimming_down(`trimming_down') `on_placebo_sample'
+	did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weights(weights_XX) switchers(`switchers') pairwise(`p') data_1XX($data_1XX) as(`as_XX') was(`was_XX') iwas(`iwas_XX') estimation_method(`estimation_method') `exact_match' cluster(`cluster') quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls')  bootstrap(`bootstrap') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation') cross_fitting(`cross_fitting')  trimming(`trimming') `on_placebo_sample'
 	 
 // Put results into a matrix 
 if ("`iwas_XX'"=="1") matrix IVeffects_bootstrap[`i',`p'] = scalar(delta3_`p'XX)
@@ -1767,7 +1758,7 @@ if ("`placebo'"!="0"){
 	//scalar delta3_`p'OGplaXX = scalar(delta3_`p'plaXX)
 	
 		//i) Calling the command for each pair of time periods
-		did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weights(weights_XX) switchers(`switchers') pairwise(`p') data_1XX($data_1XX) as(`as_XX') was(`was_XX') iwas(`iwas_XX') estimation_method(`estimation_method') placebo(`placebo') `exact_match' cluster(`cluster')  quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls') bootstrap(`bootstrap') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation') cross_fitting(`cross_fitting')  trimming_up(`trimming_up') trimming_down(`trimming_down') 
+		did_multiplegt_stat_pairwise Y_XX ID_XX T_XX D_XX `IV_var_XX' `if' `in' , estimator(`estimator') or(`order') `noextrapolation' weights(weights_XX) switchers(`switchers') pairwise(`p') data_1XX($data_1XX) as(`as_XX') was(`was_XX') iwas(`iwas_XX') estimation_method(`estimation_method') placebo(`placebo') `exact_match' cluster(`cluster')  quantile(`q') by_fd(`by_fd') by_baseline(`by_baseline') other_treatments(`other_treatments') controls(`controls') bootstrap(`bootstrap') reg_order(`reg_order') logit_bis_order(`logit_bis_order')  logit_Plus_order(`logit_Plus_order') logit_Minus_order(`logit_Minus_order') cross_validation(`cross_validation') cross_fitting(`cross_fitting')  trimming(`trimming') 
 				
 // Put results into a matrix 
 cap matrix IVplacebos_bootstrap[`i',`p'] = scalar(delta3_`p'plaXX)\
@@ -3046,7 +3037,7 @@ end
 capture program drop did_multiplegt_stat_pairwise
 program did_multiplegt_stat_pairwise, eclass
 	version 12.0
-	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) ORder(string) NOEXTRApolation weights(varlist numeric) switchers(string) pairwise(integer 2) data_1XX(string) as(integer 0) was(integer 0) iwas(integer 0) estimation_method(string) placebo(integer 0) exact_match cluster(varlist max=1) quantile(integer 1) by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) controls(varlist numeric)  bootstrap(integer 0) reg_order(integer 1) logit_bis_order(integer 1)  logit_Plus_order(integer 1) logit_Minus_order(integer 1) cross_validation(string) cross_fitting(integer 0) trimming_up(integer 100) trimming_down(integer 0) on_placebo_sample]
+	syntax varlist(min=4 max=5 numeric) [if] [in] [, estimator(string) ORder(string) NOEXTRApolation weights(varlist numeric) switchers(string) pairwise(integer 2) data_1XX(string) as(integer 0) was(integer 0) iwas(integer 0) estimation_method(string) placebo(integer 0) exact_match cluster(varlist max=1) quantile(integer 1) by_fd(integer 1) by_baseline(integer 1) other_treatments(varlist numeric) controls(varlist numeric)  bootstrap(integer 0) reg_order(integer 1) logit_bis_order(integer 1)  logit_Plus_order(integer 1) logit_Minus_order(integer 1) cross_validation(string) cross_fitting(integer 0) trimming(integer 0) on_placebo_sample]
 	
 quietly{
 //> CORE preserve
@@ -3054,8 +3045,7 @@ tempfile OG_dataPathcore
 	save "`OG_dataPathcore'.dta", replace
 	
 	//Trimming: 
-	local trimming_up  = `=`trimming_up'/100'
-	local trimming_down  = `=`trimming_down'/100'
+	local trimming  = `=`trimming'/100'
 	
 //IV method:
 local IV_feed_XX = "no"
@@ -3726,13 +3716,13 @@ Perfom here the main logit regressions that are needed for the three estimators
 			}
 			replace cf_PS0D1_XX=0 if cf_PS0D1_XX<=10^(-10)
 					**Trimming
-			gen trimmed_out_XX = 1 if cf_PS0D1_XX<`trimming_down'|cf_PS0D1_XX >`trimming_up'&cf_PS0D1_XX!=.
+			gen trimmed_out_XX = 1 if cf_PS0D1_XX<`trimming'&cf_PS0D1_XX!=.
 			//di as red "`r(N)'"
 			replace cf_PS0D1_XX         =. if trimmed_out_XX ==1
 		}
 		else{
 		**Trimming
-			gen trimmed_out_XX = 1 if (PS0D1_XX<`trimming_down'|PS0D1_XX >`trimming_up')&PS0D1_XX!=.
+			gen trimmed_out_XX = 1 if (PS0D1_XX<`trimming')&PS0D1_XX!=.
 			replace PS0D1_XX                =. if trimmed_out_XX ==1
 		}
 			
@@ -4026,13 +4016,13 @@ if ("`exact_match'"==""){ //We only do the logit regression if we have continuou
 				replace cf_PS1`suffix'D1_XX = `cf_PS1`suffix'D1_`cf_id'XX'  if cf_sample_id == `cf_id'
 				}
 				
-			gen trimmed_out2_XX = 1 if (cf_PS1`suffix'D1_XX<`trimming_down'|cf_PS1`suffix'D1_XX>`trimming_up')&cf_PS1`suffix'D1_XX!=.
-			replace cf_PS1`suffix'D1_XX = . if trimmed_out2_XX == 1
+			*gen trimmed_out2_XX = 1 if (cf_PS1`suffix'D1_XX<`trimming_down'|cf_PS1`suffix'D1_XX>`trimming_up')&cf_PS1`suffix'D1_XX!=.
+			*replace cf_PS1`suffix'D1_XX = . if trimmed_out2_XX == 1
 			}
-			else{
+			/*else{
 			gen trimmed_out2_XX = 1 if (PS1`suffix'D1_XX<`trimming_down'|PS1`suffix'D1_XX>`trimming_up')&PS1`suffix'D1_XX!=.
 			replace PS1`suffix'D1_XX = . if trimmed_out2_XX == 1
-			}
+			}*/
 			//Convention Logit STATA R
 			replace PS1`suffix'D1_XX=0 if PS1`suffix'D1_XX<=10^(-10)
 			
@@ -4177,7 +4167,7 @@ if ("`exact_match'"==""){
 		replace absdeltaD_`pairwise'`pla'XX =  absdeltaD_`pairwise'`pla'XX*weights_XX //AbsDelta_t*V_t
 }
 
-if ("`exact_match'"==""&(`trimming_up'!=1|`trimming_down'!=0)){
+if ("`exact_match'"==""&(`trimming'!=0)){
 **************************************************************
 *Adjust N switchers and N stayers when trimming
 sum Sbis_XX [w = weights_XX] if trimmed_out_XX==1&Sbis_XX==0
@@ -4348,12 +4338,12 @@ if ("`exact_match'"==""){
 			//Convention Logit STATA R
 	        replace cf_PS_IV0Z1_XX=0 if cf_PS_IV0Z1_XX<=10^(-10)
 			//Trimming
-			gen trimmed_out_XX = 1 if (cf_PS_IV0Z1_XX <`trimming_down'|cf_PS_IV0Z1_XX  >`trimming_up')&cf_PS_IV0Z1_XX!=.
+			gen trimmed_out_XX = 1 if (cf_PS_IV0Z1_XX <`trimming')&cf_PS_IV0Z1_XX!=.
 			replace cf_PS_IV0Z1_XX =. if trimmed_out_XX == 1 
 	}
 	else{
 		//Trimming
-			gen trimmed_out_XX = 1 if (PS_IV0Z1_XX <`trimming_down'|PS_IV0Z1_XX  >`trimming_up')&PS_IV0Z1_XX!=.
+			gen trimmed_out_XX = 1 if (PS_IV0Z1_XX <`trimming')&PS_IV0Z1_XX!=.
 			replace PS_IV0Z1_XX =. if trimmed_out_XX == 1 
 	}
 }
@@ -4421,13 +4411,13 @@ else{ 		//This is for the IF and point estimate of the was when we have discrete
 			//Convention Logit STATA R
 	        replace cf_PSI`suffix'1Z1_XX =0 if cf_PSI`suffix'1Z1_XX <=10^(-10)
 			
-			gen trimmed_out2_XX = 1 if ( cf_PSI`suffix'1Z1_XX<`trimming_down'| cf_PSI`suffix'1Z1_XX>`trimming_up')& cf_PSI`suffix'1Z1_XX!=.
-			replace  cf_PSI`suffix'1Z1_XX = . if trimmed_out2_XX == 1
+			*gen trimmed_out2_XX = 1 if ( cf_PSI`suffix'1Z1_XX<`trimming_down'| cf_PSI`suffix'1Z1_XX>`trimming_up')& cf_PSI`suffix'1Z1_XX!=.
+			*replace  cf_PSI`suffix'1Z1_XX = . if trimmed_out2_XX == 1
 			}
-			else{
+			/*else{
 			gen trimmed_out2_XX = 1 if (PSI`suffix'1Z1_XX<`trimming_down'| PSI`suffix'1Z1_XX>`trimming_up')& PSI`suffix'1Z1_XX!=.
 			replace  PSI`suffix'1Z1_XX = . if trimmed_out2_XX == 1
-			}
+			}*/
 			} //end of if exact_match
 		   }
 	   }
