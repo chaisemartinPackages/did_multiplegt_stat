@@ -3675,7 +3675,7 @@ Perfom here the main logit regressions that are needed for the three estimators
 		predict mean_pred_XX , xb 
 		 // deltaY_i - \hat{E}(deltaY|D_{1i}|S = 0)
 		gen inner_sumdelta12_XX  = deltaY_XX - mean_pred_XX //WILL BE USED FOR AS AND WAS AS WELL
-		
+	
 	if ("`cross_fitting'" != "0" ){
 		reg deltaY_XX `reg_vars_pol_XX'   if S_XX==0 & cf_sample_id != 1 // \delta Y  - \mu^{(1)}(D_1)
 		tempvar mean_pred_1XX
@@ -3807,15 +3807,14 @@ if (`as' == 1){
 	predict meanS_over_deltaD_XX , xb  
 	
 	
-	//Adding cross-fitting
-	//if ("`estimation_method'"=="ra"){ //deprecated but keep it here for internal test. 
+	//Adding cross-fitting & if exact_match
 	if ("`exact_match'"!=""){
 		
 		// 1) Compute \hat{delta}_1
 		gen inner_sumdelta1_XX  = inner_sumdelta12_XX/deltaD_XX // =SV*(\DeltaY - E(\DeltaY|S=0, D1, V))/\DeltaD
 		replace inner_sumdelta1_XX = 0 if deltaD_XX==0 //The convention 0*missing = 0.
-
-		sum inner_sumdelta1_XX [iw = weights_XX]
+		gen inner_sumdelta1_VXX = inner_sumdelta1_XX*weights_XX
+		sum inner_sumdelta1_VXX //inner_sumdelta1_XX 
 		scalar delta1_`pairwise'`pla'XX = r(mean)/scalar(ES_`pairwise'`pla'XX) // = E[SV*(\DeltaY - E(\DeltaY|S=0, D1, V))/\DeltaD]/E[SV]
 	}
 	else{
