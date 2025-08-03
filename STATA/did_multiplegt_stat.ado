@@ -17,7 +17,6 @@ program did_multiplegt_stat, eclass sortpreserve byable(recall)
 	if _by() {
 		quietly replace `touse' = 0 if `_byindex' != _byindex()
 	}
-	
 // Add some kind of preamble to ensure "meaningful" inputs ///
 
  if (`cross_fitting'<2&`cross_fitting'!=0) {
@@ -3809,16 +3808,15 @@ if (`as' == 1){
 	
 	
 	//Adding cross-fitting
-	if ("`estimation_method'"=="ra"){ //deprecated but keep it here for internal test. 
-	
-
+	//if ("`estimation_method'"=="ra"){ //deprecated but keep it here for internal test. 
+	if ("`exact_match'"!=""){
+		
 		// 1) Compute \hat{delta}_1
 		gen inner_sumdelta1_XX  = inner_sumdelta12_XX/deltaD_XX // =SV*(\DeltaY - E(\DeltaY|S=0, D1, V))/\DeltaD
 		replace inner_sumdelta1_XX = 0 if deltaD_XX==0 //The convention 0*missing = 0.
 
 		sum inner_sumdelta1_XX [iw = weights_XX]
-		scalar delta1_`pairwise'`pla'XX = r(mean) 
-		//scalar(ES_`pairwise'`pla'XX) // = E[SV*(\DeltaY - E(\DeltaY|S=0, D1, V))/\DeltaD]/E[SV]
+		scalar delta1_`pairwise'`pla'XX = r(mean)/scalar(ES_`pairwise'`pla'XX) // = E[SV*(\DeltaY - E(\DeltaY|S=0, D1, V))/\DeltaD]/E[SV]
 	}
 	else{
 

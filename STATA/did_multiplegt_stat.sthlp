@@ -54,8 +54,7 @@ do not affect the current outcome.
 {p_end}
 
 {p 4 4}
-{cmd:T} is the time period variable. This variable should take integer values, and consecutive time periods should be one integer away 
-from each other. For instance, a bi-yearly time variable should be recoded by assigning consecutive values to years t and t+2.
+{cmd:T} is the time period variable.
 {p_end}
 
 {p 4 4}
@@ -254,10 +253,11 @@ for further details.
 is between the minimum and the maximum values of the period-(t-1) treatment (or instrument) of stayers, thus enforcing the overlap condition.
 
 {phang}
-{cmd:cross_fitting(#)}: when this option is specified, the command performs a cross-fitting (with # splits) to estimate the requested doubly-robust estimator. For instance, if you specify {cmd:cross_fitting(2)}, the command splits randomly the sample into two subsample (I_1 and I_2) and proceeds as follows. It uses the subsample I_1 as a training sample to predict the nuisance functions' values of observations in the subsample I_2, and estimates the parameter of interest using only the subsample I_2. Then, the command redoes the same procedure by reversing the role of the two subsampple i.e.,using I_2 as training sample and estimating the parameter of interest only by using the subsample I_1. The final point estimate is then a weighted average of the two point estimates. See Section 3.3 of {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2025)} for details.
+{cmd:cross_fitting(#)}: when this option is specified, the command performs a cross-fitting (with # splits) to estimate the requested doubly-robust estimator. For instance, if you specify {cmd:cross_fitting(2)}, the command splits randomly the sample into two subsamples (I_1 and I_2) and proceeds as follows. 
+It uses subsample I_1 to estimate the nuisance functions, and estimates the parameter of interest using only subsample I_2. Then, the command redoes the same procedure, reverting the role of the two subsamples. The final point estimate is then a weighted average of the two point estimates. See Section 3.3 of {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2025)} for details.
 
 {phang}
-{cmd:on_placebo_sample}: This options allows to estimate the estimators using the placebo subsample, i.e., for each t, restricting attention to t-2-to-t-1 stayers. This option is not compatible with the option {cmd:placebo(#)}.
+{cmd:on_placebo_sample}: This option allows to compute the treatment-effect estimator on the subsample where the first placebo estimator is computed. The resulting treatment-effect estimator remains valid if the first treatment lag affects the outcome.
 
 {marker twfe_suboptions}{...}
 {dlgtab:TWFE Comparison}
