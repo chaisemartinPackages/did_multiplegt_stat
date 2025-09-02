@@ -275,49 +275,6 @@ disaggregate = FALSE, aoss_vs_waoss = FALSE)
                               p-values and confidence intervals using the percentile
                               bootstrap method.
 
- + **Cross-validation**: If the treatment is continuous (or if the option exact_match is not specified), and the
-        doubly-robust WAS estimator is used, instead of specifying the order of the
-        polynomial series that did_multiplegt_stat uses to estimate E(Y_t-Y_{t-1}|D_{t-1}),
-        P(S_{t}=0|D_{t-1}), P(S_{+, t}=1|D_{t-1}), and P(S_{-, t}=1|D_{t-1}), one may use
-        cross validation.  Then, the command will choose the polynomial order with the best
-        fit. This option can only be used to compute the doubly-robust WAS estimator:
-        cross-validation does not have proven theoretical guarantees for the other
-        estimators. This option can also not be used together with the by_fd and by_baseline
-        options.
-        *To use cross validation you have to specify cross_validation(algorithm(string)
-        cv_suboptions).  The algorithm(string) suboption is required for the
-        cross_validation(cv_suboptions) to function and has therefore to be specified in any
-        case.*
-
-
-    - **algorithm**(*string*): This option specifies which cross-validation algorithm to use.
-                              The allowed arguments are loocv (leave-one-out) and kfolds.
-                              By default, loocv is used in linear regressions and kfolds in
-                              logit regressions. The leave-one-out method can only be used
-                              in linear regressions.
-
-    - **tolerance**(*#*): This option allows to set a stop criterion based on the gain in
-                              prediction power.  By default, tolerance is set to 0.01, i.e.,
-                              the cross-validation stops when the gain in prediction power
-                              when increasing the polynomial order is less than 1%.
-
-    - **max_k**(*#*): This is another stop criterion based on the maximum order to
-                              test (the grid-search of the hyperparameter).  By default, the
-                              value is set to 5, meaning that the algorithm will look for a
-                              best model starting from a polynomial of order 1 to a
-                              polynomial of order 5 as long as the tolerance is not reached.
-
-    - **kfolds**(*#*): If kfolds is specified in algorithm(), this option specifies
-                              the number of folds to consider.  By default, the number of
-                              folds is set to 5.
-
-    - **same_order_all_logits**: When this option is specified, the cross-validation is done for
-                              only P(S_{t}=0|D_{t-1}), and the optimal order found is used
-                              to predict P(S_{+, t}=1|D_{t-1}) and P(S_{-, t}=1|D_{t-1}).
-
-    - **seed**(*#*): This option allows to set the seed so as to ensure
-                              replicability of the results.
-
   + **Display**
 
     - **disaggregate**: when this option is specified, the command shows the estimated AS, WAS, or
