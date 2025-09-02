@@ -3,6 +3,7 @@
 ** Difference-in-Differences Estimators for Treatments Continuously Distributed at Every Period (2025). 
 **https://arxiv.org/pdf/2201.06898
 
+*VERSION AS OF AUGUST 2025.
 *----------------------------------------------------------------------------------------------------------------------------------------------------------
 *
 * MAIN PROGRAM 1: THIS PROGRAM MAKES SOME SANITY CHECKS, DEFINES VARIABLES, CHECKS IF WE NEEED TO CALL THE FIRST STAGE, DOES IF SO ETC.
@@ -279,6 +280,7 @@ clonevar T_OG_XX = `3'
 clonevar D_XX = `4' 
 local depname  = "`1'" //for estout
 local OG_nameID_XX = "`2'"
+local OG_nameD_XX  = "`4'" //August 2025.
 //2. IV method:
 local IV_feed_XX = "no"
 
@@ -707,13 +709,13 @@ if (`by_quantile'>1){
 	drop deltaD_glob_XX
 	gen deltaD_glob_XX = abs(D.D_XX) if used_in_t_estimation_XX
 	
-	//if (`by_fd'>) twoway kdensity deltaD_glob_XX, xtitle("DeltaD") ytitle("Density")
+	//if (`by_fd'>1) twoway kdensity deltaD_glob_XX, xtitle("DeltaD") ytitle("Density")
 	//else 		  twoway kdensity D_XX, xtitle("D") ytitle("Density")
 	
 	//2. Generate the the quantiles
 	if (`by_fd'>1)        xtile Q_XX = deltaD_glob_XX if deltaD_glob_XX!=0, n(`by_quantile') 
 	if (`by_baseline'>1){
-		replace deltaD_glob_XX = F.deltaD_glob_XX // To make sure we compute the distribution of D_{T-1} among switchers.
+		replace deltaD_glob_XX = F.deltaD_glob_XX // To make sure we compute the distribution of D_{t-1} among switchers.
 		xtile Q_XX = D_XX if deltaD_glob_XX!=0, n(`by_quantile')  
 	}
 	// 3. The intervals 
@@ -868,7 +870,7 @@ quietly{
 //Note: the subprogram return_label is defined at the end of the code, and is used when the user specifies estout along with the option by_fd or by_baseline. Look at the dofile "different options.do" (in section estout + by_fd option) to see how I use it.
 if (`by_quantile'>1){
 di as input "{hline 80}"
-return_label, by_quantile(`by_quantile') by_fd(`by_fd') q(`q') as(`as_XX') was(`was_XX') iwas(`iwas_XX') display_message
+return_label, by_quantile(`by_quantile') by_fd(`by_fd') q(`q') as(`as_XX') was(`was_XX') iwas(`iwas_XX') display_message 
 di as input "{hline 80}"
 }
 ***********************************************************************
@@ -1700,8 +1702,8 @@ cap drop T_XX_FE_* // Modif Felix: error when running with bootstrap
 tab T_XX, gen(T_XX_FE_)
 tab ID_XX, gen (ID_XX_FE_)
 
-if ("`iwas_XX'"=="1") ivreg Y_XX (D_XX = `IV_var_XX') T_XX_FE_* ID_XX_FE_* `if_twfe' 
-else                      reg Y_XX D_XX T_XX_FE_* ID_XX_FE_* `if_twfe'
+if ("`iwas_XX'"=="1") cap ivreg Y_XX (D_XX = `IV_var_XX') T_XX_FE_* ID_XX_FE_* `controls' `if_twfe' 
+else                    cap  reg Y_XX D_XX T_XX_FE_* ID_XX_FE_* `controls' `if_twfe'
 
 matrix twfe_bootstrap[`i',1] = e(b)[1,1]
 matrix bootstrap_order[`i',1] = `i'
@@ -2501,7 +2503,7 @@ if _rc!=0{
 //ereturn matrix testt = J(5, 2, 0)
 if (`by_quantile'>1){
 forvalues q = 1/`by_quantile'{
-	return_label, by_quantile(`by_quantile') by_fd(`by_fd') q(`q') as(`as_XX') was(`was_XX') iwas(`iwas_XX')
+	return_label, by_quantile(`by_quantile') by_fd(`by_fd') q(`q') as(`as_XX') was(`was_XX') iwas(`iwas_XX') 
 	ereturn local label_quantile`q'  "`s(label_quantile`q')'"
 	ereturn local nobs_quantile`q'  "`nobs_quantile`q''"
 }
@@ -2681,7 +2683,9 @@ quietly{
 				//I will use this to label the graph
 					local lb = scalar(r`=`q'-1'_rr)
 					local ub = scalar(r`q'_rr)
-					local label_q_`q' = "[`lb'; `ub'["
+					local label_q_`q' = "]`lb'; `ub']"
+					//if (`q' ==`by_quantile') local label_q_`q' = "]`lb'; `ub']"
+					if (`q' == 1) local label_q_`q' = "[`lb'; `ub']"
 					label define by_quantile_label  `q' "`label_q_`q''", add
 				//label define by_quantile_label `q' "Block `q'", add
 			}
@@ -2788,7 +2792,8 @@ local col6 "lime"
 				//I will use this to label the graph
 					local lb = scalar(r`=`q'-1'_rr)
 					local ub = scalar(r`q'_rr)
-					local label_q_`q' = "[`lb'; `ub'["
+					local label_q_`q' = "]`lb'; `ub']"
+					if (`q' == 1) local label_q_`q' = "[`lb'; `ub']"
 					label define by_quantile_label  `q' "`label_q_`q''", add
 				//label define by_quantile_label `q' "Block `q'", add
 			}
@@ -3612,17 +3617,7 @@ if (`was' == 1 | `as' == 1 ){
 	gen cf_sample_id = 1 + mod(_n, `cross_fitting')
 	}
 	
-if (scalar(gap_`pairwise'`pla'XX)==0&scalar(n_switchers_`pla'XX)>0&scalar(n_stayers_`pla'XX)>1){ //Start of feasible estimation //I Need to do it for the IV as well.
-
-**# Bookmark #0 Preliminaries
-	cap drop predicted_XX
-	cap drop *mean_pred_XX
-	cap drop trimmed_out_XX
-	cap drop inner_sumdelta1_XX
-
-    cap drop ESbis_XX_D1
-	cap drop ES_XX_D1
-
+	
 /*******************************************************************
 	Call polynomials_generator here: Start
 	*******************************************************************/
@@ -3654,6 +3649,21 @@ polynomials_generator, order(`logit_Minus_order') prefix(logit_Minus) controls(`
 	/*******************************************************************
 	Call polynomials_generator here: End
 ******************************************************************************/	
+
+
+
+cap reg deltaY_XX `reg_vars_pol_XX'   if S_XX==0 // Because sometimes this regression mightgenerate errors because of mot positive matrix with exact_match when there is no much variation on the values of D_{t-1}
+
+if (scalar(gap_`pairwise'`pla'XX)==0&scalar(n_switchers_`pla'XX)>0&scalar(n_stayers_`pla'XX)>1&_rc==0){ //Start of feasible estimation //I Need to do it for the IV as well.
+
+**# Bookmark #0 Preliminaries
+	cap drop predicted_XX
+	cap drop *mean_pred_XX
+	cap drop trimmed_out_XX
+	cap drop inner_sumdelta1_XX
+
+    cap drop ESbis_XX_D1
+	cap drop ES_XX_D1
 
 				//Generating the binary S
 				cap drop Sbis_XX
@@ -5150,7 +5160,7 @@ SUBPROGRAM POLYNOMIALS GENERATOR
 *******************************************************************************/
 cap program drop polynomials_generator
 program define polynomials_generator, sclass
-    syntax [, order(integer 1) pla prefix(string) controls(varlist numeric) other_treatments(varlist numeric) FIRST_stage reduced_form]
+    syntax [, order(integer 1) pla prefix(string) controls(varlist numeric) other_treatments(varlist numeric) FIRST_stage reduced_form exact_match]
     
 	if ("`first_stage'"!=""|"`reduced_form'"!="") local VAR = "Z"
 	else local VAR = "D"
@@ -5173,7 +5183,7 @@ program define polynomials_generator, sclass
 				}
 			}
 		   	}
-		if (`order'>1){ //we only do the interaction when order>2
+		if (`order'>1){ //we only do the interaction when order>2 & exact_match is not specified. 
 			//Add the interaction control#D1
 			if ("`controls'"!=""&`order'>1){
 				foreach control in `controls'{
@@ -5228,7 +5238,8 @@ syntax [, by_quantile(integer 1) by_fd(integer 1) q(integer 1) as(integer 0) was
 if (`by_quantile'>1){ //I will use this to label the graph
 	local lb = scalar(r`=`q'-1'_rr)
 	local ub = scalar(r`q'_rr)
-	local label_q_`q' = "[`lb'; `ub'["
+	local label_q_`q' = "]`lb'; `ub']"
+	if (`q'==1) local label_q_`q' = "[`lb'; `ub']"
 	 if (`by_fd'>1){
 		if (`as'==1| `was'==1){	
 		 if ("`display_message'"!="")  di as input _skip(25) "DeltaD in `label_q_`q''"

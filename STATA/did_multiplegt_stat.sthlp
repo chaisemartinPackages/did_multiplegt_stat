@@ -124,12 +124,11 @@ matched to a stayer with the exact same period-(t-1) treatment, thus restricting
 
 {p 4 4}
 {cmd:Estimators, when the exact_match option is not specified.}
-When the {cmd:exact_match} option is not specified, the command computes a doubly-robust estimator, 
-that combines regression adjustment and propensity-score reweighting to compare switchers and stayers 
-controlling for their  period-(t-1) treatment. The regression adjustment amounts to regressing, 
-for all t, Y_t-Y_{t-1} on a polynomial in D_{t-1} in the sample of (t-1)-to-t stayers, and use the regression
- to predict switchers' Y_t-Y_{t-1}. Propensity score reweighting is based on logistic regressions of an indicator
-  for (t-1)-to-t switchers on a polynomial in D_{t-1}.
+When the {cmd:exact_match} option is not specified, the command computes a doubly-robust estimator, that combines regression
+ adjustment and propensity-score reweighting to compare switchers and stayers controlling for their  period-(t-1) treatment.
+  The regression adjustment amounts to regressing, for all t, Y_t-Y_{t-1} on a polynomial in D_{t-1} in the sample of
+   (t-1)-to-t stayers, and use the regression to predict switchers' Y_t-Y_{t-1}. Propensity score reweighting is based on
+    logistic regressions of an indicator for (t-1)-to-t switchers on a polynomial in D_{t-1}.
 {p_end}
 
 {p 4 4}
@@ -204,10 +203,11 @@ control variables, including control variables may not be necessary.
 {cmd:weights({varname}{cmd:})} : This option allows to compute estimators weighted by {varname}{cmd:}.
 
 {phang}
-{cmd:trimming(#)} : This option takes as argument an integer between 0 and 100. If the as or was estimator is requested
- and # is the option's argument, the command trims observations for which the estimated probability P(S_{t}=0|D_{t-1})
-  is lower than #. If the iv-was estimator is requested, the command trims observations such that P(SI_{t}=1|Z_{t-1}, D_{t-1}) 
-  is lower than #. This option is only relevant when the probabilities are estimated using logit models, thus the option is not compatible with the option {cmd:exact_match}. 
+{cmd:trimming(#)} : This option takes as argument an integer between 0 and 100. If the as or was estimator is requested and # is
+ the option's argument, the command trims observations for which the estimated probability P(S_{t}=0|D_{t-1}) is lower than #.
+  If the iv-was estimator is requested, the command trims observations such that P(SI_{t}=1|Z_{t-1}, D_{t-1}) is lower than #.
+   This option is only relevant when the probabilities are estimated using logit models, thus the option is not compatible with
+    the option {cmd:exact_match}. 
 
 {dlgtab:Options to estimate heterogeneous treatment effects}
 
@@ -261,16 +261,16 @@ for further details.
 is between the minimum and the maximum values of the period-(t-1) treatment (or instrument) of stayers, thus enforcing the overlap condition.
 
 {phang}
-{cmd:cross_fitting(#)}: when this option is specified, the command performs a cross-fitting (with # splits) to estimate the
- requested doubly-robust estimator. For instance, if you specify {cmd:cross_fitting(2)}, the command splits randomly the 
- sample into two subsamples (I_1 and I_2) and proceeds as follows. 
-It uses subsample I_1 to estimate the nuisance functions, and estimates the parameter of interest using only subsample I_2.
- Then, the command redoes the same procedure, reverting the role of the two subsamples. The final point estimate is then a
-  weighted average of the two point estimates. See Section 3.3 of {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2025)} for details.
+{cmd:cross_fitting(#)}: when this option is specified, the command performs a cross-fitting (with # splits) to estimate the requested
+ doubly-robust estimator. For instance, if you specify {cmd:cross_fitting(2)}, the command splits randomly the sample into two subsamples
+  (I_1 and I_2) and proceeds as follows. It uses subsample I_1 to estimate the nuisance functions, and estimates the parameter of interest
+   using only subsample I_2. Then, the command redoes the same procedure, reverting the role of the two subsamples. 
+   The final point estimate is then a weighted average of the two point estimates. See Section 3.3 
+   of {browse "https://ssrn.com/abstract=4011782":de Chaisemartin et al (2025)} for details.
 
 {phang}
-{cmd:on_placebo_sample}: This option allows to compute the treatment-effect estimator on the subsample where the first placebo
- estimator is computed. The resulting treatment-effect estimator remains valid if the first treatment lag affects the outcome.
+{cmd:on_placebo_sample}: This option allows to compute the treatment-effect estimator on the subsample where the first placebo estimator
+ is computed. The resulting treatment-effect estimator remains valid if the first treatment lag affects the outcome.
 
 {marker twfe_suboptions}{...}
 {dlgtab:TWFE Comparison}
